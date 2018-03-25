@@ -3,6 +3,7 @@ import allel
 import itertools
 import csv
 import re
+from array import array
 from Bio import SeqIO
 from datetime import datetime
 
@@ -14,7 +15,7 @@ from datetime import datetime
 def caller_exec(input_file, fasta_file):
     caller(input_file, fasta_file)
 
-def caller(input_file):
+def caller(input_file, fasta_file):
     '''input_file is file name without extension
     fasta_file is the reference genome
     '''
@@ -33,18 +34,14 @@ def caller(input_file):
     cpg_pat = re.compile("CG", re.IGNORECASE)
     chg_pat = re.compile("C(A|C|T)G", re.IGNORECASE)
     chh_pat = re.compile("C(A|C|T)(A|T|C)", re.IGNORECASE)
-    gch_pat = re.compile("GC(A|C|T)", re.IGNORECASE)
-    hcg_pat = re.compile("(A|C|T)CG", re.IGNORECASE)
+
 
     data_CHH = set()
     data_CHG = set()
     data_CpG = set()
-    data_HCG = set()
-    data_GCH = set()
 
+    fasta_pos_counter = {'CHH': 0, 'CHG': 0, 'CpG': 0}
 
-    fasta_pos_counter = {'CHH':0, 'CHG':0, 'CpG':0, 'GCH':0, 'HCG':0}
-    #pdb.set_trace()
     record_iter = SeqIO.parse(open(fasta_file), "fasta")
     for chrom in record_iter:
         if chrom.id == chrom_key:
@@ -55,18 +52,10 @@ def caller(input_file):
             for m in chg_pat.finditer(fasta_seq):
                 fasta_pos_counter['CHG'] += 1
                 data_CHG.add((m.start(), m.start() + 1))
-            for m in hcg_pat.finditer(fasta_seq):
-                fasta_pos_counter['HCG'] += 1
-                for pos in [m.start() + 1, m.start() + 2]:
-                    data_CpG.add((pos, pos + 1))
-            for m in gch_pat.finditer(fasta_seq):
-                fasta_pos_counter['GCH'] += 1
-                for pos in [m.start(), m.start() + 1]:
-                    data_GCH.add((pos, pos + 1))
             for m in cpg_pat.finditer(fasta_seq):
                 fasta_pos_counter['CpG'] += 1
                 for pos in [m.start(), m.start() + 1]:
-                    data_HCG.add((pos, pos + 1))
+                    data_CpG.add((pos, pos + 1))
 
 
     print(fasta_pos_counter)
@@ -81,13 +70,9 @@ def caller(input_file):
         data_sample_CHH = list(filter(lambda x: (x[1], x[2]) in data_CHH, row_OT))
         data_sample_CHG = list(filter(lambda x: (x[1], x[2]) in data_CHG, row_OT))
         data_sample_CpG = list(filter(lambda x: (x[1], x[2]) in data_CpG, row_OT))
-        data_sample_HCG = list(filter(lambda x: (x[1], x[2]) in data_HCG, row_OT))
-        data_sample_GCH = list(filter(lambda x: (x[1], x[2]) in data_GCH, row_OT))
         data_writer(input_file + "_CHH.mods", data_sample_CHH, header=first_iteration)
         data_writer(input_file + "_CHG.mods", data_sample_CHG, header=first_iteration)
         data_writer(input_file + "_CpG.mods", data_sample_CpG, header=first_iteration)
-        data_writer(input_file + "_GCH.mods", data_sample_GCH, header=first_iteration)
-        data_writer(input_file + "_HCG.mods", data_sample_HCG, header=first_iteration)
         data_writer(input_file + 'total.mods', row_OT, header=first_iteration)
         bed_graph_row = []
         for element in row_OT:

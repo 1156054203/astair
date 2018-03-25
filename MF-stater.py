@@ -1,6 +1,110 @@
 from Bio import SeqIO
 import csv
+import itertools
 import re
+import click
+
+
+@click.command()
+@click.argument('input_file')
+@click.argument('fasta_file')
+@click.argument('genome')
+@click.argument('clip')
+def stater_exec(input_file, fasta_file, genome, clip):
+    stater(input_file, fasta_file, genome, clip)
+
+def stater(input_file, fasta_file, genome, clip):
+    '''input_file is bedgraph file
+    fasta_file is the reference genome
+    genome is the name of the eukaryotic genome
+    clip is number of bases to trim from each genome end
+    '''
+
+
+
+    cpg_pat = re.compile("CG", re.IGNORECASE)
+    chg_pat = re.compile("C(A|C|T)G", re.IGNORECASE)
+    chh_pat = re.compile("C(A|C|T)(A|T|C)", re.IGNORECASE)
+    gpc_pat = re.compile("GC", re.IGNORECASE)
+
+    chrs = re.compile("chr|CHR", re.IGNORECASE)
+
+    data_CHH = set()
+    data_CHG = set()
+    data_CpG = set()
+    data_GpC = set()
+
+
+    total_key = set()
+    length = []
+
+    record_iter = SeqIO.parse(open(fasta_file), "fasta")
+    for chrom in record_iter:
+        total_key.add(chrom.id)
+        if chrom.id in total_key:
+             fasta_seq = chrom.seq.tostring()
+             length.append(len(chrom.seq.tostring()))
+             for m in chh_pat.finditer(fasta_seq):
+                 if m.start() > int(clip) and m.start() + 1 < len(fasta_seq) - int(clip):
+                    data_CHH.add((chrom.id, m.start(), m.start() + 1))
+             for m in chg_pat.finditer(fasta_seq):
+                 if m.start() > int(clip) and m.start() + 1 < len(fasta_seq) - int(clip):
+                    data_CHG.add((chrom.id, m.start(), m.start() + 1))
+             for m in gpc_pat.finditer(fasta_seq):
+                 if m.start() > int(clip) and m.start() + 1 < len(fasta_seq) - int(clip):
+                    data_GpC.add((chrom.id, m.start(), m.start() + 1))
+                 if m.start() + 1 > int(clip) and m.start() + 2 < len(fasta_seq) - int(clip):
+                    data_GpC.add((chrom.id, m.start(), m.start() + 1))
+             for m in cpg_pat.finditer(fasta_seq):
+                 if m.start() > int(clip) and m.start() + 1 < len(fasta_seq) - int(clip):
+                    data_CpG.add((chrom.id, m.start(), m.start() + 1))
+                 if m.start() + 1 > int(clip) and m.start() + 2 < len(fasta_seq) - int(clip):
+                    data_CpG.add((chrom.id, m.start(), m.start() + 1))
+
+
+
+
+    modification_rate_CHH = []
+    modification_rate_CHG = []
+    modification_rate_CpG = []
+    modification_rate_GpC = []
+
+    key = list(total_key)
+
+
+    with open(input_file) as handle:
+        bedgraph_file = csv.reader(handle, delimiter='\t', lineterminator='\n')
+        for row in bedgraph_file:
+            data_bedgraph =[(row[0], int(row[1]), int(row[2]), float(row[3]))]
+            for k in range(len(key)):
+                data_sample_CHH = list(filter(lambda x: (x[0], x[1], x[2]) in data_CHH, data_bedgraph))
+                data_sample_CHG = list(filter(lambda x: (x[0], x[1], x[2]) in data_CHG, data_bedgraph))
+                data_sample_CpG = list(filter(lambda x: (x[0], x[1], x[2]) in data_CpG, data_bedgraph))
+                data_sample_GpC = list(filter(lambda x: (x[0], x[1], x[2]) in data_GpC, data_bedgraph))
+                if len(data_sample_CHH) != 0:
+                    modification_rate_CHH.append(tuple(itertools.chain([*[x[0] for x in data_sample_CHH], non_zero_div(sum([x[3] for x in data_sample_CHH]),len(data_sample_CHH))])))
+                if len(data_sample_CHG) != 0:
+                    modification_rate_CHG.append(tuple(itertools.chain([*[x[0] for x in data_sample_CHG], non_zero_div(sum([x[3] for x in data_sample_CHG]),len(data_sample_CHG))])))
+                if len(data_sample_CpG) != 0:
+                    modification_rate_CpG.append(tuple(itertools.chain([*[x[0] for x in data_sample_CpG], non_zero_div(sum([x[3] for x in data_sample_CpG]), len(data_sample_CpG))])))
+                if len(data_sample_GpC) != 0:
+                    modification_rate_GpC.append(tuple(itertools.chain([*[x[0] for x in data_sample_GpC], non_zero_div(sum([x[3] for x in data_sample_GpC]),len(data_sample_GpC))])))
+
+
+
+    with open(input_file + ".stats", 'a', newline='') as myfile:
+        wr = csv.writer(myfile, delimiter='\t', lineterminator='\n')
+        for k in range(len(key)):
+            if re.search(chrs, key[k]):
+                wr.writerow([genome, "CpG", round(non_zero_div(sum([x[1] for x in modification_rate_CpG]), len([x[1] for x in modification_rate_CpG])),3), len([x[1] for x in modification_rate_CpG])])
+                wr.writerow([genome, "CHH", round(non_zero_div(sum([x[1] for x in modification_rate_CHH]), len([x[1] for x in modification_rate_CHH])),3), len([x[1] for x in modification_rate_CHH])])
+                wr.writerow([genome, "CHG", round(non_zero_div(sum([x[1] for x in modification_rate_CHG]), len([x[1] for x in modification_rate_CHG])),3), len([x[1] for x in modification_rate_CHG])])
+                wr.writerow([genome, "GpC", round(non_zero_div(sum([x[1] for x in modification_rate_GpC]), len([x[1] for x in modification_rate_GpC])),3), len([x[1] for x in modification_rate_GpC])])
+            else:
+                wr.writerow([key[k], "CpG", round(non_zero_div(sum([x[1] for x in modification_rate_CpG if x[0] == key[k]]), len([x[1] for x in modification_rate_CpG if x[0] == key[k]])),3), len([x[1] for x in modification_rate_CpG if x[0] == key[k]])])
+                wr.writerow([key[k], "CHH", round(non_zero_div(sum([x[1] for x in modification_rate_CHH if x[0] == key[k]]), len([x[1] for x in modification_rate_CHH if x[0] == key[k]])),3), len([x[1] for x in modification_rate_CHH if x[0] == key[k]])])
+                wr.writerow([key[k], "CHG", round(non_zero_div(sum([x[1] for x in modification_rate_CHG if x[0] == key[k]]), len([x[1] for x in modification_rate_CHG if x[0] == key[k]])),3), len([x[1] for x in modification_rate_CHG if x[0] == key[k]])])
+                wr.writerow([key[k], "GpC", round(non_zero_div(sum([x[1] for x in modification_rate_GpC if x[0] == key[k]]), len([x[1] for x in modification_rate_GpC if x[0] == key[k]])),3), len([x[1] for x in modification_rate_GpC if x[0] == key[k]])])
 
 
 def non_zero_div(x, y):
@@ -10,131 +114,7 @@ def non_zero_div(x, y):
         return x / y
 
 
-
-
-data_bedgraph = []
-with open("/home/amygdala/Downloads/trial3/spikes/BS-free_spikes_bwa_L004-stotal.bedGraph") as bedgraph:
-    bedgraph_file = csv.reader(bedgraph, delimiter='\t', lineterminator='\n')
-    for row in bedgraph_file:
-        data_bedgraph.append((row[0], int(row[1]), int(row[2]), float(row[3])))
-
-
-key = []
-test_seq = []
-#with open("/media/gergana/DiscB1/Analysis/vcfs/mm9.fa", "rU") as handle:
-with open("/home/amygdala/Videos/all-spike-ins-bisulfite-free.fa", "rU") as handle:
-    for record in SeqIO.parse(handle, "fasta"):
-        key.append(record.id)
-        test_seq.append(record)
-
-
-
-for k in range(len(key)):
-    seqs = test_seq[k].seq
-    chars = []
-    CpG = []
-    CHG = []
-    CHH = []
-    HCG = []
-    GCH = []
-    for line in seqs:
-            chars.append(line)
-    fasta_seq = ''.join(chars)
-    chh_pat = re.compile("C(A|C|T)(A|T|C)", re.IGNORECASE)
-    for m in chh_pat.finditer(fasta_seq):
-        CHH.append(m.start())
-    chg_pat = re.compile("C(A|C|T)G", re.IGNORECASE)
-    for m in chg_pat.finditer(fasta_seq):
-        CHG.append(m.start())
-    hcg_pat = re.compile("(A|C|T)CG", re.IGNORECASE)
-    for m in hcg_pat.finditer(fasta_seq):
-        HCG.append(m.start() + 1)
-        HCG.append(m.start() + 2)
-    gch_pat = re.compile("GC(A|C|T)", re.IGNORECASE)
-    for m in gch_pat.finditer(fasta_seq):
-        GCH.append(m.start())
-        GCH.append(m.start() + 1)
-    cpg_pat = re.compile("CG", re.IGNORECASE)
-    for m in cpg_pat.finditer(fasta_seq):
-        CpG.append(m.start())
-        CpG.append(m.start() + 1)
-    data_CHH = [(key[k], each, each + 1) for each in CHH]
-    data_CHG = [(key[k], each, each + 1) for each in CHG]
-    data_CpG = [(key[k], each, each + 1) for each in CpG]
-    data_HCG = [(key[k], each, each + 1) for each in HCG]
-    data_GCH = [(key[k], each, each + 1) for each in GCH]
-    CHH_set = set(data_CHH)
-    CHG_set = set(data_CHG)
-    CpG_set = set(data_CpG)
-    HCG_set = set(data_HCG)
-    GCH_set = set(data_GCH)
-    data_sample_CHH = list(filter(lambda x: (x[0], x[1], x[2]) in CHH_set, data_bedgraph))
-    data_sample_CHG = list(filter(lambda x: (x[0], x[1], x[2]) in CHG_set, data_bedgraph))
-    data_sample_CpG = list(filter(lambda x: (x[0], x[1], x[2]) in CpG_set, data_bedgraph))
-    data_sample_HCG = list(filter(lambda x: (x[0], x[1], x[2]) in HCG_set, data_bedgraph))
-    data_sample_GCH = list(filter(lambda x: (x[0], x[1], x[2]) in GCH_set, data_bedgraph))
-    modification_rate_CHH = non_zero_div(sum([x[3] for x in data_sample_CHH]), len(data_sample_CHH))
-    modification_rate_CHG = non_zero_div(sum([x[3] for x in data_sample_CHG]), len(data_sample_CHG))
-    modification_rate_CpG = non_zero_div(sum([x[3] for x in data_sample_CpG]), len(data_sample_CpG))
-    modification_rate_HCG = non_zero_div(sum([x[3] for x in data_sample_HCG]), len(data_sample_HCG))
-    modification_rate_GCH = non_zero_div(sum([x[3] for x in data_sample_GCH]), len(data_sample_GCH))
-    with open("BSF3_L004_CHH.bedGraph", 'a', newline='') as myfile:
-        wr = csv.writer(myfile, delimiter='\t', lineterminator='\n')
-        for row in data_sample_CHH:
-            wr.writerow(row)
-    with open("BSF3_L004_CHG.bedGraph", 'a', newline='') as myfile:
-        wr = csv.writer(myfile, delimiter='\t', lineterminator='\n')
-        for row in data_sample_CHG:
-            wr.writerow(row)
-    with open("BSF3_L004_CpG.bedGraph", 'a', newline='') as myfile:
-        wr = csv.writer(myfile, delimiter='\t', lineterminator='\n')
-        for row in data_sample_CpG:
-            wr.writerow(row)
-    with open("BSF3_L004_HCG.bedGraph", 'a', newline='') as myfile:
-        wr = csv.writer(myfile, delimiter='\t', lineterminator='\n')
-        for row in data_sample_HCG:
-            wr.writerow(row)
-    with open("BSF3_L004_GCH.bedGraph", 'a', newline='') as myfile:
-        wr = csv.writer(myfile, delimiter='\t', lineterminator='\n')
-        for row in data_sample_GCH:
-            wr.writerow(row)
-    with open("BSF3_L004_GCH.bedGraph", 'a', newline='') as myfile:
-        wr = csv.writer(myfile, delimiter='\t', lineterminator='\n')
-        wr.writerow([key[k], "GCH", modification_rate_GCH])
-    with open("BSF3_L004.stats", 'a', newline='') as myfile:
-        wr = csv.writer(myfile, delimiter='\t', lineterminator='\n')
-        wr.writerow([key[k], "CpG", round(modification_rate_CpG,3), len(data_CpG)])
-        wr.writerow([key[k], "CHH", round(modification_rate_CHH,3), len(data_CHH)])
-        wr.writerow([key[k], "CHG", round(modification_rate_CHG,3), len(data_CHG)])
-        wr.writerow([key[k], "GCH", round(modification_rate_GCH,3), len(data_GCH)])
-        wr.writerow([key[k], "HCG", round(modification_rate_HCG,3), len(data_HCG)])
-
-#modification_rate_CHH = non_zero_div(sum([x[3] for x in data_sample_CHH]), len(data_sample_CHH))
-#pos_modification_rate_CHH = non_zero_div(sum([x[3] for x in data_sample_CHH if x[3] >= modification_rate_CHH]), len([x[3] for x in data_sample_CHH if x[3] >= modification_rate_CHH])
-
-
-
-
-                    # with open("allchromCHH.bed", 'a', newline='') as myfile:
-    #     wr = csv.writer(myfile, delimiter='\t', lineterminator='\n')
-    #     for row in data_CHH:
-    #         wr.writerow(row)
-    # with open("allchromCHG.bed", 'a', newline='') as myfile:
-    #     wr = csv.writer(myfile, delimiter='\t', lineterminator='\n')
-    #     for row in data_CHG:
-    #         wr.writerow(row)
-    # with open("allchromCpG.bed", 'a', newline='') as myfile:
-    #     wr = csv.writer(myfile, delimiter='\t', lineterminator='\n')
-    #     for row in data_CpG:
-    #         wr.writerow(row)
-    # with open("allchromHCG.bed", 'a', newline='') as myfile:
-    #     wr = csv.writer(myfile, delimiter='\t', lineterminator='\n')
-    #     for row in data_HCG:
-    #         wr.writerow(row)
-    # with open("allchromGCH.bed", 'a', newline='') as myfile:
-    #     wr = csv.writer(myfile, delimiter='\t', lineterminator='\n')
-    #     for row in data_GCH:
-    #         wr.writerow(row)
-
+if __name__ == '__main__':
+    stater_exec()
 
 
