@@ -1,7 +1,6 @@
 import click
 import itertools
 import csv
-import logging
 from Bio import SeqIO
 import gzip
 
@@ -28,19 +27,19 @@ def phredder(input_file):
 
     def non_zero_div(x, y):
         if y == 0:
+            return "NA"
+        elif x == 0:
             return 0
         else:
             return x / y
 
     try:
-        user_input1 = input_file + ".fastq.gz"
-        #user_input2 = input_file + ".fq.gz"
 
 
         print("Lets begin.")
 
         cycle_count = 0
-        with gzip.open(user_input1, "rt") as handle:
+        with gzip.open(input_file + ".fastq.gz", "rt") as handle:
             print("Open file.")
             record_iter = SeqIO.parse(handle, "fastq")
             print("Iterator ready.")
