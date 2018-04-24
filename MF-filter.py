@@ -9,7 +9,7 @@ def filter_exec(input_file, output_file):
 
 def filter(input_file, output_file):
     '''input_file is full name .bam file
-    output_filr is file name without extension
+    output_file is file name without extension
     '''
     try:
         inbam = pysam.AlignmentFile(input_file, "rb")
