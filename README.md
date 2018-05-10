@@ -11,17 +11,17 @@ _Let us have an example paired-end sequencing data from step 1 called TAPS_mESC_
   ```
   bwa mem /dir/mm9.fa TAPS_mESC_L001_R1.fastq.gz TAPS_mESC_L001_R2.fastq.gz  | samtools view -bS > TAPS_mESC_L001.bam
   ```
-3. Use MF_split.py to separate the sequencing reads coming from the original top (OT) and original bottom (OB) strand.  
+3. Use MF-split.py to separate the sequencing reads coming from the original top (OT) and original bottom (OB) strand.  
   ```
- python3 MF_split.py --input_file TAPS_mESC_L001.bam
+ python3 MF-split.py --input_file TAPS_mESC_L001.bam
   ```
 4. Call variants on the OT and OB strand separately.  
   ```
   samtools mplieup -t "DP,ADF,ADR,AD" -v -f /dir/mm9.fa  TAPS_mESC_LOO1_OT/OB.bam > TAPS_mESC_LOO1_OT/OB.vcf.gz
   ```
-5. Summon MF_callerMOD.py for the modifcation calling. The current version does not require splitting by chromosomes, and can give both at least 1x covered positions only (default mode), or 0x covered and above ('--zero coverage option'). The default mode has some speed advantage, so if running with 0x option, splitting by chromosome prior to the modification calling might be useful.  
+5. Summon MF-callerMOD.py for the modifcation calling. The current version does not require splitting by chromosomes, and can give both at least 1x covered positions only (default mode), or 0x covered and above ('--zero coverage option'). The default mode has some speed advantage, so if running with 0x option, splitting by chromosome prior to the modification calling might be useful.  
   ```
-  python3 MF_callerMOD.py --input_file TAPS_mESC_LOO1_OT/OB.vcf.gz --fasta_file /dir/mm9.fa (--zero_coverage)
+  python3 MF-callerMOD.py --input_file TAPS_mESC_LOO1_OT/OB.vcf.gz --fasta_file /dir/mm9.fa (--zero_coverage)
   ```
   
 ### Recommendations and extras
@@ -34,18 +34,19 @@ _Let us have an example paired-end sequencing data from step 1 called TAPS_mESC_
   ```
   clipOverlap -in TAPS_mESC_LOO1_OT/OB.bam --out TAPS_mESC_LOO1_OT/OB_clipped.bam
   ```
-4. A script enabling you to split your bam files by chromosome is MF_chrom_split.py, a handy option that can enable you to run scipts in parallel. We split by chromosome before using samtools mpileup followed by MF_callerMOD.py:  
+4. A script enabling you to split your bam files by chromosome is MF-chrom_split.py, a handy option that can enable you to run scipts in parallel. We split by chromosome before using samtools mpileup followed by MF-callerMOD.py:  
   4.1.  ```
         samtools index TAPS_mESC_LOO1_OT/OB.bam
         ```  
   4.2. ```
-      python3 MF_chrom_split.py --input_file TAPS_mESC_LOO1_OT/OB.bam --fasta_file /dir/mm9.fa
+      python3 MF-chrom_split.py --input_file TAPS_mESC_LOO1_OT/OB.bam --fasta_file /dir/mm9.fa
        ```
-5. Some more scripts can give your fuller information about the sequencing calling. Currently in this category is MF_phredder.py that outputs the average quality per read (if available) for each of the four bases T, C, A, G.  
-  ```
-  python3 MF_phredder.py --input_file TAPS_mESC_L001_R1.fastq.gz
-  ```
-
-
+5. Some more scripts can give your fuller information about the sequencing calling. Currently in this category are MF-phredder.py that outputs the average quality per read (if available) for each of the four bases T, C, A, G, and MF_Mbias.py that gives modification bias along the reads in tabular format and as an image.  
+  5.1.  ```
+        python3 MF-phredder.py --input_file TAPS_mESC_L001_R1.fastq.gz
+        ```  
+  5.2. ```
+      python3 MF-Mbias.py --input_file TAPS_mESC_LOO1_OT/OB.bam --read_length N 
+       ```
 
 
