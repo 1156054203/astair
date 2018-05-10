@@ -1,21 +1,21 @@
 import click
 import pysam
+import re
 
 @click.command()
-@click.argument('input_file')
-@click.argument('output_file')
-def filter_exec(input_file, output_file):
-    filter(input_file, output_file)
+@click.option('input_file', '--input_file', required=True, help='BAM format file containing sequencing reads.')
+def filter_exec(input_file):
+    filter(input_file)
 
-def filter(input_file, output_file):
-    '''input_file is full name .bam file
-    output_file is file name without extension
-    '''
+def filter(input_file):
+
+    name = re.search(r'^.*(?=.bam)', input_file).group()
+    
     try:
         inbam = pysam.AlignmentFile(input_file, "rb")
         bam_fetch = inbam.fetch(until_eof=True)
-        outbamOT = pysam.AlignmentFile(output_file+"OT.bam", "wb", template = inbam)
-        outbamOB = pysam.AlignmentFile(output_file+"OB.bam", "wb", template = inbam) 
+        outbamOT = pysam.AlignmentFile(name+"OT.bam", "wb", template = inbam)
+        outbamOB = pysam.AlignmentFile(name+"OB.bam", "wb", template = inbam) 
         for read in bam_fetch:
             if read.flag == 99 or read.flag == 147:
                 outbamOT.write(read)

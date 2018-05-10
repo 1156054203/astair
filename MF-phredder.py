@@ -1,19 +1,19 @@
 import click
 import itertools
 import csv
+import re
 from Bio import SeqIO
 import gzip
 
 
 @click.command()
-@click.argument('input_file')
+@click.option('input_file', '--input_file', required=True, help='Sequencing reads file in fastq.gz format')
 def phredder_exec(input_file):
     phredder(input_file)
 
 def phredder(input_file):
-    '''input_file is file name without extension
-    '''
 
+    name = re.search(r'^.*(?=.fastq.gz)', input_file).group()
 
     Phred_T_sum = 0
     Phred_T_len = 0
@@ -35,11 +35,10 @@ def phredder(input_file):
 
     try:
 
-
         print("Lets begin.")
 
         cycle_count = 0
-        with gzip.open(input_file + ".fastq.gz", "rt") as handle:
+        with gzip.open(input_file, "rt") as handle:
             print("Open file.")
             record_iter = SeqIO.parse(handle, "fastq")
             print("Iterator ready.")
@@ -58,7 +57,7 @@ def phredder(input_file):
                 Phred_G_sum = sum(guanines) + Phred_G_sum
                 Phred_G_len = len(guanines) + Phred_G_len
                 read_values = [non_zero_div(sum(thymines), len(thymines)), non_zero_div(sum(cytosines), len(cytosines)), non_zero_div(sum(adenines), len(adenines)), non_zero_div(sum(guanines), len(guanines))]
-                with open(input_file + ".Phred.txt", 'a', newline='') as myfile:
+                with open(name + ".Phred.txt", 'a', newline='') as myfile:
                     wr = csv.writer(myfile, delimiter='\t', lineterminator='\n')
                     wr.writerow(read_values)
                 if cycle_count%100000==0:

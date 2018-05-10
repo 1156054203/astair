@@ -3,33 +3,31 @@ import pysam
 import re
 from multiprocessing import Process
 import itertools
+import re
 
 
 @click.command()
-@click.argument('input_file')
-@click.argument('bases_noncpg')
+@click.option('input_file', '--input_file', required=True, help='BAM format file containing sequencing reads.')
+@click.option('bases_noncpg', '--bases_noncpg', default = 3, type= int, help='The number of cytosines conversion events in CpH content to consider the read for removal. Default value is 3.')
 def filter3T_exec(input_file, bases_noncpg):
     filter3T(input_file, bases_noncpg)
 
 def filter3T(input_file, bases_noncpg):
-    '''input_file is file name without extension
-    bases_noncpg is the number of non-cpg conversion events to consider the read for removal
-    '''
 
-# try:
+    name = re.search(r'^.*(?=.bam)', input_file).group()
 
-    p1 = Process(target=single_strander, args=(input_file, "OT", bases_noncpg))
-    p2 = Process(target=single_strander, args=(input_file, "OB", bases_noncpg))
+    p1 = Process(target=single_strander, args=(name, "OT", bases_noncpg))
+    p2 = Process(target=single_strander, args=(name, "OB", bases_noncpg))
 
     p1.start()
     p2.start()
 
 
-def single_strander(input_file, strand, bases_noncpg):
-    inbam = pysam.AlignmentFile(input_file+strand+".bam", "rb")
+def single_strander(name, strand, bases_noncpg):
+    inbam = pysam.AlignmentFile(name+strand+".bam", "rb")
     bam_fetch = inbam.fetch(until_eof=True)
-    outbam3T = pysam.AlignmentFile(input_file+"3T_"+strand+".bam", "wb", template=inbam)
-    removed3T = pysam.AlignmentFile(input_file+"removed_" + strand+".bam", "wb", template=inbam)
+    outbam3T = pysam.AlignmentFile(name+"3T_"+strand+".bam", "wb", template=inbam)
+    removed3T = pysam.AlignmentFile(name+"removed_" + strand+".bam", "wb", template=inbam)
     if strand == "OT":
         regs = "(?:.*C.*)" * int(bases_noncpg)
         ch = "(C)(A|C|T)(A|T|C|G)"
