@@ -8,6 +8,7 @@ import matplotlib.pyplot as pyp
 pyp.style.use('seaborn-whitegrid')
 
 
+
 @click.command()
 @click.option('input_file', '--input_file', required=True, help='BAM format file containing sequencing reads.')
 @click.option('read_length', '--read_length', type=int, required=True, help='The read length is needed to calculate the M-bias.')
@@ -37,20 +38,21 @@ def Mbias(input_file, read_length):
     bam_fetch = inbam.fetch(until_eof=True)
     for read in bam_fetch:
         if read.flag == 99 or read.flag == 83:
-            if isinstance(read.tags[0][1], str):
+            if isinstance(read.tags[0][1], str) and read.tags[0][0] == 'MD':
                 read_data = read.tags[0][1]
-            elif isinstance(read.tags[1][1], str):
+            elif isinstance(read.tags[1][1], str) and read.tags[0][0] == 'MD':
                 read_data = read.tags[1][1]
             if re.search(regs, read_data, re.IGNORECASE):
                 changes = [int(s) for s in re.findall(r'\d+', read_data)]
                 non_overlap = [x + 1 if x == 0 else x for x in changes]
                 names = list(re.findall(r'[^\W\d_]+', read_data))
                 positions = [x + 1 for x in list(itertools.accumulate(non_overlap))]
-                positions = positions[:-1]
                 sequence = list(read.query_sequence)
+                positions = [x for x in positions if x <= len(sequence)]
                 for k in range(len(positions) - 1):
-                    element = positions[k]
-                    sequence[element] = names[k]
+                    if len(names[k]) == 1:
+                        element = positions[k]
+                        sequence[element] = names[k]
                 reads = "".join(sequence)
                 cpg_all = [m.start() for m in re.finditer(r'CG', reads, re.IGNORECASE)]
                 chg_all = [m.start() for m in re.finditer(r'C(A|C|T)G', reads, re.IGNORECASE)]
@@ -58,14 +60,14 @@ def Mbias(input_file, read_length):
                 cpg_mods = [x for x in positions if x in cpg_all]
                 chg_mods = [x for x in positions if x in chg_all]
                 chh_mods = [x for x in positions if x in chh_all]
-                for i in range(0,len(reads)):
+                for i in range(0, len(reads)):
                     if i in chh_mods:
                         read1_mods_CHH[i] += 1
                     if i in chg_mods:
                         read1_mods_CHG[i] += 1
                     if i in cpg_mods:
                         read1_mods_CpG[i] += 1
-                for i in range(0,len(reads)):
+                for i in range(0, len(reads)):
                     if i in chh_all:
                         read1_all_CHH[i] += 1
                     if i in chg_all:
@@ -77,7 +79,7 @@ def Mbias(input_file, read_length):
                 reads = "".join(sequence)
                 cpg_all = [m.start() for m in re.finditer(r'CG', reads, re.IGNORECASE)]
                 chg_all = [m.start() for m in re.finditer(r'C(A|C|T)G', reads, re.IGNORECASE)]
-                chh_all = [m.start()  for m in re.finditer(r'C(A|C|T)(A|T|C)', reads, re.IGNORECASE)]
+                chh_all = [m.start() for m in re.finditer(r'C(A|C|T)(A|T|C)', reads, re.IGNORECASE)]
                 for i in range(0,len(reads)):
                     if i in chh_all:
                         read1_all_CHH[i] += 1
@@ -86,20 +88,21 @@ def Mbias(input_file, read_length):
                     if i in cpg_all:
                         read1_all_CpG[i] += 1
         if read.flag == 147 or read.flag == 163:
-            if isinstance(read.tags[0][1], str):
+            if isinstance(read.tags[0][1], str) and read.tags[0][0] == 'MD':
                 read_data = read.tags[0][1]
-            elif isinstance(read.tags[1][1], str):
+            elif isinstance(read.tags[1][1], str) and read.tags[1][0] == 'MD':
                 read_data = read.tags[1][1]
             if re.search(regs, read_data, re.IGNORECASE):
                 changes = [int(s) for s in re.findall(r'\d+', read_data)]
                 non_overlap = [x + 1 if x == 0 else x for x in changes]
                 names = list(re.findall(r'[^\W\d_]+', read_data))
                 positions = [x + 1 for x in list(itertools.accumulate(non_overlap))]
-                positions = positions[:-1]
                 sequence = list(read.query_sequence)
+                positions = [x for x in positions if x <= len(sequence)]
                 for k in range(len(positions) - 1):
-                    element = positions[k]
-                    sequence[element] = names[k]
+                    if len(names[k]) == 1:
+                        element = positions[k]
+                        sequence[element] = names[k]
                 reads = "".join(sequence)
                 cpg_all = [m.start() for m in re.finditer(r'CG', reads, re.IGNORECASE)]
                 chg_all = [m.start() for m in re.finditer(r'C(A|C|T)G', reads, re.IGNORECASE)]
@@ -107,14 +110,14 @@ def Mbias(input_file, read_length):
                 cpg_mods = [x for x in positions if x in cpg_all]
                 chg_mods = [x for x in positions if x in chg_all]
                 chh_mods = [x for x in positions if x in chh_all]
-                for i in range(0,len(reads)):
+                for i in range(0, len(reads)):
                     if i in chh_mods:
                         read2_mods_CHH[i] += 1
                     if i in chg_mods:
                         read2_mods_CHG[i] += 1
                     if i in cpg_mods:
                         read2_mods_CpG[i] += 1
-                for i in range(0,len(reads)):
+                for i in range(0, len(reads)):
                     if i in chh_all:
                         read2_all_CHH[i] += 1
                     if i in chg_all:
@@ -231,6 +234,7 @@ read2_mods_CHG = {}
 read2_mods_CpG = {}
 
 regs = "(?:.*C.*)"
+
 
 def non_zero_div(x, y):
     if y == 0:

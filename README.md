@@ -41,7 +41,7 @@ _Let us have an example paired-end sequencing data from step 1 called TAPS_mESC_
   4.2. ```
       python3 MF-chrom_split.py --input_file TAPS_mESC_LOO1_OT/OB.bam --fasta_file /dir/mm9.fa
        ```
-5. Some more scripts can give your fuller information about the sequencing calling. Currently in this category are MF-phredder.py that outputs the average quality per read (if available) for each of the four bases T, C, A, G, and MF_Mbias.py that gives modification bias along the reads in tabular format and as an image.  
+5. Some more scripts can give your fuller information about the sequencing calling. Currently, in this category are MF-phredder.py that outputs the average quality per read (if available) for each of the four bases T, C, A, G, and MF-Mbias.py that gives modification bias along the reads in tabular format and as an image.  
   5.1.  ```
         python3 MF-phredder.py --input_file TAPS_mESC_L001_R1.fastq.gz
         ```  
