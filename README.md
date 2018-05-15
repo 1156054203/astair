@@ -19,7 +19,7 @@ _Let us have an example paired-end sequencing data from step 1 called TAPS_mESC_
   ```
   samtools mplieup -t "DP,ADF,ADR,AD" -v -f /dir/mm9.fa  TAPS_mESC_LOO1_OT/OB.bam > TAPS_mESC_LOO1_OT/OB.vcf.gz
   ```
-5. Summon MF-callerMOD.py for the modifcation calling. The current version does not require splitting by chromosomes, and can give both at least 1x covered positions only (default mode), or 0x covered and above ('--zero coverage option'). The default mode has some speed advantage, so if running with 0x option, splitting by chromosome prior to the modification calling might be useful.  
+5. Summon MF-callerMOD.py for the modifcation calling. The current version does not require splitting by chromosomes, and can give both at least 1x covered positions only (default mode), or 0x covered and above ('--zero coverage' option). The default mode has some speed advantage, so if running with 0x option, splitting by chromosome prior to the modification calling might be useful.  
   ```
   python3 MF-callerMOD.py --input_file TAPS_mESC_LOO1_OT/OB.vcf.gz --fasta_file /dir/mm9.fa (--zero_coverage)
   ```
@@ -32,7 +32,7 @@ _Let us have an example paired-end sequencing data from step 1 called TAPS_mESC_
 
 3. Check the fragment (insert) size distribution and decide on overlap removal method for paired-end reads. The simplest option is *-x* added to the samtools mpileup command, but we prefered bamUtil tool clipOverlap before calling variants.  
   ```
-  clipOverlap -in TAPS_mESC_LOO1_OT/OB.bam --out TAPS_mESC_LOO1_OT/OB_clipped.bam
+  clipOverlap --in TAPS_mESC_LOO1_OT/OB.bam --out TAPS_mESC_LOO1_OT/OB_clipped.bam
   ```
 4. A script enabling you to split your bam files by chromosome is MF-chrom_split.py, a handy option that can enable you to run scipts in parallel. We split by chromosome before using samtools mpileup followed by MF-callerMOD.py:  
   4.1.  ```
