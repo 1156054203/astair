@@ -34,7 +34,7 @@ _Let us have an example paired-end sequencing data from step 1 called TAPS_mESC_
   ```
   clipOverlap --in TAPS_mESC_LOO1_OT/OB.bam --out TAPS_mESC_LOO1_OT/OB_clipped.bam
   ```
-4. A script enabling you to split your bam files by chromosome is MF-chrom_split.py, a handy option that can enable you to run scipts in parallel. We split by chromosome before using samtools mpileup followed by MF-callerMOD.py:  
+4. A script enabling you to split your bam files by chromosome is MF-chrom_split.py, a handy option that can assist you to run scipts in parallel. We split by chromosome before using samtools mpileup followed by MF-callerMOD.py:  
   4.1.  ```
         samtools index TAPS_mESC_LOO1_OT/OB.bam
         ```  
