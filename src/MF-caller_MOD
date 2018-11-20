@@ -132,6 +132,19 @@ def caller(input_file, fasta_file, zero_coverage):
                 wr.writerow(["CHROM", "START", "END", "MOD_LEVEL", "MOD", "NMOD", "ALT", "REF", "DEPTH", "CONTEXT"])
             for row in data_mods:
                 wr.writerow(row)
+                
+                
+    def inverser(letter):
+        if letter == 'C':
+            letter = 'G'
+        elif letter == 'G':
+            letter = 'C'
+        elif letter == 'A':
+            letter = 'T'
+        elif letter == 'T':
+            letter = 'A'
+        return letter
+    
 
     def variants_aggregator(row_data, alele, REF_base, ALT_base):
         cycle = datetime.now()
@@ -156,8 +169,12 @@ def caller(input_file, fasta_file, zero_coverage):
         index_mod = [(x[0], x.index(ALT_base) - 2) for x in indexed if ALT_base in x[:] and REF_base in x[1]]
         set_mod = [x[0] for x in index_mod]
         index_nmod = list(filter(lambda x: x not in set_mod, index_all))
-        data_mod = [(chrom[i], pos[i] - 1, pos[i], mods[i, k]/(org[i] + mods[i, k]), mods[i, k], org[i], ALT_base, REF_base, depth[i], ref[i]+ref[i+1]+ref[i+2] if i + 2 <= len(ref) - 1 and chrom[i] == chrom[i+2] else ref[i]) for n in range(int(len(index_mod)/crows) + 1) for i, k in index_mod[n * crows:n * crows + crows]]
-        data_nmod = [(chrom[i], pos[i] - 1, pos[i], 0, 0, org[i], ALT_base, REF_base, depth[i], ref[i]+ref[i+1]+ref[i+2] if i + 2 <= len(ref) - 1 and chrom[i] == chrom[i+2] else ref[i]) for n in range(int(len(index_nmod)/crows) + 1) for i in index_nmod[n * crows:n * crows + crows]]
+        if REF_base == 'C':
+            data_mod = [(chrom[i], pos[i] - 1, pos[i], mods[i, k]/(org[i] + mods[i, k]), mods[i, k], org[i], ALT_base, REF_base, depth[i], ref[i]+ref[i+1]+ref[i+2] if i + 2 <= len(ref) - 1 and chrom[i] == chrom[i+2] else ref[i]) for n in range(int(len(index_mod)/crows) + 1) for i, k in index_mod[n * crows:n * crows + crows]]
+            data_nmod = [(chrom[i], pos[i] - 1, pos[i], 0, 0, org[i], ALT_base, REF_base, depth[i], ref[i]+ref[i+1]+ref[i+2] if i + 2 <= len(ref) - 1 and chrom[i] == chrom[i+2] else ref[i]) for n in range(int(len(index_nmod)/crows) + 1) for i in index_nmod[n * crows:n * crows + crows]]
+        else:
+            data_mod = [(chrom[i], pos[i] - 1, pos[i], mods[i, k]/(org[i] + mods[i, k]), mods[i, k], org[i], ALT_base, REF_base, depth[i], inverser(ref[i])+inverser(ref[i+1])+inverser(ref[i+2]) if i + 2 <= len(ref) - 1 and chrom[i] == chrom[i+2] else inverser(ref[i])) for n in range(int(len(index_mod)/crows) + 1) for i, k in index_mod[n * crows:n * crows + crows]]
+            data_nmod = [(chrom[i], pos[i] - 1, pos[i], 0, 0, org[i], ALT_base, REF_base, depth[i], inverser(ref[i])+inverser(ref[i+1])+inverser(ref[i+2]) if i + 2 <= len(ref) - 1 and chrom[i] == chrom[i+2] else inverser(ref[i])) for n in range(int(len(index_nmod)/crows) + 1) for i in index_nmod[n * crows:n * crows + crows]]
         position = max(data_nmod[-1][1], data_mod[-1][1])
         if zero_coverage == True:
             for tuples in data_context:

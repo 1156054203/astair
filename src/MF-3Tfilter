@@ -5,7 +5,7 @@ import pysam
 import re
 from multiprocessing import Process
 import itertools
-import re
+
 
 
 @click.command()
