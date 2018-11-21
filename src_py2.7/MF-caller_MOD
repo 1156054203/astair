@@ -1,16 +1,17 @@
-#!/usr/bin/env python3
+#!/usr/bin/env python2
 
+from __future__ import division
 import click
 import allel
 import itertools
 import csv
 import re
 import numpy
-from array import array
 from datetime import datetime
 from Bio import SeqIO
 import ahocorasick
 import warnings
+
 
 
 @click.command()
@@ -39,8 +40,7 @@ def caller(input_file, fasta_file, zero_coverage,  directory):
 
     if list(directory)[-1]!="/":
         directory = directory + "/"
-        
-        
+
     record_iter = SeqIO.parse(open(fasta_file), "fasta")
 
     time_b = datetime.now()
@@ -97,7 +97,7 @@ def caller(input_file, fasta_file, zero_coverage,  directory):
 
     time_d = datetime.now()
 
-    print("Cytosine positions are loaded. {}".format((time_d - time_b).total_seconds()))
+    print "Cytosine positions are loaded. {}".format((time_d - time_b).total_seconds())
 
     def splitter_mods(input_file, strand):
         file_fields, file_samples, file_headers, file_iter = allel.iter_vcf_chunks(input_file, fields='*', alt_number=4,
@@ -143,14 +143,13 @@ def caller(input_file, fasta_file, zero_coverage,  directory):
         return result
 
     def data_writer(input_name, data_mods, header = False):
-        with open(input_name, 'a', newline='') as myfile:
+        with open(input_name, 'a') as myfile:
             wr = csv.writer(myfile, delimiter='\t', lineterminator='\n')
             if header:
                 wr.writerow(["CHROM", "START", "END", "MOD_LEVEL", "MOD", "NMOD", "ALT", "REF", "DEPTH", "CONTEXT"])
             for row in data_mods:
                 wr.writerow(row)
 
-            
     def inverser(letter):
         if letter == 'C':
             letter = 'G'
@@ -162,7 +161,21 @@ def caller(input_file, fasta_file, zero_coverage,  directory):
             letter = 'A'
         return letter
 
-        
+    def changer(element):
+        if element == u'C':
+            element = 'C'
+        if element == u'T':
+            element = 'T'
+        if element == u'A':
+            element = 'A'
+        if element == u'G':
+            element = 'G'
+        if element == u'':
+            element = ''
+        if element == u'<*>':
+            element = '<*>'
+        return element
+
     def variants_aggregator(row_data, alele, REF_base, ALT_base):
         cycle = datetime.now()
         totals_context = {}
@@ -172,26 +185,29 @@ def caller(input_file, fasta_file, zero_coverage,  directory):
         not_indel = [x[0] for x in index_indel if x[1] == 0]
         chrom = row_data['variants/CHROM'][not_indel]
         pos = row_data['variants/POS'][not_indel]
-        ref = row_data['variants/REF'][not_indel]
-        alt = row_data['variants/ALT'][not_indel]
+        ref = [changer(x) for x in row_data['variants/REF'][not_indel]]
+        alt = [(changer(x[0]), changer(x[1]), changer(x[2]), changer(x[3])) for x in row_data['variants/ALT'][not_indel]]
         mods = row_data[alele][not_indel, 0, 1:]
         org = row_data[alele][not_indel, 0, 0]
         depth = row_data['calldata/DP'][not_indel, 0]
-        results = [(i, *j, d) for i, j, d in itertools.zip_longest(ref, alt, depth, fillvalue='BLANK')]
-        zipper = itertools.zip_longest(chrom, pos, fillvalue='BLANK')
+        results = [(i, j[0], j[1], j[2], j[3], d) for i, j, d in itertools.izip_longest(ref, alt, depth, fillvalue='BLANK')]
+        zipper = itertools.izip_longest(chrom, pos, fillvalue='BLANK')
         for element in zipper:
             totals_found[element] = 1
-        indexed = [(i, *j) for i, j in enumerate(results)]
+        indexed = [(i, j[0], j[1], j[2], j[3], j[4], j[5]) for i, j in enumerate(results)]
         index_all = [x[0] for x in indexed if REF_base in x[1]]
         index_mod = [(x[0], x.index(ALT_base) - 2) for x in indexed if ALT_base in x[:] and REF_base in x[1]]
         set_mod = [x[0] for x in index_mod]
         index_nmod = list(filter(lambda x: x not in set_mod, index_all))
+        var1 = int(len(index_mod)/crows)
+        var2 = var1*crows
+        var3 = var2+crows
         if REF_base == 'C':
-            data_mod = [(chrom[i], pos[i] - 1, pos[i], mods[i, k]/(org[i] + mods[i, k]), mods[i, k], org[i], ALT_base, REF_base, depth[i], ref[i]+ref[i+1]+ref[i+2] if i + 2 <= len(ref) - 1 and chrom[i] == chrom[i+2] else ref[i]) for n in range(int(len(index_mod)/crows) + 1) for i, k in index_mod[n * crows:n * crows + crows]]
-            data_nmod = [(chrom[i], pos[i] - 1, pos[i], 0, 0, org[i], ALT_base, REF_base, depth[i], ref[i]+ref[i+1]+ref[i+2] if i + 2 <= len(ref) - 1 and chrom[i] == chrom[i+2] else ref[i]) for n in range(int(len(index_nmod)/crows) + 1) for i in index_nmod[n * crows:n * crows + crows]]
+            data_mod = [(chrom[i], pos[i] - 1, pos[i], mods[i, k]/(org[i] + mods[i, k]), mods[i, k], org[i], ALT_base, REF_base, depth[i], ref[i]+ref[i+1]+ref[i+2] if i + 2 <= len(ref) - 1 and chrom[i] == chrom[i+2] else ref[i])  for i, k in index_mod[var2:var3]]
+            data_nmod = [(chrom[i], pos[i] - 1, pos[i], 0, 0, org[i], ALT_base, REF_base, depth[i], ref[i]+ref[i+1]+ref[i+2] if i + 2 <= len(ref) - 1 and chrom[i] == chrom[i+2] else ref[i]) for i in index_nmod[var2:var3]]
         else:
-            data_mod = [(chrom[i], pos[i] - 1, pos[i], mods[i, k]/(org[i] + mods[i, k]), mods[i, k], org[i], ALT_base, REF_base, depth[i], inverser(ref[i])+inverser(ref[i-1])+inverser(ref[i-2]) if i + 2 <= len(ref) - 1 and chrom[i] == chrom[i+2] else inverser(ref[i])) for n in range(int(len(index_mod)/crows) + 1) for i, k in index_mod[n * crows:n * crows + crows]]
-            data_nmod = [(chrom[i], pos[i] - 1, pos[i], 0, 0, org[i], ALT_base, REF_base, depth[i], inverser(ref[i])+inverser(ref[i-1])+inverser(ref[i-2]) if i + 2 <= len(ref) - 1 and chrom[i] == chrom[i+2] else inverser(ref[i])) for n in range(int(len(index_nmod)/crows) + 1) for i in index_nmod[n * crows:n * crows + crows]]
+            data_mod = [(chrom[i], pos[i] - 1, pos[i], mods[i, k] / (org[i] + mods[i, k]), mods[i, k], org[i], ALT_base, REF_base, depth[i], inverser(ref[i]) + inverser(ref[i-1]) + inverser(ref[i-2]) if i + 2 <= len(ref) - 1 and chrom[i] == chrom[i + 2] else inverser(ref[i])) for i, k in index_mod[var2:var3]]
+            data_nmod = [(chrom[i], pos[i] - 1, pos[i], 0, 0, org[i], ALT_base, REF_base, depth[i], inverser(ref[i]) + inverser(ref[i-1]) + inverser(ref[i-2]) if i + 2 <= len(ref) - 1 and chrom[i] == chrom[i + 2] else inverser(ref[i])) for i in index_nmod[var2:var3]]
         if len(data_nmod) >= 1 and len(data_mod) >= 1:
             position = max(data_nmod[-1][1], data_mod[-1][1])
         elif len(data_nmod) >= 1:
@@ -266,12 +282,13 @@ def caller(input_file, fasta_file, zero_coverage,  directory):
         mean_nmod['CHH'] += sum([x[5] for x in data_mod if re.match(r"(?=(C(A|C|T)(A|C|T)))", x[9])])
         mean_nmod['Unknown'] += sum([x[5] for x in data_mod if len(x[9]) == 1])
 
-    it_OT = splitter_mods(directory+name+'OT.vcf.gz', 'OT')
-    it_OB = splitter_mods(directory+name+'OB.vcf.gz', 'OB')
+
+    it_OT = splitter_mods(str(directory+name+'OT.vcf.gz'), 'OT')
+    it_OB = splitter_mods(str(directory+name+'OB.vcf.gz'), 'OB')
 
     first_iteration = True
     if zero_coverage == True:
-        for row_OT, row_OB in itertools.zip_longest(it_OT, it_OB):
+        for row_OT, row_OB in itertools.izip_longest(it_OT, it_OB):
             if row_OB is not None and row_OT is not None:
                 row_OT[0].extend(row_OB[0])
                 row_OT[1].extend(row_OB[1])
@@ -315,7 +332,7 @@ def caller(input_file, fasta_file, zero_coverage,  directory):
                 data_writer(directory+name + 'total.mods', row_OB[0], header=first_iteration)
                 first_iteration = False
     else:
-        for row_OT, row_OB in itertools.zip_longest(it_OT, it_OB):
+        for row_OT, row_OB in itertools.izip_longest(it_OT, it_OB):
             if row_OB is not None and row_OT is not None:
                 row_OT.extend(row_OB)
                 row_OT.sort(key=lambda x: x[0:2])
@@ -327,8 +344,8 @@ def caller(input_file, fasta_file, zero_coverage,  directory):
             elif row_OB is not None:
                 data_writer(directory+name + 'total.mods', row_OB, header=first_iteration)
                 first_iteration = False
-
-
+                
+                
     with open(directory+name + ".stats", 'a') as myfile:
         wr = csv.writer(myfile, delimiter='\t', lineterminator='\n')
         wr.writerow(["_____________________________________________________________________________________________________________________________"])
@@ -341,10 +358,8 @@ def caller(input_file, fasta_file, zero_coverage,  directory):
         wr.writerow(["_____________________________________________________________________________________________________________________________"])
 
 
-
-
     time_e = datetime.now()
-    print("asTair modification finder finished running. {}".format((time_e - time_b).total_seconds()))
+    print "asTair modification finder finished running. {}".format((time_e - time_b).total_seconds())
 
 index_occ = []
 sequences_key = dict()
