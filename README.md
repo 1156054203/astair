@@ -3,6 +3,17 @@
 ## A little tool for analysis of bisulfite-free and base-resolution sequencing data generated with TET Assisted Pic-borane Sequencing (TAPS).
 _These scripts transform aligned reads to bed-like file containing cytosine positions and their modification level._
 
+### Installation of dependencies with _pip_
+_For python 2.7:
+```bash
+pip install -r requirements.txt
+```
+  
+_For python 3 (>3.5):
+```bash
+pip3 install -r requirements.txt
+```
+
 ### Analysis of TAPS data 
 _Let us have an example paired-end sequencing data from step 1 called `lambda.phage_test_sample_R1.fastq.gz` and `lambda.phage_test_sample_R2.fastq.gz` to guide us through the process._
 
