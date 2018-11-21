@@ -9,7 +9,7 @@ For python 2.7:
 pip install -r requirements.txt
 ```
   
-For python 3 (>3.5):
+For python 3 (>=3.5):
 ```bash
 pip3 install -r requirements.txt
 ```
