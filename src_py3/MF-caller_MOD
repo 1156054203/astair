@@ -84,7 +84,7 @@ def caller(input_file, fasta_file, zero_coverage):
 
     def splitter_mods(input_file, strand):
         file_fields, file_samples, file_headers, file_iter = allel.iter_vcf_chunks(input_file, fields='*', alt_number=4,
-                                                                                   buffer_size=5000, chunk_length=10000)
+                                                                                   buffer_size=500, chunk_length=1000)
         if strand == 'OT':
             ref_base = 'C'
             alt_base = 'T'
@@ -235,18 +235,19 @@ def caller(input_file, fasta_file, zero_coverage):
             return data_mod, coef
 
     def stater(data_mod):
-        modification_rate_CpG = [x[3] for x in data_mod if re.match(r"CG.", x[9]) or re.match(r"GC.", x[9])]
-        modification_rate_CHG = [x[3] for x in data_mod if re.match(r"(?=(C(A|C|T)G))", x[9]) or re.match(r"(?=(G(A|G|T)C))", x[9])]
-        modification_rate_CHH = [x[3] for x in data_mod if re.match(r"(?=(C(A|C|T)(A|C|T)))", x[9]) or re.match(r"(?=(G(A|G|T)(A|G|T)))", x[9])]
-        modification_rate_unknown = [x[3] for x in data_mod if len(x[9]) == 1]
-        mean_mod['CpG'] += round(non_zero_div(sum([x for x in modification_rate_CpG if x is not str]), len([x for x in modification_rate_CpG if x is not str])), 3)
-        mean_mod['CHG'] += round(non_zero_div(sum([x for x in modification_rate_CHG if x is not str]), len([x for x in modification_rate_CHG if x is not str])), 3)
-        mean_mod['CHH'] += round(non_zero_div(sum([x for x in modification_rate_CHH if x is not str]), len([x for x in modification_rate_CHH if x is not str])), 3)
-        mean_mod['Unknown'] += round(non_zero_div(sum([x for x in modification_rate_unknown if x is not str]), len([x for x in modification_rate_unknown if x is not str])), 3)
-        mod_len['CpG'] += 1
-        mod_len['CHG'] += 1
-        mod_len['CHH'] += 1
-        mod_len['Unknown'] += 1
+        modification_rate_CpG = [x[4] for x in data_mod if re.match(r"CG.", x[9])]
+        modification_rate_CHG = [x[4] for x in data_mod if re.match(r"(?=(C(A|C|T)G))", x[9])]
+        modification_rate_CHH = [x[4] for x in data_mod if re.match(r"(?=(C(A|C|T)(A|C|T)))", x[9])]
+        modification_rate_unknown = [x[4] for x in data_mod if len(x[9]) == 1]
+        nonmodification_rate_CpG = [x[5] for x in data_mod if re.match(r"CG.", x[9])]
+        nonmodification_rate_CHG = [x[5] for x in data_mod if re.match(r"(?=(C(A|C|T)G))", x[9])]
+        nonmodification_rate_CHH = [x[5] for x in data_mod if re.match(r"(?=(C(A|C|T)(A|C|T)))", x[9])]
+        nonmodification_rate_unknown = [x[5] for x in data_mod if len(x[9]) == 1]
+        mean_mod['CpG'] += round(non_zero_div(sum(modification_rate_CpG), sum(nonmodification_rate_CpG + modification_rate_CpG)), 3)
+        mean_mod['CHG'] += round(non_zero_div(sum(modification_rate_CHG), sum(nonmodification_rate_CHG + modification_rate_CHG)), 3)
+        mean_mod['CHH'] += round(non_zero_div(sum(modification_rate_CHH), sum(nonmodification_rate_CHH + modification_rate_CHH)), 3)
+        mean_mod['Unknown'] += round(non_zero_div(sum(modification_rate_unknown), sum(nonmodification_rate_unknown + modification_rate_unknown)), 3)
+
 
     it_OT = splitter_mods(name+'OT.vcf.gz', 'OT')
     it_OB = splitter_mods(name+'OB.vcf.gz', 'OB')
@@ -311,12 +312,13 @@ def caller(input_file, fasta_file, zero_coverage):
                 first_iteration = False
 
 
-    with open(name + ".stats", 'a', newline='') as myfile:
+    with open(name + ".stats", 'a') as myfile:
         wr = csv.writer(myfile, delimiter='\t', lineterminator='\n')
-        wr.writerow(["mean CpG modification rate: ", round(non_zero_div(mean_mod['CpG'],mod_len["CpG"]),3)])
-        wr.writerow(["mean CHG modification rate: ", round(non_zero_div(mean_mod['CHG'],mod_len["CHG"]),3)])
-        wr.writerow(["mean CHH modification rate: ", round(non_zero_div(mean_mod['CHH'],mod_len["CHH"]),3)])
-        wr.writerow(["mean CNN modification rate: ", round(non_zero_div(mean_mod['Unknown'],mod_len["Unknown"]),3)])
+        wr.writerow(["mean CpG modification rate: ", str(round(mean_mod['CpG'],3))+' %'])
+        wr.writerow(["mean CHG modification rate: ", str(round(mean_mod['CHG'],3))+' %'])
+        wr.writerow(["mean CHH modification rate: ", str(round(mean_mod['CHH'],3))+' %'])
+        wr.writerow(["mean CNN modification rate: ", str(round(mean_mod['Unknown'],3))+' %'])
+
 
 
     time_e = datetime.now()
@@ -332,7 +334,6 @@ warnings.simplefilter(action='ignore', category=FutureWarning)
 warnings.simplefilter(action='ignore', category=UserWarning)
 
 mean_mod = {'CHH': 0, 'CHG': 0, 'CpG': 0, 'Unknown': 0}
-mod_len = {'CHH': 0, 'CHG': 0, 'CpG': 0, 'Unknown': 0}
 
 def non_zero_div(x, y):
     if y == 0:
