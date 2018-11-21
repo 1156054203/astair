@@ -175,7 +175,12 @@ def caller(input_file, fasta_file, zero_coverage):
         else:
             data_mod = [(chrom[i], pos[i] - 1, pos[i], mods[i, k]/(org[i] + mods[i, k]), mods[i, k], org[i], ALT_base, REF_base, depth[i], inverser(ref[i])+inverser(ref[i-1])+inverser(ref[i-2]) if i + 2 <= len(ref) - 1 and chrom[i] == chrom[i+2] else inverser(ref[i])) for n in range(int(len(index_mod)/crows) + 1) for i, k in index_mod[n * crows:n * crows + crows]]
             data_nmod = [(chrom[i], pos[i] - 1, pos[i], 0, 0, org[i], ALT_base, REF_base, depth[i], inverser(ref[i])+inverser(ref[i-1])+inverser(ref[i-2]) if i + 2 <= len(ref) - 1 and chrom[i] == chrom[i+2] else inverser(ref[i])) for n in range(int(len(index_nmod)/crows) + 1) for i in index_nmod[n * crows:n * crows + crows]]
-        position = max(data_nmod[-1][1], data_mod[-1][1])
+        if len(data_nmod) >= 1 and len(data_mod) >= 1:
+            position = max(data_nmod[-1][1], data_mod[-1][1])
+        elif len(data_nmod) >= 1:
+            position = data_nmod[-1][1]
+        elif len(data_mod) >= 1:
+            position = data_mod[-1][1]
         if zero_coverage == True:
             for tuples in data_context:
                 context_index = (tuples[0], tuples[1])
@@ -309,14 +314,14 @@ def caller(input_file, fasta_file, zero_coverage):
 
     with open(name + ".stats", 'a') as myfile:
         wr = csv.writer(myfile, delimiter='\t', lineterminator='\n')
-        wr.writerow(["_________________________________________________________________________________________________________________________"])
-        wr.writerow(["Cytosine modification rate given as the percentage total modified cytosines divided by total number of cytosines covered."])
-        wr.writerow(["_________________________________________________________________________________________________________________________"])
+        wr.writerow(["_____________________________________________________________________________________________________________________________"])
+        wr.writerow(["Cytosine modification rate given as the percentage total modified cytosines divided by the total number of cytosines covered."])
+        wr.writerow(["_____________________________________________________________________________________________________________________________"])
         wr.writerow(["mean CpG modification rate: ", str(round(non_zero_div(mean_mod['CpG'], mean_mod['CpG'] + mean_nmod['CpG'])*100, 3)) + ' %'])
         wr.writerow(["mean CHG modification rate: ", str(round(non_zero_div(mean_mod['CHG'], mean_mod['CHG'] + mean_nmod['CHG'])*100, 3)) + ' %'])
         wr.writerow(["mean CHH modification rate: ", str(round(non_zero_div(mean_mod['CHH'], mean_mod['CHH'] + mean_nmod['CHH'])*100, 3)) + ' %'])
         wr.writerow(["mean CNN modification rate: ", str(round(non_zero_div(mean_mod['Unknown'], mean_mod['Unknown'] + mean_nmod['Unknown'])*100, 3)) + ' %'])
-        wr.writerow(["_________________________________________________________________________________________________________________________"])
+        wr.writerow(["_____________________________________________________________________________________________________________________________"])
 
 
 
