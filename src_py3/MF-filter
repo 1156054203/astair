@@ -1,33 +1,75 @@
 #!/usr/bin/env python3
 
 import click
+import csv
 import pysam
 import re
+from datetime import datetime
 
 @click.command()
 @click.option('input_file', '--input_file', required=True, help='BAM format file containing sequencing reads.')
-def filter_exec(input_file):
-    filter(input_file)
+@click.option('directory', '--directory', required=True, type=str, help='Output directory to save files.')
 
-def filter(input_file):
+def filter_exec(input_file, directory):
+    filter(input_file, directory)
 
-    name = re.search(r'^.*(?=.bam)', input_file).group()
+def filter(input_file, directory):
     
-    try:
+    time_b = datetime.now()
+
+    if list(directory)[-1]!="/":
+        directory = directory + "/"
+        
+    
+    try:    
+        if len(re.split(r'^/(.*)/', input_file)) == 1:
+            no_dir = None
+        elif len(re.split(r'^/(.*)/', input_file)) > 1:
+            no_dir = re.split(r'^/(.*)/', input_file)[-1]
+
+        if no_dir:
+            input_dir = re.match(r'^/(.*)/', input_file).group()
+            name = re.match(r'^.*(?=.bam)', no_dir).group()
+        else:
+            name = re.match(r'^.*(?=.bam)', input_file).group()
         inbam = pysam.AlignmentFile(input_file, "rb")
         bam_fetch = inbam.fetch(until_eof=True)
-        outbamOT = pysam.AlignmentFile(name+"OT.bam", "wb", template = inbam)
-        outbamOB = pysam.AlignmentFile(name+"OB.bam", "wb", template = inbam) 
+        outbamOT = pysam.AlignmentFile(directory + name+"OT.bam", "wb", template = inbam)
+        outbamOB = pysam.AlignmentFile(directory + name+"OB.bam", "wb", template = inbam) 
+        flags = {'F1': 0, 'F2': 0, 'R1': 0, 'R2': 0, 'Other': 0}
         for read in bam_fetch:
             if read.flag == 99 or read.flag == 147:
                 outbamOT.write(read)
+                if read.flag == 99:
+                    flags['F1'] += 1
+                else:
+                    flags['R2'] += 1
             elif read.flag == 83 or read.flag == 163: 
                 outbamOB.write(read)
-    finally:       
+                if read.flag == 83:
+                    flags['F2'] += 1
+                else:
+                    flags['R1'] += 1
+            else:
+                flags['Other'] += 1
         inbam.close()
         outbamOB.close()
         outbamOT.close() 
-
+        time_e = datetime.now() 
+        with open(directory + name + '_total_read_flags.log', 'w', newline='') as myfile:
+            wr = csv.writer(myfile, delimiter='\t', lineterminator='\n')
+            wr.writerow(['          Reads distribution by flag          '])
+            wr.writerow(['..............................................'])
+            wr.writerow(['Number of F1 (flag 99) reads: ',    flags['F1']])  
+            wr.writerow(['Number of F2 (flag 83) reads: ',    flags['F2']]) 
+            wr.writerow(['Number of R1 (flag 163) reads: ',   flags['R1']]) 
+            wr.writerow(['Number of R2 (flag 147) reads: ',   flags['R2']]) 
+            wr.writerow(['Number of other reads: ',        flags['Other']]) 
+            wr.writerow(['..............................................'])
+            wr.writerow(['Total run time, seconds: ', (time_e - time_b).total_seconds()]) 
+    except IOError:
+        print('There is no such file.')        
+    
 
 if __name__ == '__main__':
     filter_exec()
