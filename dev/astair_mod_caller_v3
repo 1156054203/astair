@@ -8,7 +8,8 @@ import re
 import pdb
 import click
 import warnings
-import time
+import logging
+from datetime import datetime
 from threading import Thread
 
 from filename_directory_search import filename_directory_search
@@ -34,6 +35,10 @@ def modification_finder_exec(input_file, fasta_file, context, zero_coverage, use
 warnings.simplefilter(action='ignore', category=FutureWarning)
 warnings.simplefilter(action='ignore', category=UserWarning)
 
+logging.basicConfig(level=logging.INFO)
+logs = logging.getLogger(__name__)
+
+time_b = datetime.now()
 
 
 def fasta_splitting_by_sequence(fasta_file):
@@ -233,6 +238,14 @@ def final_statistics_output(mean_mod, mean_nmod, directory, name, user_defined_c
 def cytosine_modification_finder(input_file, fasta_file, context, zero_coverage, user_defined_context, directory):
     """Searches for cytosine modification positions in the desired contexts and calculates the modificaton levels."""
     header = True
+    try:
+        open(input_file, 'rb')
+    except (SystemExit, KeyboardInterrupt, IOError, FileNotFoundError):
+        logs.error('The input file does not exist.', exc_info=True)
+    try:
+        open(fasta_file, 'r')
+    except (SystemExit, KeyboardInterrupt, IOError, FileNotFoundError):
+        logs.error('The genome reference fasta file does not exist.', exc_info=True)
     name, directory = filename_directory_search(input_file, directory)
     if user_defined_context:
         mean_mod = {'CHH': 0, 'CHG': 0, 'CpG': 0, 'Unknown': 0, 'CAG': 0, 'CCG': 0, 'CTG': 0, 'CTT': 0, 'CCT': 0, 'CAT': 0, 'CTA': 0, 'CTC': 0, 'CAC': 0, 'CAA': 0, 'CCA': 0, 'CCC': 0, 'user defined context': 0}
@@ -243,11 +256,19 @@ def cytosine_modification_finder(input_file, fasta_file, context, zero_coverage,
     inbam = pysam.AlignmentFile(input_file, "rb")
     keys, fastas = fasta_splitting_by_sequence(fasta_file)
     contexts, all_keys = sequence_context_set_creation(context, user_defined_context)
+    run_once = 0
     for i in range(0, len(keys)):
-        # threads = []
-        # for j in range(0, len(all_keys)):
-        #     threads.append(Thread(target=context_sequence_search, args=(contexts, all_keys[j], fastas, keys[i])))
-        #     threads[j].start()
+        time_m = datetime.now()
+        logs.info("Staring modification calling on {} chromosome (sequence). {} seconds".format(keys[i], (time_m - time_b).total_seconds()))
+        if run_once == 0:
+            threads = []
+            for j in range(0, len(all_keys)):
+                threads.append(Thread(target=context_sequence_search, args=(contexts, all_keys[j], fastas, keys[i], user_defined_context),))
+                threads[j].start()
+                threads[j].join()
+                run_once += 1
+            time_d = datetime.now()
+            logs.info("Cytosine positions are loaded. {} seconds".format((time_d - time_b).total_seconds()))
         datata = context_sequence_search(contexts, all_keys, fastas, keys[i], user_defined_context)
         covered_positions = list()
         for pileupcolumn in inbam.pileup(conting=keys[i], min_base_quality=20, fasta_file=fasta_file, stepper='samtools'):
@@ -298,7 +319,8 @@ def cytosine_modification_finder(input_file, fasta_file, context, zero_coverage,
                     modification_calls_writer(name, directory, all_data, header=header)
                     header = False
     final_statistics_output(mean_mod, mean_nmod, directory, name, user_defined_context)
-
+    time_e = datetime.now()
+    logs.info("asTair modification finder finished running. {} seconds".format((time_e - time_b).total_seconds()))
 
 
 if __name__ == '__main__':
