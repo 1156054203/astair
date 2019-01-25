@@ -154,7 +154,7 @@ def context_sequence_search(context, key, fastas, string_name, user_defined_cont
 
 def modification_calls_writer(name, directory, data_mods, header=False):
     """Outputs the modification calls per position in a tab-delimited format."""
-    with open(path.join(directory, path.splitext(path.basename(name))[0]+".mods"), 'a', newline='') as myfile:
+    with open(path.join(directory, name+".mods"), 'a', newline='') as myfile:
         wr = csv.writer(myfile, delimiter='\t', lineterminator='\n')
         if header:
             wr.writerow(["CHROM", "START", "END", "MOD_LEVEL", "MOD", "NMOD", "ALT", "REF", "DEPTH", "CONTEXT",
@@ -188,7 +188,7 @@ def statistics_calculator(mean_mod, mean_nmod, data_mod, user_defined_context):
 
 def final_statistics_output(mean_mod, mean_nmod, directory, name, user_defined_context):
     """Writes the summary statistics of the cytosine modificaton levels."""
-    with open(path.join(directory, path.splitext(path.basename(name))[0]+".stats"), 'a', newline='') as myfile:
+    with open(path.join(directory, name+".stats"), 'a', newline='') as myfile:
         wr = csv.writer(myfile, delimiter='\t', lineterminator='\n')
         wr.writerow([
                         "_____________________________________________________________________________________________________________________________"])
