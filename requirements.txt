@@ -1,0 +1,8 @@
+####### General Requirements #######
+
+click 
+Biopython
+scikit-allel
+pysam
+pyahocorasick
+numpy
