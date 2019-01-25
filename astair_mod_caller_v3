@@ -1,0 +1,329 @@
+#!/usr/bin/env python3
+
+import pysam
+import ahocorasick
+import itertools
+import csv
+import re
+import pdb
+import click
+import warnings
+import logging
+from datetime import datetime
+from threading import Thread
+
+from filename_directory_search import filename_directory_search
+from DNA_sequences_operations import complementary
+from safe_division import non_zero_division
+
+@click.command()
+@click.option('input_file', '--input_file', required=True, help='BAM format file containing sequencing reads.')
+# @click.option('control_file', '--control_file', required=False, help='BAM format file containing sequencing reads of a matched control.')
+@click.option('fasta_file', '--fasta_file', required=True, help='DNA sequence in fasta format used for aligning the sequencing reads and mpileup.')
+@click.option('zero_coverage', '--zero_coverage', default=False, is_flag=True, help='When set to True, outputs positions not covered in the bam file. Uncovering zero coverage positions takes longer time than using the default option.')
+@click.option('context', '--context', required=False, default='all',  type=click.Choice(['all', 'CpG', 'CHG', 'CHH']), help='Explains which cytosine sequence contexts are to be expected in the output file. Default behaviour is all, which includes CpG, CHG, CHH contexts and their sub-contexts for downstream filtering and analysis.')
+@click.option('user_defined_context', '--user_defined_context', required=False, type=str, help='At least two-letter contexts other than CG, CHH and CHG to be evaluated, will return the genomic coordinates for the first cytosine in the string.')
+# @click.option('library', '--library', required=False, default = 'directional',  type=click.Choice(['directional', 'RR', 'PMAT']), help='Provides information for the library preparation protocol (RR is reduced representation and PMAT is post-method adapter-tagging).')
+# @click.option('method', '--method', required=False, default = 'CmtoT', type=click.Choice(['CtoT', 'CmtoT']), help='Specify sequencing method, possible options are CtoT (unmodified cytosines are converted to thymines, bisulfite sequencing-like) and CmtoT (modified cytosines are converted to thymines, TAPS-like).')
+# @click.option('skip_clip_overlap', '--skip_clip_overlap', required=False, is_flag=True, help='Skipping the random removal of overlapping bases between paired-end reads. Not recommended for paired-end libraries, unless the overlaps are removed prior to calling.')
+# @click.option('N_threads', '--N_threads', default = 1, required=True, help='The number of threads to spawn (the default value is 1).')
+@click.option('directory', '--directory', required=True, type=str, help='Output directory to save files.')
+def modification_finder_exec(input_file, fasta_file, context, zero_coverage, user_defined_context, directory):
+        cytosine_modification_finder(input_file, fasta_file, context, zero_coverage, user_defined_context, directory)
+
+
+warnings.simplefilter(action='ignore', category=FutureWarning)
+warnings.simplefilter(action='ignore', category=UserWarning)
+
+logging.basicConfig(level=logging.INFO)
+logs = logging.getLogger(__name__)
+
+time_b = datetime.now()
+
+
+def fasta_splitting_by_sequence(fasta_file):
+    """Parses fasta files with multiple genomes."""
+    fastas = {}
+    keys, sequences = list(), list()
+    with open(fasta_file, 'r', newline='') as myfile:
+        wr = csv.reader(myfile, delimiter='\t', lineterminator='\n')
+        for n in wr:
+            if n[0][0] == '>':
+                keys.append(n[0][1:])
+            else:
+                sequences.append(n[0])
+    for i in range(0, len(keys)):
+        fastas[keys[i]] = sequences[i]
+    return keys, fastas
+
+
+def sequence_context_set_creation(desired_sequence, user_defined_context):
+    """Prepares sets of possible cytosine contexts."""
+    letters_top = ['A', 'C', 'T', 'a', 'c', 't']
+    if user_defined_context:
+        user = list(map(''.join, itertools.product(*zip(user_defined_context.upper(), user_defined_context.lower()))))
+    if desired_sequence == 'all':
+        CHG = [y + x + z for x in letters_top for y in ['C', 'c'] for z in ['G', 'g']]
+        CHGb = [y + x + z for x in letters_top for z in ['C', 'c'] for y in ['G', 'g']]
+        CHH = [y + x + z for x in letters_top for y in ['C', 'c'] for z in letters_top]
+        CHHb = [y + x + z for x in letters_top for z in ['C', 'c'] for y in letters_top]
+        CG = [y + z for y in ['C', 'c'] for z in ['G', 'g']]
+        CN = [y + x + z for x in ['N', 'n'] for y in ['C', 'c'] for z in ['N', 'n']]
+        CNb = [y + x + z for x in ['N', 'n'] for z in ['C', 'c'] for y in ['N', 'n']]
+        if user_defined_context:
+            contexts = {'CHG': list(CHG), 'CHGb': list(CHGb), 'CHH': list(CHH), 'CHHb': list(CHHb), 'CG': list(CG),'CN': list(CN), 'CNb': list(CNb), 'user': list(user)}
+            all_keys = list(('CHG', 'CHGb', 'CHH', 'CHHb', 'CG', 'CN', 'CNb', 'user'))
+        else:
+            contexts = {'CHG': list(CHG), 'CHGb': list(CHGb), 'CHH': list(CHH), 'CHHb': list(CHHb), 'CG': list(CG),'CN': list(CN), 'CNb': list(CNb)}
+            all_keys = list(('CHG', 'CHGb', 'CHH', 'CHHb', 'CG', 'CN', 'CNb'))
+    elif desired_sequence == 'CpG':
+        CG = [y + z for y in ['C', 'c'] for z in ['G', 'g']]
+        if user_defined_context:
+            contexts = {'CG': list(CG), 'user': list(user)}
+            all_keys = list(( 'CG', 'user'))
+        else:
+            contexts = {'CG': list(CG)}
+            all_keys = list(('CG'))
+    elif desired_sequence == 'CHG':
+        CHG = [y + x + z for x in letters_top for y in ['C', 'c'] for z in ['G', 'g']]
+        CHGb = [y + x + z for x in letters_top for z in ['C', 'c'] for y in ['G', 'g']]
+        if user_defined_context:
+            contexts = {'CHG': list(CHG), 'CHGb': list(CHGb), 'user': list(user)}
+            all_keys = list(( 'CHG', 'CHGb', 'user'))
+        else:
+            contexts = {'CHG': list(CHG), 'CHGb': list(CHGb)}
+            all_keys = list(('CHG', 'CHGb'))
+    elif desired_sequence == 'CHH':
+        CHH = [y + x + z for x in letters_top for y in ['C', 'c'] for z in letters_top]
+        CHHb = [y + x + z for x in letters_top for z in ['C', 'c'] for y in letters_top]
+        if user_defined_context:
+            contexts = {'CHH': list(CHH), 'CHHb': list(CHHb), 'user': list(user)}
+            all_keys = list(( 'CHH', 'CHHb', 'user'))
+        else:
+            contexts = {'CHH': list(CHH), 'CHHb': list(CHHb)}
+            all_keys = list(('CHH', 'CHHb'))
+    return contexts, all_keys
+
+
+def ahocorasick_search(objects, context, string, data_context, string_name, user_defined_context):
+    """Looks for cytosine contexts in the reference fasta file."""
+    auto = ahocorasick.Automaton()
+    for pattern in context[objects]:
+        auto.add_word(pattern, pattern)
+    auto.make_automaton()
+    if objects[-1] == 'b':
+        for end_ind, found in auto.iter(complementary(string)):
+            reversed = list(found.upper())
+            reversed.reverse()
+            data_context[(string_name, end_ind, end_ind + 1)] = tuple(
+                ("".join(reversed), objects[0:-1], 'A', 'G'))
+    elif objects == 'CG':
+        for end_ind, found in auto.iter(string):
+            data_context[(string_name, end_ind - 1, end_ind)] = tuple((found.upper(), 'CpG', 'T', 'C'))
+            data_context[(string_name, end_ind, end_ind + 1)] = tuple((found.upper(), 'CpG', 'A', 'G'))
+    elif objects == 'CHG' or objects == 'CHH':
+        for end_ind, found in auto.iter(string):
+            data_context[(string_name, end_ind - 2, end_ind - 1)] = tuple((found.upper(), objects, 'T', 'C'))
+    elif objects == 'CN':
+        for end_ind, found in auto.iter(string):
+            data_context[(string_name, end_ind - 1, end_ind)] = tuple((found.upper(), 'CN', 'T', 'C'))
+    elif objects == 'user':
+        index_c = [user_defined_context.find('C') if user_defined_context.find('C') >= 0 else user_defined_context.find('c') if user_defined_context.find('c') >= 0 else print('The user defined context does not contain cytosines.')][0]
+        for end_ind, found in auto.iter(string):
+            data_context[(string_name, end_ind - index_c - 1, end_ind - index_c)] = tuple(
+                (found.upper(), 'user defined context', 'T', 'C'))
+        for end_ind, found in auto.iter(complementary(string)):
+            reversed = list(found.upper())
+            reversed.reverse()
+            data_context[(string_name, end_ind - index_c, end_ind - index_c + 1)] = tuple(
+                ("".join(reversed), 'user defined context', 'A', 'G'))
+
+
+def context_sequence_search(context, key, fastas, string_name, user_defined_context):
+    """Starts the search for cytosine contexts in the reference fasta file."""
+    data_context = {}
+    string = fastas[string_name]
+    if key.count('C') == 0:
+        for objects in key:
+            ahocorasick_search(objects, context, string, data_context, string_name, user_defined_context)
+    else:
+        objects = "".join(key)
+        ahocorasick_search(objects, context, string, data_context, string_name, user_defined_context)
+    return data_context
+
+
+def modification_calls_writer(name, directory, data_mods, header=False):
+    """Outputs the modification calls per position in a tab-delimited format."""
+    with open(directory + name + ".mods", 'a', newline='') as myfile:
+        wr = csv.writer(myfile, delimiter='\t', lineterminator='\n')
+        if header:
+            wr.writerow(["CHROM", "START", "END", "MOD_LEVEL", "MOD", "NMOD", "ALT", "REF", "DEPTH", "CONTEXT",
+                         "SPECIFIC_CONTEXT", 'SNV'])
+            wr.writerow(data_mods)
+            # for row in data_mods:
+            #     wr.writerow(row)
+        else:
+            wr.writerow(data_mods)
+            # for row in data_mods:
+            #     wr.writerow(row)
+
+
+def statistics_calculator(mean_mod, mean_nmod, data_mod, user_defined_context):
+    """Calculates the summary statistics of the cytosine modificaton levels."""
+    for context in list(('CpG', 'CHH', 'CHG')):
+        if re.match(context, data_mod[9]) and data_mod[10] == 'No':
+            mean_mod[context] += data_mod[4]
+            mean_nmod[context] += data_mod[5]
+    for context in list(('CAG', 'CCG', 'CTG', 'CTT', 'CCT', 'CAT', 'CTA', 'CTC', 'CAC', 'CAA', 'CCA', 'CCC')):
+        if re.match(context, data_mod[8]) and data_mod[10] == 'No':
+            mean_mod[context] += data_mod[4]
+            mean_nmod[context] += data_mod[5]
+    if re.match(r"CN", data_mod[9]) and data_mod[10] == 'No':
+        mean_mod['Unknown'] += data_mod[4]
+        mean_nmod['Unknown'] += data_mod[5]
+    if user_defined_context and re.match(user_defined_context, data_mod[9]) and data_mod[10] == 'No':
+        mean_mod['user defined context'] += data_mod[4]
+        mean_nmod['user defined context'] += data_mod[5]
+
+
+def final_statistics_output(mean_mod, mean_nmod, directory, name, user_defined_context):
+    """Writes the summary statistics of the cytosine modificaton levels."""
+    with open(directory + name + ".stats", 'a', newline='') as myfile:
+        wr = csv.writer(myfile, delimiter='\t', lineterminator='\n')
+        wr.writerow([
+                        "_____________________________________________________________________________________________________________________________"])
+        wr.writerow([
+                        "Cytosine modification rate given as the percentage total modified cytosines divided by the total number of cytosines covered."])
+        wr.writerow([
+                        "_____________________________________________________________________________________________________________________________"])
+        wr.writerow(["mean CpG modification rate: ",
+                     str(round(non_zero_division(mean_mod['CpG'], mean_mod['CpG'] + mean_nmod['CpG']) * 100, 3)) + ' %'])
+        wr.writerow(["mean CHG modification rate: ",
+                     str(round(non_zero_division(mean_mod['CHG'], mean_mod['CHG'] + mean_nmod['CHG']) * 100, 3)) + ' %'])
+        wr.writerow([" | " + "mean CAG modification rate:" + " | " + str(
+            round(non_zero_division(mean_mod['CAG'], mean_mod['CAG'] + mean_nmod['CAG']) * 100, 3)) + ' %'])
+        wr.writerow([" | " + "mean CCG modification rate:" + " | " + str(
+            round(non_zero_division(mean_mod['CCG'], mean_mod['CCG'] + mean_nmod['CCG']) * 100, 3)) + ' %'])
+        wr.writerow([" | " + "mean CTG modification rate:" + " | " + str(
+            round(non_zero_division(mean_mod['CTG'], mean_mod['CTG'] + mean_nmod['CTG']) * 100, 3)) + ' %'])
+        wr.writerow(["mean CHH modification rate: ",
+                     str(round(non_zero_division(mean_mod['CHH'], mean_mod['CHH'] + mean_nmod['CHH']) * 100, 3)) + ' %'])
+        wr.writerow([" | " + "mean CTT modification rate:" + " | " + str(
+            round(non_zero_division(mean_mod['CTT'], mean_mod['CTT'] + mean_nmod['CTT']) * 100, 3)) + ' %'])
+        wr.writerow([" | " + "mean CAT modification rate:" + " | " + str(
+            round(non_zero_division(mean_mod['CAT'], mean_mod['CAT'] + mean_nmod['CAT']) * 100, 3)) + ' %'])
+        wr.writerow([" | " + "mean CCT modification rate:" + " | " + str(
+            round(non_zero_division(mean_mod['CCT'], mean_mod['CCT'] + mean_nmod['CCT']) * 100, 3)) + ' %'])
+        wr.writerow([" | " + "mean CTA modification rate:" + " | " + str(
+            round(non_zero_division(mean_mod['CTA'], mean_mod['CTA'] + mean_nmod['CTA']) * 100, 3)) + ' %'])
+        wr.writerow([" | " + "mean CAA modification rate:" + " | " + str(
+            round(non_zero_division(mean_mod['CAA'], mean_mod['CAA'] + mean_nmod['CAA']) * 100, 3)) + ' %'])
+        wr.writerow([" | " + "mean CCA modification rate:" + " | " + str(
+            round(non_zero_division(mean_mod['CCA'], mean_mod['CCA'] + mean_nmod['CCA']) * 100, 3)) + ' %'])
+        wr.writerow([" | " + "mean CTC modification rate:" + " | " + str(
+            round(non_zero_division(mean_mod['CTC'], mean_mod['CTC'] + mean_nmod['CTC']) * 100, 3)) + ' %'])
+        wr.writerow([" | " + "mean CAC modification rate:" + " | " + str(
+            round(non_zero_division(mean_mod['CAC'], mean_mod['CAC'] + mean_nmod['CAC']) * 100, 3)) + ' %'])
+        wr.writerow([" | " + "mean CCC modification rate:" + " | " + str(
+            round(non_zero_division(mean_mod['CCC'], mean_mod['CCC'] + mean_nmod['CCC']) * 100, 3)) + ' %'])
+        wr.writerow(["mean CNN modification rate: ", str(
+            round(non_zero_division(mean_mod['Unknown'], mean_mod['Unknown'] + mean_nmod['Unknown']) * 100, 3)) + ' %'])
+        if user_defined_context:
+            wr.writerow(["mean " + user_defined_context + " modification rate: ", str(
+                round(non_zero_division(mean_mod['user defined context'], mean_mod['user defined context'] + mean_nmod['user defined context']) * 100, 3)) + ' %'])
+        wr.writerow([
+                        "_____________________________________________________________________________________________________________________________"])
+
+
+def cytosine_modification_finder(input_file, fasta_file, context, zero_coverage, user_defined_context, directory):
+    """Searches for cytosine modification positions in the desired contexts and calculates the modificaton levels."""
+    header = True
+    try:
+        open(input_file, 'rb')
+    except (SystemExit, KeyboardInterrupt, IOError, FileNotFoundError):
+        logs.error('The input file does not exist.', exc_info=True)
+    try:
+        open(fasta_file, 'r')
+    except (SystemExit, KeyboardInterrupt, IOError, FileNotFoundError):
+        logs.error('The genome reference fasta file does not exist.', exc_info=True)
+    name, directory = filename_directory_search(input_file, directory)
+    if user_defined_context:
+        mean_mod = {'CHH': 0, 'CHG': 0, 'CpG': 0, 'Unknown': 0, 'CAG': 0, 'CCG': 0, 'CTG': 0, 'CTT': 0, 'CCT': 0, 'CAT': 0, 'CTA': 0, 'CTC': 0, 'CAC': 0, 'CAA': 0, 'CCA': 0, 'CCC': 0, 'user defined context': 0}
+        mean_nmod = {'CHH': 0, 'CHG': 0, 'CpG': 0, 'Unknown': 0, 'CAG': 0, 'CCG': 0, 'CTG': 0, 'CTT': 0, 'CCT': 0, 'CAT': 0, 'CTA': 0, 'CTC': 0, 'CAC': 0, 'CAA': 0, 'CCA': 0, 'CCC': 0, 'user defined context': 0}
+    else:
+        mean_mod = {'CHH': 0, 'CHG': 0, 'CpG': 0, 'Unknown': 0, 'CAG': 0, 'CCG': 0, 'CTG': 0, 'CTT': 0, 'CCT': 0, 'CAT': 0, 'CTA': 0, 'CTC': 0, 'CAC': 0, 'CAA': 0, 'CCA': 0, 'CCC': 0}
+        mean_nmod = {'CHH': 0, 'CHG': 0, 'CpG': 0, 'Unknown': 0, 'CAG': 0, 'CCG': 0, 'CTG': 0, 'CTT': 0, 'CCT': 0, 'CAT': 0, 'CTA': 0, 'CTC': 0, 'CAC': 0, 'CAA': 0, 'CCA': 0, 'CCC': 0}
+    inbam = pysam.AlignmentFile(input_file, "rb")
+    keys, fastas = fasta_splitting_by_sequence(fasta_file)
+    contexts, all_keys = sequence_context_set_creation(context, user_defined_context)
+    run_once = 0
+    for i in range(0, len(keys)):
+        time_m = datetime.now()
+        logs.info("Staring modification calling on {} chromosome (sequence). {} seconds".format(keys[i], (time_m - time_b).total_seconds()))
+        if run_once == 0:
+            threads = []
+            for j in range(0, len(all_keys)):
+                threads.append(Thread(target=context_sequence_search, args=(contexts, all_keys[j], fastas, keys[i], user_defined_context),))
+                threads[j].start()
+                threads[j].join()
+                run_once += 1
+            time_d = datetime.now()
+            logs.info("Cytosine positions are loaded. {} seconds".format((time_d - time_b).total_seconds()))
+        datata = context_sequence_search(contexts, all_keys, fastas, keys[i], user_defined_context)
+        covered_positions = list()
+        for pileupcolumn in inbam.pileup(conting=keys[i], min_base_quality=20, fasta_file=fasta_file, stepper='samtools'):
+            for positions in datata:
+                if pileupcolumn.pos == positions[1]:
+                    covered_positions.append(positions)
+                    bases_pileup_seqs = pileupcolumn.get_query_sequences()
+                    bases_pileup_flags = [x.alignment.flag for x in pileupcolumn.pileups if x.is_del==0 and x.is_refskip==0 and x.indel==0]
+                    all_bases_pileup = [(i,*j) for i,j in itertools.zip_longest(bases_pileup_flags, bases_pileup_seqs, fillvalue='BLANK')]
+                    bases_T, bases_T2, bases_A, bases_A2, bases_G, bases_G2, bases_C, bases_C2 = 0, 0, 0, 0, 0, 0, 0, 0
+                    bases_C += all_bases_pileup.count((99, 'C')) + all_bases_pileup.count((147, 'C'))
+                    bases_G += all_bases_pileup.count((99, 'G')) + all_bases_pileup.count((147, 'G'))
+                    bases_T += all_bases_pileup.count((99, 'T')) + all_bases_pileup.count((147, 'T'))
+                    bases_A += all_bases_pileup.count((99, 'A')) + all_bases_pileup.count((147, 'A'))
+                    bases_C2 += all_bases_pileup.count((83, 'C')) + all_bases_pileup.count((163, 'C'))
+                    bases_G2 += all_bases_pileup.count((83, 'G')) + all_bases_pileup.count((163, 'G'))
+                    bases_T2 += all_bases_pileup.count((83, 'T')) + all_bases_pileup.count((163, 'T'))
+                    bases_A2 += all_bases_pileup.count((83, 'A')) + all_bases_pileup.count((163, 'A'))
+                    if datata[positions][3] == 'C' and non_zero_division(bases_A2, (bases_G2 + bases_A2)) < 0.8:
+                        all_data = list((positions[0], positions[1], positions[1] + 1, round(non_zero_division(bases_T, (bases_T + bases_C)), 3), bases_T, bases_C, 'T', 'C',datata[positions][0], datata[positions][1], 'No'))
+                        statistics_calculator(mean_mod, mean_nmod, all_data, user_defined_context)
+                        modification_calls_writer(name, directory, all_data, header=header)
+                        header = False
+                    elif datata[positions][3] == 'C' and non_zero_division(bases_A2, (bases_G2 + bases_A2)) >= 0.8:
+                        all_data = list((positions[0], positions[1], positions[1] + 1, round(non_zero_division(bases_T, (bases_T + bases_C)), 3), bases_T, bases_C, 'T', 'C',datata[positions][0], datata[positions][1], 'homozyguous'))
+                        statistics_calculator(mean_mod, mean_nmod, all_data, user_defined_context)
+                        modification_calls_writer(name, directory, all_data, header=header)
+                        header = False
+                    elif datata[positions][3] == 'G' and non_zero_division(bases_T, (bases_T + bases_C)) < 0.8:
+                        all_data = list((positions[0], positions[1], positions[1] + 1, round(non_zero_division(bases_A2, (bases_G2 + bases_A2)), 3), bases_A2, bases_G2, 'A', 'G',datata[positions][0], datata[positions][1], 'No'))
+                        statistics_calculator(mean_mod, mean_nmod, all_data, user_defined_context)
+                        modification_calls_writer(name, directory, all_data, header=header)
+                        header = False
+                    elif datata[positions][3] == 'G' and non_zero_division(bases_T, (bases_T + bases_C)) >= 0.8:
+                        all_data = list((positions[0], positions[1], positions[1] + 1, round(non_zero_division(bases_A2, (bases_G2 + bases_A2)), 3), bases_A2, bases_G2, 'A', 'G',datata[positions][0], datata[positions][1], 'homozyguous'))
+                        statistics_calculator(mean_mod, mean_nmod, all_data, user_defined_context)
+                        modification_calls_writer(name, directory, all_data, header=header)
+                        header = False
+        if zero_coverage:
+            positions_not_covered = [pos for pos in datata if pos not in covered_positions]
+            for positions in positions_not_covered:
+                if datata[positions][3] == 'C':
+                    all_data = list((positions[0], positions[1], positions[1] + 1, 0, 0, 0, 'T', 'C', datata[positions][0], datata[positions][1], 'No'))
+                    modification_calls_writer(name, directory, all_data, header=header)
+                    header = False
+                elif datata[positions][3] == 'G':
+                    all_data = list((positions[0], positions[1], positions[1] + 1, 0, 0, 0, 'A', 'G', datata[positions][0], datata[positions][1], 'No'))
+                    modification_calls_writer(name, directory, all_data, header=header)
+                    header = False
+    final_statistics_output(mean_mod, mean_nmod, directory, name, user_defined_context)
+    time_e = datetime.now()
+    logs.info("asTair modification finder finished running. {} seconds".format((time_e - time_b).total_seconds()))
+
+
+if __name__ == '__main__':
+    modification_finder_exec()
+
+
