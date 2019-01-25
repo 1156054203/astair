@@ -256,24 +256,24 @@ def cytosine_modification_finder(input_file, fasta_file, context, zero_coverage,
     inbam = pysam.AlignmentFile(input_file, "rb")
     keys, fastas = fasta_splitting_by_sequence(fasta_file)
     contexts, all_keys = sequence_context_set_creation(context, user_defined_context)
-    run_once = 0
+   # run_once = 0
     for i in range(0, len(keys)):
         time_m = datetime.now()
         logs.info("Staring modification calling on {} chromosome (sequence). {} seconds".format(keys[i], (time_m - time_b).total_seconds()))
-        if run_once == 0:
-            threads = []
-            for j in range(0, len(all_keys)):
-                threads.append(Thread(target=context_sequence_search, args=(contexts, all_keys[j], fastas, keys[i], user_defined_context),))
-                threads[j].start()
-                threads[j].join()
-                run_once += 1
-            time_d = datetime.now()
-            logs.info("Cytosine positions are loaded. {} seconds".format((time_d - time_b).total_seconds()))
+        # if run_once == 0:
+        #     threads = []
+        #     for j in range(0, len(all_keys)):
+        #         threads.append(Thread(target=context_sequence_search, args=(contexts, all_keys[j], fastas, keys[i], user_defined_context),))
+        #         threads[j].start()
+        #         threads[j].join()
+        #         run_once += 1
+        #     time_d = datetime.now()
+        #     logs.info("Cytosine positions are loaded. {} seconds".format((time_d - time_b).total_seconds()))
         datata = context_sequence_search(contexts, all_keys, fastas, keys[i], user_defined_context)
         covered_positions = list()
         for pileupcolumn in inbam.pileup(conting=keys[i], min_base_quality=20, fasta_file=fasta_file, stepper='samtools'):
             for positions in datata:
-                if pileupcolumn.pos == positions[1]:
+                if pileupcolumn.pos == positions[1] and pileupcolumn.reference_name == positions[0]:
                     covered_positions.append(positions)
                     bases_pileup_seqs = pileupcolumn.get_query_sequences()
                     bases_pileup_flags = [x.alignment.flag for x in pileupcolumn.pileups if x.is_del==0 and x.is_refskip==0 and x.indel==0]
@@ -309,6 +309,7 @@ def cytosine_modification_finder(input_file, fasta_file, context, zero_coverage,
                         header = False
         if zero_coverage:
             positions_not_covered = [pos for pos in datata if pos not in covered_positions]
+            positions_not_covered.sort()
             for positions in positions_not_covered:
                 if datata[positions][3] == 'C':
                     all_data = list((positions[0], positions[1], positions[1] + 1, 0, 0, 0, 'T', 'C', datata[positions][0], datata[positions][1], 'No'))
