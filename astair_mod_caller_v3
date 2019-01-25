@@ -9,10 +9,10 @@ import pdb
 import click
 import warnings
 import logging
+from os import path
 from datetime import datetime
 from threading import Thread
 
-from filename_directory_search import filename_directory_search
 from DNA_sequences_operations import complementary
 from safe_division import non_zero_division
 
@@ -35,7 +35,7 @@ def modification_finder_exec(input_file, fasta_file, context, zero_coverage, use
 warnings.simplefilter(action='ignore', category=FutureWarning)
 warnings.simplefilter(action='ignore', category=UserWarning)
 
-logging.basicConfig(level=logging.INFO)
+logging.basicConfig(level=logging.DEBUG)
 logs = logging.getLogger(__name__)
 
 time_b = datetime.now()
@@ -154,7 +154,7 @@ def context_sequence_search(context, key, fastas, string_name, user_defined_cont
 
 def modification_calls_writer(name, directory, data_mods, header=False):
     """Outputs the modification calls per position in a tab-delimited format."""
-    with open(directory + name + ".mods", 'a', newline='') as myfile:
+    with open(path.join(directory, path.splitext(path.basename(name))[0]+".mods"), 'a', newline='') as myfile:
         wr = csv.writer(myfile, delimiter='\t', lineterminator='\n')
         if header:
             wr.writerow(["CHROM", "START", "END", "MOD_LEVEL", "MOD", "NMOD", "ALT", "REF", "DEPTH", "CONTEXT",
@@ -188,7 +188,7 @@ def statistics_calculator(mean_mod, mean_nmod, data_mod, user_defined_context):
 
 def final_statistics_output(mean_mod, mean_nmod, directory, name, user_defined_context):
     """Writes the summary statistics of the cytosine modificaton levels."""
-    with open(directory + name + ".stats", 'a', newline='') as myfile:
+    with open(path.join(directory, path.splitext(path.basename(name))[0]+".stats"), 'a', newline='') as myfile:
         wr = csv.writer(myfile, delimiter='\t', lineterminator='\n')
         wr.writerow([
                         "_____________________________________________________________________________________________________________________________"])
@@ -246,7 +246,9 @@ def cytosine_modification_finder(input_file, fasta_file, context, zero_coverage,
         open(fasta_file, 'r')
     except (SystemExit, KeyboardInterrupt, IOError, FileNotFoundError):
         logs.error('The genome reference fasta file does not exist.', exc_info=True)
-    name, directory = filename_directory_search(input_file, directory)
+    name = path.splitext(path.basename(input_file))[0]
+    directory = path.abspath(directory)
+
     if user_defined_context:
         mean_mod = {'CHH': 0, 'CHG': 0, 'CpG': 0, 'Unknown': 0, 'CAG': 0, 'CCG': 0, 'CTG': 0, 'CTT': 0, 'CCT': 0, 'CAT': 0, 'CTA': 0, 'CTC': 0, 'CAC': 0, 'CAA': 0, 'CCA': 0, 'CCC': 0, 'user defined context': 0}
         mean_nmod = {'CHH': 0, 'CHG': 0, 'CpG': 0, 'Unknown': 0, 'CAG': 0, 'CCG': 0, 'CTG': 0, 'CTT': 0, 'CCT': 0, 'CAT': 0, 'CTA': 0, 'CTC': 0, 'CAC': 0, 'CAA': 0, 'CCA': 0, 'CCC': 0, 'user defined context': 0}
@@ -259,7 +261,7 @@ def cytosine_modification_finder(input_file, fasta_file, context, zero_coverage,
    # run_once = 0
     for i in range(0, len(keys)):
         time_m = datetime.now()
-        logs.info("Staring modification calling on {} chromosome (sequence). {} seconds".format(keys[i], (time_m - time_b).total_seconds()))
+        logs.info("Starting modification calling on {} chromosome (sequence). {} seconds".format(keys[i], (time_m - time_b).total_seconds()))
         # if run_once == 0:
         #     threads = []
         #     for j in range(0, len(all_keys)):
