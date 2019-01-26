@@ -10,7 +10,9 @@ import click
 import warnings
 import logging
 from datetime import datetime
+from collections import defaultdict
 from threading import Thread
+import cProfile
 
 from filename_directory_search import filename_directory_search
 from DNA_sequences_operations import complementary
@@ -256,7 +258,7 @@ def cytosine_modification_finder(input_file, fasta_file, context, zero_coverage,
     inbam = pysam.AlignmentFile(input_file, "rb")
     keys, fastas = fasta_splitting_by_sequence(fasta_file)
     contexts, all_keys = sequence_context_set_creation(context, user_defined_context)
-   # run_once = 0
+    #run_once = 0
     for i in range(0, len(keys)):
         time_m = datetime.now()
         logs.info("Staring modification calling on {} chromosome (sequence). {} seconds".format(keys[i], (time_m - time_b).total_seconds()))
@@ -271,54 +273,47 @@ def cytosine_modification_finder(input_file, fasta_file, context, zero_coverage,
         #     logs.info("Cytosine positions are loaded. {} seconds".format((time_d - time_b).total_seconds()))
         datata = context_sequence_search(contexts, all_keys, fastas, keys[i], user_defined_context)
         covered_positions = list()
-        for pileupcolumn in inbam.pileup(conting=keys[i], min_base_quality=20, fasta_file=fasta_file, stepper='samtools'):
-            for positions in datata:
-                if pileupcolumn.pos == positions[1] and pileupcolumn.reference_name == positions[0]:
-                    covered_positions.append(positions)
-                    bases_pileup_seqs = pileupcolumn.get_query_sequences()
-                    bases_pileup_flags = [x.alignment.flag for x in pileupcolumn.pileups if x.is_del==0 and x.is_refskip==0 and x.indel==0]
-                    all_bases_pileup = [(i,*j) for i,j in itertools.zip_longest(bases_pileup_flags, bases_pileup_seqs, fillvalue='BLANK')]
-                    bases_T, bases_T2, bases_A, bases_A2, bases_G, bases_G2, bases_C, bases_C2 = 0, 0, 0, 0, 0, 0, 0, 0
-                    bases_C += all_bases_pileup.count((99, 'C')) + all_bases_pileup.count((147, 'C'))
-                    bases_G += all_bases_pileup.count((99, 'G')) + all_bases_pileup.count((147, 'G'))
-                    bases_T += all_bases_pileup.count((99, 'T')) + all_bases_pileup.count((147, 'T'))
-                    bases_A += all_bases_pileup.count((99, 'A')) + all_bases_pileup.count((147, 'A'))
-                    bases_C2 += all_bases_pileup.count((83, 'C')) + all_bases_pileup.count((163, 'C'))
-                    bases_G2 += all_bases_pileup.count((83, 'G')) + all_bases_pileup.count((163, 'G'))
-                    bases_T2 += all_bases_pileup.count((83, 'T')) + all_bases_pileup.count((163, 'T'))
-                    bases_A2 += all_bases_pileup.count((83, 'A')) + all_bases_pileup.count((163, 'A'))
-                    if datata[positions][3] == 'C' and non_zero_division(bases_A2, (bases_G2 + bases_A2)) < 0.8:
-                        all_data = list((positions[0], positions[1], positions[1] + 1, round(non_zero_division(bases_T, (bases_T + bases_C)), 3), bases_T, bases_C, 'T', 'C',datata[positions][0], datata[positions][1], 'No'))
-                        statistics_calculator(mean_mod, mean_nmod, all_data, user_defined_context)
-                        modification_calls_writer(name, directory, all_data, header=header)
-                        header = False
-                    elif datata[positions][3] == 'C' and non_zero_division(bases_A2, (bases_G2 + bases_A2)) >= 0.8:
-                        all_data = list((positions[0], positions[1], positions[1] + 1, round(non_zero_division(bases_T, (bases_T + bases_C)), 3), bases_T, bases_C, 'T', 'C',datata[positions][0], datata[positions][1], 'homozyguous'))
-                        statistics_calculator(mean_mod, mean_nmod, all_data, user_defined_context)
-                        modification_calls_writer(name, directory, all_data, header=header)
-                        header = False
-                    elif datata[positions][3] == 'G' and non_zero_division(bases_T, (bases_T + bases_C)) < 0.8:
-                        all_data = list((positions[0], positions[1], positions[1] + 1, round(non_zero_division(bases_A2, (bases_G2 + bases_A2)), 3), bases_A2, bases_G2, 'A', 'G',datata[positions][0], datata[positions][1], 'No'))
-                        statistics_calculator(mean_mod, mean_nmod, all_data, user_defined_context)
-                        modification_calls_writer(name, directory, all_data, header=header)
-                        header = False
-                    elif datata[positions][3] == 'G' and non_zero_division(bases_T, (bases_T + bases_C)) >= 0.8:
-                        all_data = list((positions[0], positions[1], positions[1] + 1, round(non_zero_division(bases_A2, (bases_G2 + bases_A2)), 3), bases_A2, bases_G2, 'A', 'G',datata[positions][0], datata[positions][1], 'homozyguous'))
-                        statistics_calculator(mean_mod, mean_nmod, all_data, user_defined_context)
-                        modification_calls_writer(name, directory, all_data, header=header)
-                        header = False
-        if zero_coverage:
-            positions_not_covered = [pos for pos in datata if pos not in covered_positions]
-            positions_not_covered.sort()
-            for positions in positions_not_covered:
-                if datata[positions][3] == 'C':
-                    all_data = list((positions[0], positions[1], positions[1] + 1, 0, 0, 0, 'T', 'C', datata[positions][0], datata[positions][1], 'No'))
+        pileups = inbam.pileup(keys[i], min_base_quality=20, fasta_file=fasta_file, stepper='samtools')
+        for reads in pileups:
+            if (reads.reference_name, reads.pos, reads.pos + 1) in datata:
+                position = (reads.reference_name, reads.pos, reads.pos + 1)
+                covered_positions.append(position)
+                read_counts = defaultdict(int)
+                sequences = reads.get_query_sequences()
+                for pileup, seq in itertools.zip_longest(reads.pileups, sequences, fillvalue='BLANK'):
+                    read_counts[(pileup.alignment.flag, seq)] += 1
+                if datata[position][3] == 'C' and non_zero_division(read_counts[(163, 'A')] + read_counts[(83, 'A')], (read_counts[(163, 'G')] + read_counts[(83, 'G')] + read_counts[(163, 'A')] + read_counts[(83, 'A')])) < 0.8:
+                    all_data = list((position[0], position[1], position[1] + 1, round(non_zero_division(read_counts[(99, 'T')] + read_counts[(147, 'T')], (read_counts[(147, 'C')] + read_counts[(99, 'C')] + read_counts[(147, 'T')] + read_counts[(99, 'T')])), 3), read_counts[(99, 'T')] + read_counts[(147, 'T')], read_counts[(147, 'C')] + read_counts[(99, 'C')], 'T', 'C', datata[position][0],datata[position][1], 'No'))
+                    statistics_calculator(mean_mod, mean_nmod, all_data, user_defined_context)
                     modification_calls_writer(name, directory, all_data, header=header)
                     header = False
-                elif datata[positions][3] == 'G':
-                    all_data = list((positions[0], positions[1], positions[1] + 1, 0, 0, 0, 'A', 'G', datata[positions][0], datata[positions][1], 'No'))
+                elif datata[position][3] == 'C' and non_zero_division(read_counts[(163, 'A')] + read_counts[(83, 'A')],(read_counts[(163, 'G')] + read_counts[(83, 'G')] + read_counts[(163, 'A')] + read_counts[(83, 'A')])) >= 0.8:
+                    all_data = list((position[0], position[1], position[1] + 1, round(non_zero_division(read_counts[(99, 'T')] + read_counts[(147, 'T')], (read_counts[(147, 'C')] + read_counts[(99, 'C')] + read_counts[(147, 'T')] + read_counts[(99, 'T')])), 3), read_counts[(99, 'T')] + read_counts[(147, 'T')],read_counts[(147, 'C')] + read_counts[(99, 'C')], 'T', 'C', datata[position][0], datata[position][1], 'homozyguous'))
+                    statistics_calculator(mean_mod, mean_nmod, all_data, user_defined_context)
                     modification_calls_writer(name, directory, all_data, header=header)
                     header = False
+                elif datata[position][3] == 'G' and non_zero_division(read_counts[(99, 'T')] + read_counts[(147, 'T')],(read_counts[(147, 'C')] + read_counts[(99, 'C')] + read_counts[(147, 'T')] + read_counts[(99, 'T')])) < 0.8:
+                    all_data = list((position[0], position[1], position[1] + 1, round(non_zero_division(read_counts[(163, 'A')] + read_counts[(83, 'A')], (read_counts[(163, 'G')] + read_counts[(83, 'G')] + read_counts[(163, 'A')] + read_counts[(83, 'A')])), 3), read_counts[(163, 'A')] + read_counts[(83, 'A')],read_counts[(163, 'G')] + read_counts[(83, 'G')], 'A', 'G', datata[position][0],datata[position][1], 'No'))
+                    statistics_calculator(mean_mod, mean_nmod, all_data, user_defined_context)
+                    modification_calls_writer(name, directory, all_data, header=header)
+                    header = False
+                elif datata[position][3] == 'G' and non_zero_division(read_counts[(99, 'T')] + read_counts[(147, 'T')],(read_counts[(147, 'C')] + read_counts[(99, 'C')] + read_counts[(147, 'T')] + read_counts[(99, 'T')])) >= 0.8:
+                    all_data = list((position[0], position[1], position[1] + 1, round(non_zero_division(read_counts[(163, 'A')] + read_counts[(83, 'A')], (read_counts[(163, 'G')] + read_counts[(83, 'G')] + read_counts[(163, 'A')] + read_counts[(83, 'A')])), 3), read_counts[(163, 'A')] + read_counts[(83, 'A')],read_counts[(163, 'G')] + read_counts[(83, 'G')], 'A', 'G', datata[position][0], datata[position][1], 'homozyguous'))
+                    statistics_calculator(mean_mod, mean_nmod, all_data, user_defined_context)
+                    modification_calls_writer(name, directory, all_data, header=header)
+                    header = False
+    if zero_coverage:
+        positions_not_covered = [pos for pos in datata if pos not in covered_positions]
+        positions_not_covered.sort()
+        for positions in positions_not_covered:
+            if datata[positions][3] == 'C':
+                all_data = list((positions[0], positions[1], positions[1] + 1, 0, 0, 0, 'T', 'C', datata[positions][0], datata[positions][1], 'No'))
+                modification_calls_writer(name, directory, all_data, header=header)
+                header = False
+            elif datata[positions][3] == 'G':
+                all_data = list((positions[0], positions[1], positions[1] + 1, 0, 0, 0, 'A', 'G', datata[position][0], datata[positions][1], 'No'))
+                modification_calls_writer(name, directory, all_data, header=header)
+                header = False
     final_statistics_output(mean_mod, mean_nmod, directory, name, user_defined_context)
     time_e = datetime.now()
     logs.info("asTair modification finder finished running. {} seconds".format((time_e - time_b).total_seconds()))
