@@ -48,12 +48,20 @@ def fasta_splitting_by_sequence(fasta_file):
     fastas = {}
     keys, sequences = list(), list()
     with open(fasta_file, 'r', newline='') as myfile:
-        wr = csv.reader(myfile, delimiter='\t', lineterminator='\n')
-        for n in wr:
-            if n[0][0] == '>':
-                keys.append(n[0][1:])
-            else:
-                sequences.append(n[0])
+        fasta_sequence = myfile.read()
+        if re.match(r".*(?=\r\n)", fasta_sequence):
+            keys = re.findall(r"(?<=>).*(?=\r\n)", fasta_sequence)
+            sequences = re.findall(r"(?<=\r\n)(?!>).*(?=\r\n)", fasta_sequence)
+            if len(keys) < len(sequences):
+                new_strings = [string for string in sequences if len(string) <= 100]
+                not_to_merge = [string for string in sequences if string not in new_strings]
+                joined_sequence = "".join(new_strings)
+                sequences = list()
+                sequences.append(joined_sequence)
+                sequences.append(not_to_merge)
+        elif re.match(r".*(?=\n)", fasta_sequence):
+            keys = re.findall(r"(?<=>).*(?=\n)", fasta_sequence)
+            sequences = re.findall(r"(?<=\n)(?!>).*(?=\n)", fasta_sequence)
     for i in range(0, len(keys)):
         fastas[keys[i]] = sequences[i]
     return keys, fastas
@@ -162,12 +170,8 @@ def modification_calls_writer(name, directory, data_mods, header=False):
             wr.writerow(["CHROM", "START", "END", "MOD_LEVEL", "MOD", "NMOD", "ALT", "REF", "DEPTH", "CONTEXT",
                          "SPECIFIC_CONTEXT", 'SNV'])
             wr.writerow(data_mods)
-            # for row in data_mods:
-            #     wr.writerow(row)
         else:
             wr.writerow(data_mods)
-            # for row in data_mods:
-            #     wr.writerow(row)
 
 
 def statistics_calculator(mean_mod, mean_nmod, data_mod, user_defined_context):
