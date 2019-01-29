@@ -27,11 +27,12 @@ from safe_division import non_zero_division
 @click.option('user_defined_context', '--user_defined_context', required=False, type=str, help='At least two-letter contexts other than CG, CHH and CHG to be evaluated, will return the genomic coordinates for the first cytosine in the string.')
 # @click.option('library', '--library', required=False, default = 'directional',  type=click.Choice(['directional', 'RR', 'PMAT']), help='Provides information for the library preparation protocol (RR is reduced representation and PMAT is post-method adapter-tagging).')
 # @click.option('method', '--method', required=False, default = 'CmtoT', type=click.Choice(['CtoT', 'CmtoT']), help='Specify sequencing method, possible options are CtoT (unmodified cytosines are converted to thymines, bisulfite sequencing-like) and CmtoT (modified cytosines are converted to thymines, TAPS-like).')
-# @click.option('skip_clip_overlap', '--skip_clip_overlap', required=False, is_flag=True, help='Skipping the random removal of overlapping bases between paired-end reads. Not recommended for paired-end libraries, unless the overlaps are removed prior to calling.')
+@click.option('skip_clip_overlap', '--skip_clip_overlap', required=False, is_flag=True, help='Skipping the random removal of overlapping bases between paired-end reads. Not recommended for paired-end libraries, unless the overlaps are removed prior to calling.')
+@click.option('minimum_base_quality', '--minimum_base_quality', required=False, type=int, default=20, help='Set the minimum base quality for a read base to be used in the pileup (Default 20).')
 # @click.option('N_threads', '--N_threads', default = 1, required=True, help='The number of threads to spawn (the default value is 1).')
 @click.option('directory', '--directory', required=True, type=str, help='Output directory to save files.')
-def modification_finder_exec(input_file, fasta_file, context, zero_coverage, user_defined_context, directory):
-        cytosine_modification_finder(input_file, fasta_file, context, zero_coverage, user_defined_context, directory)
+def modification_finder_exec(input_file, fasta_file, context, zero_coverage, skip_clip_overlap, minimum_base_quality, user_defined_context, directory):
+        cytosine_modification_finder(input_file, fasta_file, context, zero_coverage, skip_clip_overlap, minimum_base_quality, user_defined_context, directory)
 
 
 warnings.simplefilter(action='ignore', category=FutureWarning)
@@ -53,7 +54,7 @@ def fasta_splitting_by_sequence(fasta_file):
             keys = re.findall(r"(?<=>).*(?=\r\n)", fasta_sequence)
             sequences = re.findall(r"(?<=\r\n)(?!>).*(?=\r\n)", fasta_sequence)
             if len(keys) < len(sequences):
-                new_strings = [string for string in sequences if len(string) <= 100]
+                new_strings = [string for string in sequences if len(string) <= 75]
                 not_to_merge = [string for string in sequences if string not in new_strings]
                 joined_sequence = "".join(new_strings)
                 sequences = list()
@@ -240,8 +241,7 @@ def final_statistics_output(mean_mod, mean_nmod, directory, name, user_defined_c
         wr.writerow([
                         "_____________________________________________________________________________________________________________________________"])
 
-
-def cytosine_modification_finder(input_file, fasta_file, context, zero_coverage, user_defined_context, directory):
+def cytosine_modification_finder(input_file, fasta_file, context, zero_coverage, skip_clip_overlap, minimum_base_quality, user_defined_context, directory):
     """Searches for cytosine modification positions in the desired contexts and calculates the modificaton levels."""
     header = True
     try:
@@ -279,7 +279,11 @@ def cytosine_modification_finder(input_file, fasta_file, context, zero_coverage,
         #     logs.info("Cytosine positions are loaded. {} seconds".format((time_d - time_b).total_seconds()))
         datata = context_sequence_search(contexts, all_keys, fastas, keys[i], user_defined_context)
         covered_positions = list()
-        pileups = inbam.pileup(keys[i], min_base_quality=20, fasta_file=fasta_file, stepper='samtools')
+        if skip_clip_overlap:
+            clip_overlap = False
+        else:
+            clip_overlap = True
+        pileups = inbam.pileup(keys[i], ignore_overlaps=clip_overlap, min_base_quality=minimum_base_quality, fasta_file=fasta_file, stepper='samtools')
         for reads in pileups:
             if (reads.reference_name, reads.pos, reads.pos + 1) in datata:
                 position = (reads.reference_name, reads.pos, reads.pos + 1)
