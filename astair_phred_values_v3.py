@@ -29,7 +29,6 @@ from statistics_summary import general_statistics_summary
 @click.command()
 @click.option('fq1', '--fq1', required=True, help='First in pair (R1) sequencing reads file in fastq.gz format')
 @click.option('fq2', '--fq2', required=True, help='Second in pair (R2) sequencing reads file in fastq.gz format')
-@click.option('minimum_score', '--minimum_score', required=False, default=15, type=int, help='Minimum Phred score used for visualisation only. (Default 15)')
 @click.option('calculation_mode', '--calculation_mode', required=False, default='means', type=click.Choice(['means', 'absolute']), help='Gives the mode of computation used for the Phred scores summary, where means runs faster. (Default is means)')
 @click.option('directory', '--directory', required=True, type=str, help='Output directory to save files.')
 @click.option('sample_size', '--sample_size', default=10000000, type=int, required=False, help='The number of reads to sample for the analysis. (Default 10 000 000)')
