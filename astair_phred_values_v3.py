@@ -206,7 +206,7 @@ def Phred_scores_plotting(fq1, fq2, calculation_mode, directory, sample_size, mi
     except (SystemExit, KeyboardInterrupt, IOError, FileNotFoundError):
         logs.error('The input fastq files do not exist.', exc_info=True)
     name = path.splitext(path.basename(fq1))[0]
-    name = re.sub('[R1]', '', name)
+    name = re.sub('_(R1|1).fq', '', name)
     directory = path.abspath(directory)
     if list(directory)[-1]!="/":
         directory = directory + "/"
