@@ -4,3 +4,7 @@ click
 pysam
 pyahocorasick
 numpy
+
+####### Graphics Requirements #######
+
+matplotlib 
