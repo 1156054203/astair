@@ -15,7 +15,8 @@ class SequenceSearchOutputTest(unittest.TestCase):
     key values tuples of (chromomes, start, end) of the desired contexts discovered in
     the provided fasta file, and as dictionary items the general and specific context
     discovered at that position. The test battery should have two failures."""
-    def test_ahocorasick_search_CHH_top_correct(self):
+
+    def test_ahocorasick_search_CHH_top(self):
         """Tests whether the expected CHH positions will be discovered on the top DNA strand."""
         data_context = {}
         contexts, all_keys = sequence_context_set_creation('CHH', None)
@@ -23,15 +24,8 @@ class SequenceSearchOutputTest(unittest.TestCase):
         self.assertEqual(data_context, {('test_string', 2, 3): ('CTT', 'CHH', 'T', 'C'),
                                         ('test_string', 5, 6): ('CAT', 'CHH', 'T', 'C'),
                                         ('test_string', 8, 9): ('CAC', 'CHH', 'T', 'C')})
-    def test_ahocorasick_search_CHH_top_incorrect(self):
-        """Tests whether incorrect CHH positions will be discovered on the top DNA strand."""
-        data_context = {}
-        contexts, all_keys = sequence_context_set_creation('CHH', None)
-        ahocorasick_search('CHH', contexts, 'AACTTCATCACT', 'test_string', None, data_context)
-        self.assertNotEqual(data_context, {('test_string', 2, 3): ('CAA', 'CHH', 'T', 'C'),
-                                        ('test_string', 5, 6): ('CTT', 'CHH', 'T', 'C'),
-                                        ('test_string', 8, 9): ('CTA', 'CHH', 'T', 'C')})
-    def test_ahocorasick_search_CHH_bottom_correct(self):
+
+    def test_ahocorasick_search_CHH_bottom(self):
         """Tests whether the expected CHH positions will be discovered on the bottom DNA strand."""
         data_context = {}
         contexts, all_keys = sequence_context_set_creation('CHH', None)
@@ -39,25 +33,22 @@ class SequenceSearchOutputTest(unittest.TestCase):
         self.assertEqual(data_context, {('test_string', 2, 3): ('CTT', 'CHH', 'A', 'G'),
                                         ('test_string', 3, 4): ('CCT', 'CHH', 'A', 'G'),
                                         ('test_string', 8, 9): ('CAA', 'CHH', 'A', 'G')})
-    def test_ahocorasick_search_CHH_bottom_incorrect(self):
-        """Tests whether any CHH positions will be discovered on the bottom DNA strand."""
-        data_context = {}
-        contexts, all_keys = sequence_context_set_creation('CHH', None)
-        ahocorasick_search('CHHb', contexts, 'AAGGCTTTGccc', 'test_string', None, data_context)
-        self.assertNotEqual(data_context, {})
-    def test_ahocorasick_search_CHG_top_correct(self):
+
+    def test_ahocorasick_search_CHG_top(self):
         """Tests whether the expected CHG positions will be discovered on the top DNA strand."""
         data_context = {}
         contexts, all_keys = sequence_context_set_creation('CHG', None)
         ahocorasick_search('CHG', contexts, 'AACTTCAGCACT', 'test_string', None, data_context)
         self.assertEqual(data_context, {('test_string', 5, 6): ('CAG', 'CHG', 'T', 'C')})
-    def test_ahocorasick_search_CHG_bottom_correct(self):
+
+    def test_ahocorasick_search_CHG_bottom(self):
         """Tests whether the expected CHG positions will be discovered on the bottom DNA strand."""
         data_context = {}
         contexts, all_keys = sequence_context_set_creation('CHG', None)
         ahocorasick_search('CHGb', contexts, 'AACTTCAGCACT', 'test_string', None, data_context)
         self.assertEqual(data_context, {('test_string', 7, 8): ('CTG', 'CHG', 'A', 'G')})
-    def test_ahocorasick_search_CpG_correct(self):
+
+    def test_ahocorasick_search_CpG(self):
         """Tests whether the expected CpG positions will be discovered."""
         data_context = {}
         contexts, all_keys = sequence_context_set_creation('CpG', None)

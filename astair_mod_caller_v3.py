@@ -55,11 +55,9 @@ def fasta_splitting_by_sequence(fasta_file):
             sequences = re.findall(r"(?<=\r\n)(?!>).*(?=\r\n)", fasta_sequence)
             if len(keys) < len(sequences):
                 new_strings = [string for string in sequences if len(string) <= 75]
-                not_to_merge = [string for string in sequences if string not in new_strings]
+                sequences = [string for string in sequences if string not in new_strings]
                 joined_sequence = "".join(new_strings)
-                sequences = list()
-                sequences.append(joined_sequence)
-                sequences.append(not_to_merge)
+                sequences.insert(0, joined_sequence)
         elif re.match(r".*(?=\n)", fasta_sequence):
             keys = re.findall(r"(?<=>).*(?=\n)", fasta_sequence)
             sequences = re.findall(r"(?<=\n)(?!>).*(?=\n)", fasta_sequence)
