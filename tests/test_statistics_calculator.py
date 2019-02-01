@@ -11,7 +11,7 @@ class StatisticsCalculationTest(unittest.TestCase):
     modified reads, number of unmodified reads, modified base, reference base, specific context, general context,
      SNV or not."""
     def test_modified_position_correct(self):
-         """Tests whether a CHH context will be discovered and its modified and unmodified bases counted."""
+        """Tests whether a CHH context will be discovered and its modified and unmodified bases counted."""
         mean_mod = {'CHH':0, 'CAT':0}
         mean_unmod = {'CHH':0, 'CAT':0}
         data_mod = ['some_reference_genome', 1, 2, 0.8, 8, 2, 'T', 'C', 'CAT', 'CHH', 'No']
@@ -19,7 +19,7 @@ class StatisticsCalculationTest(unittest.TestCase):
         self.assertEqual(mean_mod, {'CHH': 8, 'CAT': 8})
         self.assertEqual(mean_unmod, {'CHH': 2, 'CAT': 2})
     def test_modified_position_incorrect(self):
-         """Tests whether a SNV in CHH context will not be counted as a modification."""
+        """Tests whether a SNV in CHH context will not be counted as a modification."""
         mean_mod = {'CHH':0, 'CAT':0}
         mean_unmod = {'CHH':0, 'CAT':0}
         data_mod = ['some_reference_genome', 1, 2, 0.8, 8, 2, 'T', 'C', 'CAT', 'CHH', 'homozyguous']

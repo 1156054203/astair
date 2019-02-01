@@ -40,7 +40,7 @@ class SequenceSearchOutputTest(unittest.TestCase):
                                         ('test_string', 3, 4): ('CCT', 'CHH', 'A', 'G'),
                                         ('test_string', 8, 9): ('CAA', 'CHH', 'A', 'G')})
     def test_ahocorasick_search_CHH_bottom_incorrect(self):
-         """Tests whether any CHH positions will be discovered on the bottom DNA strand."""
+        """Tests whether any CHH positions will be discovered on the bottom DNA strand."""
         data_context = {}
         contexts, all_keys = sequence_context_set_creation('CHH', None)
         ahocorasick_search('CHHb', contexts, 'AAGGCTTTGccc', 'test_string', None, data_context)
