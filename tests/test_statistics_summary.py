@@ -1,4 +1,5 @@
 import unittest
+import xmlrunner
 
 from statistics_summary import general_statistics_summary
 
@@ -12,4 +13,4 @@ class StatisticsSummaryOutputTest(unittest.TestCase):
         self.assertEqual(statistics_output, [43.385, 12.0, 62.068, 4.0, 76.0, 1, 215])
 
 if __name__ == '__main__':
-    unittest.main()
+    unittest.main(testRunner=xmlrunner.XMLTestRunner(output='test-reports'))

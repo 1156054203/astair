@@ -1,4 +1,5 @@
 import unittest
+import xmlrunner
 
 from astair_mod_caller_v3 import statistics_calculator
 
@@ -28,4 +29,4 @@ class StatisticsCalculationTest(unittest.TestCase):
 
 
 if __name__ == '__main__':
-    unittest.main()
+    unittest.main(testRunner=xmlrunner.XMLTestRunner(output='test-reports'))

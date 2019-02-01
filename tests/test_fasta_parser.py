@@ -1,4 +1,5 @@
 import unittest
+import xmlrunner
 from io import StringIO
 import re
 import csv
@@ -80,4 +81,4 @@ class FastaParserTest(unittest.TestCase):
 
 
 if __name__ == '__main__':
-    unittest.main()
+    unittest.main(testRunner=xmlrunner.XMLTestRunner(output='test-reports'))
