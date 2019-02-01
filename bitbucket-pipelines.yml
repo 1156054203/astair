@@ -15,4 +15,4 @@ pipelines:
           - pip install -r requirements.txt
           - pip install -r test_requirements.txt
           - mkdir -p test-results
-          - nosetests -w . -w tests --with-xunit --xunit-file=test-results/combined_results.xml --with-coverage --cover-erase --cover-xml --cover-xml-file=test-results/coverage.xml 
+          - nosetests --with-xunit --xunit-file=test-results/combined_results.xml --with-coverage --cover-erase --cover-xml --cover-xml-file=test-results/coverage.xml  --cover-package=. tests/
