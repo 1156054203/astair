@@ -13,4 +13,5 @@ pipelines:
           - pip
         script:
           - pip install -r requirements.txt
-          - python -m unittest discover -s tests -p test_*.py
+          - pip install -r test_requirements.txt
+          - nosetests -w . -w tests --with-xunit --xunit-file=test-results/combined_results.xml

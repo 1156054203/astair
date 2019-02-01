@@ -1,5 +1,4 @@
 import unittest
-import xmlrunner
 
 from astair_mod_caller_v3 import sequence_context_set_creation
 from astair_mod_caller_v3 import ahocorasick_search

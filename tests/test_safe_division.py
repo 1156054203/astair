@@ -1,5 +1,4 @@
 import unittest
-import xmlrunner
 
 from safe_division import non_zero_division
 from safe_division import non_zero_division_NA
@@ -14,4 +13,4 @@ class SafeDivisionFunctionsOutputTest(unittest.TestCase):
         self.assertEqual(non_zero_division_NA(10,0), 'NA')
 
 if __name__ == '__main__':
-    unittest.main(testRunner=xmlrunner.XMLTestRunner(output='test-reports'))
+    unittest.main()
