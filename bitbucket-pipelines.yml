@@ -14,4 +14,5 @@ pipelines:
         script:
           - pip install -r requirements.txt
           - pip install -r test_requirements.txt
+          - mkdir -p test-results
           - nosetests -w . -w tests --with-xunit --xunit-file=test-results/combined_results.xml
