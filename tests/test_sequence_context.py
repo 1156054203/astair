@@ -26,7 +26,7 @@ class SequenceSearchOutputTest(unittest.TestCase):
         data_context = {}
         contexts, all_keys = sequence_context_set_creation('CHH', None)
         ahocorasick_search('CHH', contexts, 'AACTTCATCACT', 'test_string', None, data_context)
-        self.assertEqual(data_context, {('test_string', 2, 3): ('CAA', 'CHH', 'T', 'C'),
+        self.assertNotEqual(data_context, {('test_string', 2, 3): ('CAA', 'CHH', 'T', 'C'),
                                         ('test_string', 5, 6): ('CTT', 'CHH', 'T', 'C'),
                                         ('test_string', 8, 9): ('CTA', 'CHH', 'T', 'C')})
     def test_ahocorasick_search_CHH_bottom_correct(self):
@@ -40,7 +40,7 @@ class SequenceSearchOutputTest(unittest.TestCase):
         data_context = {}
         contexts, all_keys = sequence_context_set_creation('CHH', None)
         ahocorasick_search('CHHb', contexts, 'AAGGCTTTGccc', 'test_string', None, data_context)
-        self.assertEqual(data_context, {})
+        self.assertNotEqual(data_context, {})
     def test_ahocorasick_search_CHG_top_correct(self):
         data_context = {}
         contexts, all_keys = sequence_context_set_creation('CHG', None)

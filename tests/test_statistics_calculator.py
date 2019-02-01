@@ -22,8 +22,8 @@ class StatisticsCalculationTest(unittest.TestCase):
         mean_unmod = {'CHH':0, 'CAT':0}
         data_mod = ['some_reference_genome', 1, 2, 0.8, 8, 2, 'T', 'C', 'CAT', 'CHH', 'homozyguous']
         statistics_calculator(mean_mod, mean_unmod, data_mod, None)
-        self.assertEqual(mean_mod, {'CHH': 8, 'CAT': 8})
-        self.assertEqual(mean_unmod, {'CHH': 2, 'CAT': 2})
+        self.assertNotEqual(mean_mod, {'CHH': 8, 'CAT': 8})
+        self.assertNotEqual(mean_unmod, {'CHH': 2, 'CAT': 2})
 
 
 
