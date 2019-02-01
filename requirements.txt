@@ -8,3 +8,7 @@ numpy
 ####### Graphics Requirements #######
 
 matplotlib 
+
+####### Test Requirements #######
+
+unittest-xml-reporting
