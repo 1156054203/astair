@@ -58,6 +58,14 @@ def numeric_Phred_score(score):
     final_score = [int(x) for x in re.findall(r"(?!'')[0-9][0-9]|[0-9](?=" ")", final_score)]
     return final_score
 
+def clean_open_file(input_file):
+    try:
+        fastq_file = gzip.open(input_file, "rt")
+        return fastq_file
+    except (SystemExit, KeyboardInterrupt, IOError, FileNotFoundError):
+        logs.error('The input file does not exist.', exc_info=True)
+
+
 
 def Phred_score_statistics_calculation(input_file, sample_size, calculation_mode):
     if sample_size == None:
@@ -67,50 +75,49 @@ def Phred_score_statistics_calculation(input_file, sample_size, calculation_mode
     cycle_count = 0
     read_values = []
     Phred_T_sum, Phred_T_len, Phred_C_sum, Phred_C_len, Phred_A_sum, Phred_A_len, Phred_G_sum, Phred_G_len = [0] * 8
-    with gzip.open(input_file, "rt") as fastq_file:
-        for line in fastq_file:
-            if cycle_count == 1 or cycle_count % 4 == 1:
-                read_sequence = re.findall(r"(?<!@)(?!@).*[^+|^\n].*(?!@\n)", line)[0]
-            elif cycle_count == 3 or cycle_count % 4 == 3:
-                read_base_qualities = re.findall(r"(?<!@)(?!@).*[^+|^\n].*(?!@\n)", line)
-                read_base_qualities = numeric_Phred_score(read_base_qualities[0])
-                results = [(i, *j) for i, j in
-                           itertools.zip_longest(read_base_qualities, read_sequence, fillvalue='BLANK')]
-                thymines = [x[0] for x in results if 'T' in x[:]]
-                cytosines = [x[0] for x in results if 'C' in x[:]]
-                adenines = [x[0] for x in results if 'A' in x[:]]
-                guanines = [x[0] for x in results if 'G' in x[:]]
-                Phred_T_sum += sum(thymines)
-                Phred_T_len += len(thymines)
-                Phred_C_sum += sum(cytosines)
-                Phred_C_len += len(cytosines)
-                Phred_A_sum += sum(adenines)
-                Phred_A_len += len(adenines)
-                Phred_G_sum += sum(guanines)
-                Phred_G_len += len(guanines)
-                if calculation_mode == 'means':
-                    if cycle_count < cutoff * 4:
-                        read_values.append(tuple((non_zero_division_NA(sum(thymines), len(thymines)),
-                                              non_zero_division_NA(sum(cytosines), len(cytosines)),
-                                              non_zero_division_NA(sum(adenines), len(adenines)),
-                                              non_zero_division_NA(sum(guanines), len(guanines)))))
-                    elif cycle_count >= cutoff * 4 and cycle_count < 10 * cutoff * 4:
-                        random_index = random.randint(0, len(read_values) - 1)
-                        read_values[random_index] = tuple((non_zero_division_NA(sum(thymines), len(thymines)),
-                                                           non_zero_division_NA(sum(cytosines), len(cytosines)),
-                                                           non_zero_division_NA(sum(adenines), len(adenines)),
-                                                           non_zero_division_NA(sum(guanines), len(guanines))))
-                    else:
-                        break
-                elif calculation_mode == 'absolute':
-                    if cycle_count < cutoff * 4:
-                        read_values.append((list((thymines)), list((cytosines)), list((adenines)), list((guanines))))
-                    elif cycle_count >= cutoff * 4 and cycle_count < 10 * cutoff * 4:
-                        random_index = random.randint(0, len(read_values) - 1)
-                        read_values[random_index] = tuple(((list((thymines)), list((cytosines)), list((adenines)), list((guanines)))))
-                    else:
-                        break
-            cycle_count += 1
+    for line in clean_open_file(input_file):
+        if cycle_count == 1 or cycle_count % 4 == 1:
+            read_sequence = re.findall(r"(?<!@)(?!@).*[^+|^\n].*(?!@\n)", line)[0]
+        elif cycle_count == 3 or cycle_count % 4 == 3:
+            read_base_qualities = re.findall(r"(?<!@)(?!@).*[^+|^\n].*(?!@\n)", line)
+            read_base_qualities = numeric_Phred_score(read_base_qualities[0])
+            results = [(i, *j) for i, j in
+                       itertools.zip_longest(read_base_qualities, read_sequence, fillvalue='BLANK')]
+            thymines = [x[0] for x in results if 'T' in x[:]]
+            cytosines = [x[0] for x in results if 'C' in x[:]]
+            adenines = [x[0] for x in results if 'A' in x[:]]
+            guanines = [x[0] for x in results if 'G' in x[:]]
+            Phred_T_sum += sum(thymines)
+            Phred_T_len += len(thymines)
+            Phred_C_sum += sum(cytosines)
+            Phred_C_len += len(cytosines)
+            Phred_A_sum += sum(adenines)
+            Phred_A_len += len(adenines)
+            Phred_G_sum += sum(guanines)
+            Phred_G_len += len(guanines)
+            if calculation_mode == 'means':
+                if cycle_count < cutoff * 4:
+                    read_values.append(tuple((non_zero_division_NA(sum(thymines), len(thymines)),
+                                          non_zero_division_NA(sum(cytosines), len(cytosines)),
+                                          non_zero_division_NA(sum(adenines), len(adenines)),
+                                          non_zero_division_NA(sum(guanines), len(guanines)))))
+                elif cycle_count >= cutoff * 4 and cycle_count < 10 * cutoff * 4:
+                    random_index = random.randint(0, len(read_values) - 1)
+                    read_values[random_index] = tuple((non_zero_division_NA(sum(thymines), len(thymines)),
+                                                       non_zero_division_NA(sum(cytosines), len(cytosines)),
+                                                       non_zero_division_NA(sum(adenines), len(adenines)),
+                                                       non_zero_division_NA(sum(guanines), len(guanines))))
+                else:
+                    break
+            elif calculation_mode == 'absolute':
+                if cycle_count < cutoff * 4:
+                    read_values.append((list((thymines)), list((cytosines)), list((adenines)), list((guanines))))
+                elif cycle_count >= cutoff * 4 and cycle_count < 10 * cutoff * 4:
+                    random_index = random.randint(0, len(read_values) - 1)
+                    read_values[random_index] = tuple(((list((thymines)), list((cytosines)), list((adenines)), list((guanines)))))
+                else:
+                    break
+        cycle_count += 1
     return read_values
 
 
@@ -213,9 +220,9 @@ def Phred_scores_plotting(fq1, fq2, calculation_mode, directory, sample_size, mi
     if colors != ['skyblue', 'mediumaquamarine', 'khaki', 'lightcoral']:
         colors = "".join(colors).split(',')
     read_values_fq1, read_values_fq2 = main_Phred_score_calculation_output(fq1, fq2, sample_size, directory, name, calculation_mode)
+    data_fq1, maxy1 = Phred_values_return(read_values_fq1, 'F', directory, name, calculation_mode)
+    data_fq2, maxy2 = Phred_values_return(read_values_fq2, 'R', directory, name, calculation_mode)
     if plot:
-        data_fq1, maxy1 = Phred_values_return(read_values_fq1, 'F', directory, name, calculation_mode)
-        data_fq2, maxy2 = Phred_values_return(read_values_fq2, 'R', directory, name, calculation_mode)
         pyp.figure()
         fig, fq = pyp.subplots(1, 2)
         fig.suptitle('Sequencing base quality', fontsize=14)
