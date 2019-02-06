@@ -5,15 +5,14 @@ import ahocorasick
 import itertools
 import csv
 import re
-import pdb
+import sys
 import click
 import warnings
 import logging
 from os import path
 from datetime import datetime
 from collections import defaultdict
-from threading import Thread
-import cProfile
+
 
 from DNA_sequences_operations import complementary
 from safe_division import non_zero_division
@@ -246,10 +245,12 @@ def cytosine_modification_finder(input_file, fasta_file, context, zero_coverage,
         open(input_file, 'rb')
     except (SystemExit, KeyboardInterrupt, IOError, FileNotFoundError):
         logs.error('The input file does not exist.', exc_info=True)
+        sys.exit(1)
     try:
         open(fasta_file, 'r')
     except (SystemExit, KeyboardInterrupt, IOError, FileNotFoundError):
         logs.error('The genome reference fasta file does not exist.', exc_info=True)
+        sys.exit(1)
     name = path.splitext(path.basename(input_file))[0]
     directory = path.abspath(directory)
 

@@ -1,10 +1,14 @@
+#!/usr/bin/env python3
+
 import click
 import pysam
 import re
+import sys
 import itertools
 import csv
 from math import ceil
 import numpy
+from datetime import datetime
 import logging
 import warnings
 from os import path
@@ -37,7 +41,10 @@ warnings.simplefilter(action='ignore', category=UserWarning)
 logging.basicConfig(level=logging.DEBUG)
 logs = logging.getLogger(__name__)
 
+time_b = datetime.now()
+
 def initialise_data_counters(read_length):
+    """Clean initialisation of empty dictionaries used for counters."""
     all_read_data = list(({}, {}, {}))
     for read_data in all_read_data:
         for i in range(0, read_length):
@@ -46,25 +53,31 @@ def initialise_data_counters(read_length):
 
 
 def bam_file_opener(input_file):
+    """Opens neatly and separately the bam file as an iterator."""
     try:
         open(input_file, 'rb')
     except (SystemExit, KeyboardInterrupt, IOError, FileNotFoundError):
         logs.error('The input file does not exist.', exc_info=True)
+        sys.exit(1)
     inbam = pysam.AlignmentFile(input_file, "rb")
     bam_fetch = inbam.fetch(until_eof=True)
     return bam_fetch
 
 def check_read_info(read):
-    if isinstance(read.tags[0][1], str) and read.tags[0][0] == 'MD':
-        data = read.tags[0][1]
-    elif isinstance(read.tags[1][1], str) and read.tags[1][0] == 'MD':
-        data = read.tags[1][1]
-    else:
-        pass
-    return data
+    """Checks if the MD column exist in the input bam file and takes its string."""
+    try:
+        if isinstance(read.tags[0][1], str) and read.tags[0][0] == 'MD':
+            data = read.tags[0][1]
+        elif isinstance(read.tags[1][1], str) and read.tags[1][0] == 'MD':
+            data = read.tags[1][1]
+        return data
+    except (IndexError, TypeError):
+            logs.error('The input file does not contain a MD tag column.', exc_info=True)
+            sys.exit(1)
 
 
 def mbias_calculator(read, read_length, read_mods_CpG, read_mods_CHG, read_mods_CHH, read_all_CpG, read_all_CHG, read_all_CHH):
+    """Calculates the modification level per read position, pair orientation and cytosine context."""
     read_data = check_read_info(read)
     if re.search("(?:.*C.*)", read_data, re.IGNORECASE):
         changes = [int(s) for s in re.findall(r'\d+', read_data)]
@@ -98,7 +111,6 @@ def mbias_calculator(read, read_length, read_mods_CpG, read_mods_CHG, read_mods_
                     read_all_CHG[i] += 1
                 elif i in cpg_all:
                     read_all_CpG[i] += 1
-       # pdb.set_trace()
     else:
         sequence = list(read.query_sequence)
         reads = "".join(sequence)
@@ -117,6 +129,7 @@ def mbias_calculator(read, read_length, read_mods_CpG, read_mods_CHG, read_mods_
 
 
 def mbias_evaluater(input_file, read_length):
+    """Outputs the modification levels per read position, pair orientation and cytosine context."""
     read1_mods_CHH, read1_mods_CHG, read1_mods_CpG = initialise_data_counters(read_length)
     read1_all_CHH, read1_all_CHG, read1_all_CpG = initialise_data_counters(read_length)
     read2_mods_CHH, read2_mods_CHG, read2_mods_CpG = initialise_data_counters(read_length)
@@ -131,6 +144,8 @@ def mbias_evaluater(input_file, read_length):
 
 
 def mbias_statistics_calculator(input_file, name, directory, read_length):
+    """Creates a summary statistics of the modification levels per read position, pair orientation and cytosine context,
+    and then writes them as a text file that can be used for independent visualisation."""
     read1_mods_CpG, read1_mods_CHG, read1_mods_CHH, read1_all_CpG, read1_all_CHG, read1_all_CHH,\
     read2_mods_CpG, read2_mods_CHG, read2_mods_CHH, read2_all_CpG, read2_all_CHG, read2_all_CHH \
         = mbias_evaluater(input_file, read_length)
@@ -160,6 +175,7 @@ def mbias_statistics_calculator(input_file, name, directory, read_length):
 
 
 def Mbias_plotting(input_file, directory, read_length, plot):
+    """The general M-bias calculation and statistics output function, which might be also visualised if the plotting module is enabled."""
     name = path.splitext(path.basename(input_file))[0]
     directory = path.abspath(directory)
     if list(directory)[-1]!="/":
@@ -206,6 +222,9 @@ def Mbias_plotting(input_file, directory, read_length, plot):
         pyp.close()
     else:
         pass
+    time_m = datetime.now()
+    logs.info("asTair's M-bias summary function has finished running. {} seconds".format((
+    time_m - time_b).total_seconds()))
 
 
 if __name__ == '__main__':

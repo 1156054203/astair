@@ -5,6 +5,7 @@ import logging
 from os import path
 import itertools
 import csv
+import sys
 import re
 from datetime import datetime
 from threading import Thread
@@ -46,6 +47,7 @@ time_b = datetime.now()
 
 
 def numeric_Phred_score(score):
+    """Converts ASCII fastq sequencing scores to numeric scores."""
     final_score = score.translate({ord("!"): ' 0 ', ord("\""): ' 1 ', ord("#"): ' 2 ', ord("$"): ' 3 ', ord("%"): ' 4 ',
                                    ord("&"): ' 5 ', ord("'"): ' 6 ', ord("("): ' 7 ', ord(")"): ' 8 ', ord("*"): ' 9 ',
                                    ord("+"): ' 10 ', ord("`"): ' 11 ', ord("-"): ' 12 ', ord("."): ' 13 ', ord("/"): ' 14 ',
@@ -59,15 +61,18 @@ def numeric_Phred_score(score):
     return final_score
 
 def clean_open_file(input_file):
+    """Opens neatly and separately the fastq file as an iterator."""
     try:
         fastq_file = gzip.open(input_file, "rt")
         return fastq_file
     except (SystemExit, KeyboardInterrupt, IOError, FileNotFoundError):
         logs.error('The input file does not exist.', exc_info=True)
+        sys.exit(1)
 
 
 
 def Phred_score_statistics_calculation(input_file, sample_size, calculation_mode):
+    """Calculates the mean or the absolute numeric Phred scores per each base using a desired sample size for random sampling from the fastq file."""
     if sample_size == None:
         cutoff = 10000000
     else:
@@ -122,6 +127,7 @@ def Phred_score_statistics_calculation(input_file, sample_size, calculation_mode
 
 
 def Phred_score_value_return(fastq_input, sample_size, calculation_mode, fq1, fq2):
+    """Returns the numeric Phred scores per base for the forward and reverse reads in pair-end sequencing."""
     if fastq_input == fq1:
         read_values_fq1 = Phred_score_statistics_calculation(fastq_input, sample_size, calculation_mode)
         return read_values_fq1
@@ -131,6 +137,7 @@ def Phred_score_value_return(fastq_input, sample_size, calculation_mode, fq1, fq
 
 
 def main_Phred_score_calculation_output(fq1, fq2, sample_size, directory, name, calculation_mode):
+    """Runs the Phred score calculation functions in parallel for the forward and the reverse reads in pair-end sequencing."""
     threads = []
     queue = [Queue(), Queue()]
     threads.append(Thread(target=lambda que, arg1, arg2, arg3, arg4, arg5: que.put(Phred_score_value_return(arg1, arg2, arg3, arg4, arg5)),
@@ -146,6 +153,7 @@ def main_Phred_score_calculation_output(fq1, fq2, sample_size, directory, name, 
 
 
 def summary_statistics_output(directory, name, statistics_data, read_orientation):
+    """Outputs the Phred score calculation statistics as a text file that can be visualised independently from the plotting module."""
     with open(directory + name + '_total_Phred.txt', 'a', newline='') as new_file:
         data_line = csv.writer(new_file, delimiter='\t', lineterminator='\n')
         if read_orientation == 'F':
@@ -172,6 +180,7 @@ def summary_statistics_output(directory, name, statistics_data, read_orientation
 
 
 def Phred_values_return(input_values, read_orientation, directory, name, calculation_mode):
+    """Takes the Phred scores per read and splits them in lists per base, and then calculates the summary statistics."""
     Ts = [x[0] for x in input_values if x[0] != 'NA']
     Cs = [x[1] for x in input_values if x[1] != 'NA']
     As = [x[2] for x in input_values if x[2] != 'NA']
@@ -193,6 +202,7 @@ def Phred_values_return(input_values, read_orientation, directory, name, calcula
 
 
 def Phred_scores_color_change(plot_input, colors):
+    """Employs the desired colouring scheme for the plotting module."""
     for plot in plot_input:
         for box in plot['boxes']:
             box.set(color='black', linewidth=1)
@@ -207,11 +217,14 @@ def Phred_scores_color_change(plot_input, colors):
 
 
 def Phred_scores_plotting(fq1, fq2, calculation_mode, directory, sample_size, minimum_score, colors, plot):
+    """The general function that takes the input file, calculates mean or absolute Phred scores per base, and outputs
+    their summary statistics as a text file or as a plot when the plotting module is enabled."""
     try:
         open(fq1, 'r')
         open(fq2, 'r')
     except (SystemExit, KeyboardInterrupt, IOError, FileNotFoundError):
         logs.error('The input fastq files do not exist.', exc_info=True)
+        sys.exit(1)
     name = path.splitext(path.basename(fq1))[0]
     name = re.sub('_(R1|1).fq', '', name)
     directory = path.abspath(directory)
