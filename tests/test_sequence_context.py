@@ -1,7 +1,7 @@
 import unittest
 
 from astair_mod_caller_v3 import sequence_context_set_creation
-from astair_mod_caller_v3 import ahocorasick_search
+from reference_context_search_triad import ahocorasick_search
 
 
 

@@ -1,7 +1,6 @@
 #!/usr/bin/env python3
 
 import click
-import pysam
 import re
 import sys
 import itertools
@@ -23,6 +22,7 @@ except ImportError:
     pass
 
 from safe_division import non_zero_division
+from bam_file_parser import bam_file_opener
 
 
 
@@ -51,17 +51,6 @@ def initialise_data_counters(read_length):
             read_data[i] = 0
     return all_read_data[0], all_read_data[1], all_read_data[2]
 
-
-def bam_file_opener(input_file):
-    """Opens neatly and separately the bam file as an iterator."""
-    try:
-        open(input_file, 'rb')
-    except (SystemExit, KeyboardInterrupt, IOError, FileNotFoundError):
-        logs.error('The input file does not exist.', exc_info=True)
-        sys.exit(1)
-    inbam = pysam.AlignmentFile(input_file, "rb")
-    bam_fetch = inbam.fetch(until_eof=True)
-    return bam_fetch
 
 def check_read_info(read):
     """Checks if the MD column exist in the input bam file and takes its string."""
@@ -134,7 +123,7 @@ def mbias_evaluater(input_file, read_length):
     read1_all_CHH, read1_all_CHG, read1_all_CpG = initialise_data_counters(read_length)
     read2_mods_CHH, read2_mods_CHG, read2_mods_CpG = initialise_data_counters(read_length)
     read2_all_CHH, read2_all_CHG, read2_all_CpG = initialise_data_counters(read_length)
-    for read in bam_file_opener(input_file):
+    for read in bam_file_opener(input_file, 'fetch'):
         if read.flag == 99 or read.flag == 83:
             mbias_calculator(read, read_length, read1_mods_CpG, read1_mods_CHG, read1_mods_CHH, read1_all_CpG, read1_all_CHG, read1_all_CHH)
         if read.flag == 147 or read.flag == 163:

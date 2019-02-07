@@ -1,11 +1,9 @@
 #!/usr/bin/env python3
 
-import pysam
-import ahocorasick
+
 import itertools
 import csv
 import re
-import sys
 import click
 import warnings
 import logging
@@ -14,8 +12,11 @@ from datetime import datetime
 from collections import defaultdict
 
 
-from DNA_sequences_operations import complementary
 from safe_division import non_zero_division
+from bam_file_parser import bam_file_opener
+from simple_fasta_parser import fasta_splitting_by_sequence
+from reference_context_search_triad import sequence_context_set_creation
+from reference_context_search_triad import context_sequence_search
 
 @click.command()
 @click.option('input_file', '--input_file', required=True, help='BAM format file containing sequencing reads.')
@@ -25,7 +26,7 @@ from safe_division import non_zero_division
 @click.option('context', '--context', required=False, default='all',  type=click.Choice(['all', 'CpG', 'CHG', 'CHH']), help='Explains which cytosine sequence contexts are to be expected in the output file. Default behaviour is all, which includes CpG, CHG, CHH contexts and their sub-contexts for downstream filtering and analysis.')
 @click.option('user_defined_context', '--user_defined_context', required=False, type=str, help='At least two-letter contexts other than CG, CHH and CHG to be evaluated, will return the genomic coordinates for the first cytosine in the string.')
 # @click.option('library', '--library', required=False, default = 'directional',  type=click.Choice(['directional', 'RR', 'PMAT']), help='Provides information for the library preparation protocol (RR is reduced representation and PMAT is post-method adapter-tagging).')
-# @click.option('method', '--method', required=False, default = 'CmtoT', type=click.Choice(['CtoT', 'CmtoT']), help='Specify sequencing method, possible options are CtoT (uunmodified cytosines are converted to thymines, bisulfite sequencing-like) and CmtoT (modified cytosines are converted to thymines, TAPS-like).')
+# @click.option('method', '--method', required=False, default = 'CmtoT', type=click.Choice(['CtoT', 'CmtoT']), help='Specify sequencing method, possible options are CtoT (unmodified cytosines are converted to thymines, bisulfite sequencing-like) and CmtoT (modified cytosines are converted to thymines, TAPS-like).')
 @click.option('skip_clip_overlap', '--skip_clip_overlap', required=False, is_flag=True, help='Skipping the random removal of overlapping bases between paired-end reads. Not recommended for paired-end libraries, unless the overlaps are removed prior to calling.')
 @click.option('minimum_base_quality', '--minimum_base_quality', required=False, type=int, default=20, help='Set the minimum base quality for a read base to be used in the pileup (Default 20).')
 # @click.option('N_threads', '--N_threads', default = 1, required=True, help='The number of threads to spawn (the default value is 1).')
@@ -41,124 +42,6 @@ logging.basicConfig(level=logging.DEBUG)
 logs = logging.getLogger(__name__)
 
 time_b = datetime.now()
-
-
-def fasta_splitting_by_sequence(fasta_file):
-    """Parses fasta files with multiple genomes."""
-    fastas = {}
-    keys, sequences = list(), list()
-    with open(fasta_file, 'r', newline='') as fasta_handle:
-        fasta_sequence = fasta_handle.read()
-        if re.match(r".*(?=\r\n)", fasta_sequence):
-            keys = re.findall(r"(?<=>).*(?=\r\n)", fasta_sequence)
-            sequences = re.findall(r"(?<=\r\n)(?!>).*(?=\r\n)", fasta_sequence)
-            if len(keys) < len(sequences):
-                new_strings = [string for string in sequences if len(string) <= 75]
-                sequences = [string for string in sequences if string not in new_strings]
-                joined_sequence = "".join(new_strings)
-                sequences.insert(0, joined_sequence)
-        elif re.match(r".*(?=\n)", fasta_sequence):
-            keys = re.findall(r"(?<=>).*(?=\n)", fasta_sequence)
-            sequences = re.findall(r"(?<=\n)(?!>).*(?=\n)", fasta_sequence)
-    for i in range(0, len(keys)):
-        fastas[keys[i]] = sequences[i]
-    return keys, fastas
-
-
-def sequence_context_set_creation(desired_sequence, user_defined_context):
-    """Prepares sets of possible cytosine contexts."""
-    letters_top = ['A', 'C', 'T', 'a', 'c', 't']
-    if user_defined_context:
-        user = list(map(''.join, itertools.product(*zip(user_defined_context.upper(), user_defined_context.lower()))))
-    if desired_sequence == 'all':
-        CHG = [y + x + z for x in letters_top for y in ['C', 'c'] for z in ['G', 'g']]
-        CHGb = [y + x + z for x in letters_top for z in ['C', 'c'] for y in ['G', 'g']]
-        CHH = [y + x + z for x in letters_top for y in ['C', 'c'] for z in letters_top]
-        CHHb = [y + x + z for x in letters_top for z in ['C', 'c'] for y in letters_top]
-        CG = [y + z for y in ['C', 'c'] for z in ['G', 'g']]
-        CN = [y + x + z for x in ['N', 'n'] for y in ['C', 'c'] for z in ['N', 'n']]
-        CNb = [y + x + z for x in ['N', 'n'] for z in ['C', 'c'] for y in ['N', 'n']]
-        if user_defined_context:
-            contexts = {'CHG': list(CHG), 'CHGb': list(CHGb), 'CHH': list(CHH), 'CHHb': list(CHHb), 'CG': list(CG),'CN': list(CN), 'CNb': list(CNb), 'user': list(user)}
-            all_keys = list(('CHG', 'CHGb', 'CHH', 'CHHb', 'CG', 'CN', 'CNb', 'user'))
-        else:
-            contexts = {'CHG': list(CHG), 'CHGb': list(CHGb), 'CHH': list(CHH), 'CHHb': list(CHHb), 'CG': list(CG),'CN': list(CN), 'CNb': list(CNb)}
-            all_keys = list(('CHG', 'CHGb', 'CHH', 'CHHb', 'CG', 'CN', 'CNb'))
-    elif desired_sequence == 'CpG':
-        CG = [y + z for y in ['C', 'c'] for z in ['G', 'g']]
-        if user_defined_context:
-            contexts = {'CG': list(CG), 'user': list(user)}
-            all_keys = list(( 'CG', 'user'))
-        else:
-            contexts = {'CG': list(CG)}
-            all_keys = list(('CG'))
-    elif desired_sequence == 'CHG':
-        CHG = [y + x + z for x in letters_top for y in ['C', 'c'] for z in ['G', 'g']]
-        CHGb = [y + x + z for x in letters_top for z in ['C', 'c'] for y in ['G', 'g']]
-        if user_defined_context:
-            contexts = {'CHG': list(CHG), 'CHGb': list(CHGb), 'user': list(user)}
-            all_keys = list(( 'CHG', 'CHGb', 'user'))
-        else:
-            contexts = {'CHG': list(CHG), 'CHGb': list(CHGb)}
-            all_keys = list(('CHG', 'CHGb'))
-    elif desired_sequence == 'CHH':
-        CHH = [y + x + z for x in letters_top for y in ['C', 'c'] for z in letters_top]
-        CHHb = [y + x + z for x in letters_top for z in ['C', 'c'] for y in letters_top]
-        if user_defined_context:
-            contexts = {'CHH': list(CHH), 'CHHb': list(CHHb), 'user': list(user)}
-            all_keys = list(( 'CHH', 'CHHb', 'user'))
-        else:
-            contexts = {'CHH': list(CHH), 'CHHb': list(CHHb)}
-            all_keys = list(('CHH', 'CHHb'))
-    return contexts, all_keys
-
-
-def ahocorasick_search(objects, context, string, string_name, user_defined_context, data_context):
-    """Looks for cytosine contexts in the reference fasta file."""
-    auto = ahocorasick.Automaton()
-    for pattern in context[objects]:
-        auto.add_word(pattern, pattern)
-    auto.make_automaton()
-    if objects[-1] == 'b':
-        for end_ind, found in auto.iter(complementary(string)):
-            reversed = list(found.upper())
-            reversed.reverse()
-            data_context[(string_name, end_ind, end_ind + 1)] = tuple(
-                ("".join(reversed), objects[0:-1], 'A', 'G'))
-    elif objects == 'CG':
-        for end_ind, found in auto.iter(string):
-            data_context[(string_name, end_ind - 1, end_ind)] = tuple((found.upper(), 'CpG', 'T', 'C'))
-            data_context[(string_name, end_ind, end_ind + 1)] = tuple((found.upper(), 'CpG', 'A', 'G'))
-    elif objects == 'CHG' or objects == 'CHH':
-        for end_ind, found in auto.iter(string):
-            data_context[(string_name, end_ind - 2, end_ind - 1)] = tuple((found.upper(), objects, 'T', 'C'))
-    elif objects == 'CN':
-        for end_ind, found in auto.iter(string):
-            data_context[(string_name, end_ind - 1, end_ind)] = tuple((found.upper(), 'CN', 'T', 'C'))
-    elif objects == 'user':
-        index_c = [user_defined_context.find('C') if user_defined_context.find('C') >= 0 else user_defined_context.find('c') if user_defined_context.find('c') >= 0 else print('The user defined context does not contain cytosines.')][0]
-        for end_ind, found in auto.iter(string):
-            data_context[(string_name, end_ind - index_c - 1, end_ind - index_c)] = tuple(
-                (found.upper(), 'user defined context', 'T', 'C'))
-        for end_ind, found in auto.iter(complementary(string)):
-            reversed = list(found.upper())
-            reversed.reverse()
-            data_context[(string_name, end_ind - index_c, end_ind - index_c + 1)] = tuple(
-                ("".join(reversed), 'user defined context', 'A', 'G'))
-
-
-def context_sequence_search(context, key, fastas, string_name, user_defined_context):
-    """Starts the search for cytosine contexts in the reference fasta file."""
-    data_context = {}
-    string = fastas[string_name]
-    if key.count('C') == 0:
-        for objects in key:
-            ahocorasick_search(objects, context, string, string_name, user_defined_context, data_context)
-    else:
-        objects = "".join(key)
-        ahocorasick_search(objects, context, string, string_name, user_defined_context, data_context)
-    return data_context
-
 
 def modification_calls_writer(name, directory, data_mods, header=False):
     """Outputs the modification calls per position in a tab-delimited format."""
@@ -241,26 +124,15 @@ def final_statistics_output(mean_mod, mean_unmod, directory, name, user_defined_
 def cytosine_modification_finder(input_file, fasta_file, context, zero_coverage, skip_clip_overlap, minimum_base_quality, user_defined_context, directory):
     """Searches for cytosine modification positions in the desired contexts and calculates the modificaton levels."""
     header = True
-    try:
-        open(input_file, 'rb')
-    except (SystemExit, KeyboardInterrupt, IOError, FileNotFoundError):
-        logs.error('The input file does not exist.', exc_info=True)
-        sys.exit(1)
-    try:
-        open(fasta_file, 'r')
-    except (SystemExit, KeyboardInterrupt, IOError, FileNotFoundError):
-        logs.error('The genome reference fasta file does not exist.', exc_info=True)
-        sys.exit(1)
     name = path.splitext(path.basename(input_file))[0]
     directory = path.abspath(directory)
-
     if user_defined_context:
         mean_mod = {'CHH': 0, 'CHG': 0, 'CpG': 0, 'Unknown': 0, 'CAG': 0, 'CCG': 0, 'CTG': 0, 'CTT': 0, 'CCT': 0, 'CAT': 0, 'CTA': 0, 'CTC': 0, 'CAC': 0, 'CAA': 0, 'CCA': 0, 'CCC': 0, 'user defined context': 0}
         mean_unmod = {'CHH': 0, 'CHG': 0, 'CpG': 0, 'Unknown': 0, 'CAG': 0, 'CCG': 0, 'CTG': 0, 'CTT': 0, 'CCT': 0, 'CAT': 0, 'CTA': 0, 'CTC': 0, 'CAC': 0, 'CAA': 0, 'CCA': 0, 'CCC': 0, 'user defined context': 0}
     else:
         mean_mod = {'CHH': 0, 'CHG': 0, 'CpG': 0, 'Unknown': 0, 'CAG': 0, 'CCG': 0, 'CTG': 0, 'CTT': 0, 'CCT': 0, 'CAT': 0, 'CTA': 0, 'CTC': 0, 'CAC': 0, 'CAA': 0, 'CCA': 0, 'CCC': 0}
         mean_unmod = {'CHH': 0, 'CHG': 0, 'CpG': 0, 'Unknown': 0, 'CAG': 0, 'CCG': 0, 'CTG': 0, 'CTT': 0, 'CCT': 0, 'CAT': 0, 'CTA': 0, 'CTC': 0, 'CAC': 0, 'CAA': 0, 'CCA': 0, 'CCC': 0}
-    inbam = pysam.AlignmentFile(input_file, "rb")
+    inbam = bam_file_opener(input_file, None)
     keys, fastas = fasta_splitting_by_sequence(fasta_file)
     contexts, all_keys = sequence_context_set_creation(context, user_defined_context)
     for i in range(0, len(keys)):
