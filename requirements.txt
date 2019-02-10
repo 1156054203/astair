@@ -1,7 +1,7 @@
 ####### General Requirements #######
 
 click 
-pysam
+pysam # >= 0.15.0
 pyahocorasick
 numpy
 
