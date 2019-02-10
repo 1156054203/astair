@@ -1,6 +1,6 @@
 import unittest
 from unittest.mock import patch, mock_open
-from astair_mod_caller_v3 import fasta_splitting_by_sequence
+from simple_fasta_parser import fasta_splitting_by_sequence
 
 class FastaParserTest(unittest.TestCase):
     """Tests whether fasta-like strings can be split meaningfully into DNA strings and chromosome names (keys).
