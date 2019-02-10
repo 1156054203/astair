@@ -1,6 +1,7 @@
 import re
 import sys
 import logging
+import pdb
 
 
 logging.basicConfig(level=logging.DEBUG)
@@ -18,13 +19,33 @@ def fasta_splitting_by_sequence(fasta_file):
                 keys = re.findall(r"(?<=>).*(?=\r\n)", fasta_sequence)
                 sequences = re.findall(r"(?<=\r\n)(?!>).*(?=\r\n)", fasta_sequence)
                 if len(keys) < len(sequences):
-                    new_strings = [string for string in sequences if len(string) <= 75]
-                    sequences = [string for string in sequences if string not in new_strings]
+                    for i in range(0,len(keys_indices)-1):
+                        new_strings = re.findall(r"(?<=\n)(?!>).*(?=\n)", fasta_sequence[keys_indices[i]:keys_indices[i+1]])
+                        joined_sequence = "".join(new_strings)
+                        sequences.append(joined_sequence)
+                    new_strings = re.findall(r"(?<=\n)(?!>).*(?=\n)", 
+                                             fasta_sequence[keys_indices[-1]:])
                     joined_sequence = "".join(new_strings)
-                    sequences.insert(0, joined_sequence)
+                    sequences.append(joined_sequence)
+                    sequences.remove('')
             elif re.match(r".*(?=\n)", fasta_sequence):
                 keys = re.findall(r"(?<=>).*(?=\n)", fasta_sequence)
                 sequences = re.findall(r"(?<=\n)(?!>).*(?=\n)", fasta_sequence)
+                keys_indices = list()
+                keys_indices.insert(0,0)
+                for index in re.finditer(r"(?<=>).*(?=\n)", fasta_sequence):
+                    keys_indices.append(index.end())
+                if len(keys) < len(sequences):
+                    sequences = list()
+                    for i in range(0,len(keys_indices)-1):
+                        new_strings = re.findall(r"(?<=\n)(?!>).*(?=\n)", fasta_sequence[keys_indices[i]:keys_indices[i+1]])
+                        joined_sequence = "".join(new_strings)
+                        sequences.append(joined_sequence)
+                    new_strings = re.findall(r"(?<=\n)(?!>).*(?=\n)", 
+                                             fasta_sequence[keys_indices[-1]:])
+                    joined_sequence = "".join(new_strings)
+                    sequences.append(joined_sequence)
+                    sequences.remove('')
         for i in range(0, len(keys)):
             fastas[keys[i]] = sequences[i]
         return keys, fastas

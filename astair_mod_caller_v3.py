@@ -7,6 +7,7 @@ import re
 import click
 import warnings
 import logging
+import pdb
 from os import path
 from datetime import datetime
 from collections import defaultdict
@@ -120,10 +121,41 @@ def final_statistics_output(mean_mod, mean_unmod, directory, name, user_defined_
                 round(non_zero_division(mean_mod['user defined context'], mean_mod['user defined context'] + mean_unmod['user defined context']) * 100, 3)) + ' %'])
         wr.writerow([
                         "_____________________________________________________________________________________________________________________________"])
+        
+        
+def pillup_summary(modification_information_per_position, position, read_counts, mean_mod, mean_unmod, name, directory, user_defined_context, header):
+    if modification_information_per_position[position][3] == 'C':
+        desired_tuples = [(147, 'C'), (99, 'C'), (147, 'T'), (99, 'T')]
+        undesired_tuples = [(163, 'G'), (83, 'G'), (163, 'A'), (83, 'A')]
+        modification = 'T'
+        reference = 'C'
+    elif modification_information_per_position[position][3] == 'G':
+        desired_tuples = [(163, 'G'), (83, 'G'), (163, 'A'), (83, 'A')]
+        undesired_tuples = [(147, 'C'), (99, 'C'), (147, 'T'), (99, 'T')]
+        modification = 'A'
+        reference = 'G'
+    if non_zero_division(read_counts[undesired_tuples[2]] + read_counts[undesired_tuples[3]],
+                         (read_counts[undesired_tuples[0]] + read_counts[undesired_tuples[1]]
+                              + read_counts[undesired_tuples[2]] + read_counts[undesired_tuples[3]])) < 0.8:
+        snp = 'No'
+    elif non_zero_division(read_counts[undesired_tuples[2]] + read_counts[undesired_tuples[3]],
+                             (read_counts[undesired_tuples[0]] + read_counts[undesired_tuples[1]]
+                                  + read_counts[undesired_tuples[2]] + read_counts[undesired_tuples[3]])) >= 0.8:
+        snp = 'homozyguous'
+    all_data = list((position[0], position[1], position[1] + 1, round(
+        non_zero_division(read_counts[desired_tuples[0]] + read_counts[desired_tuples[1]], (
+            read_counts[desired_tuples[2]] + read_counts[desired_tuples[3]] + read_counts[desired_tuples[0]] + read_counts[
+                desired_tuples[1]])), 3), read_counts[desired_tuples[2]] + read_counts[desired_tuples[3]],
+                     read_counts[desired_tuples[0]] + read_counts[desired_tuples[1]], modification, reference,
+                     modification_information_per_position[position][0],
+                     modification_information_per_position[position][1], snp))
+    statistics_calculator(mean_mod, mean_unmod, all_data, user_defined_context)
+    modification_calls_writer(name, directory, all_data, header=header)
+    
 
 def cytosine_modification_finder(input_file, fasta_file, context, zero_coverage, skip_clip_overlap, minimum_base_quality, user_defined_context, directory):
     """Searches for cytosine modification positions in the desired contexts and calculates the modificaton levels."""
-    header = True
+    #header = True
     name = path.splitext(path.basename(input_file))[0]
     directory = path.abspath(directory)
     if user_defined_context:
@@ -144,35 +176,26 @@ def cytosine_modification_finder(input_file, fasta_file, context, zero_coverage,
             clip_overlap = False
         else:
             clip_overlap = True
-        pileups = inbam.pileup(keys[i], ignore_overlaps=clip_overlap, min_base_quality=minimum_base_quality, fasta_file=fasta_file, stepper='samtools')
+        pileups = inbam.pileup(keys[i], ignore_overlaps=clip_overlap, min_base_quality=minimum_base_quality, fasta_file=fasta_file, stepper='samtools', max_depth=100000)
+        cycles=0
         for reads in pileups:
+            if cycles==0:
+                header = True
+            else:
+                header = False
             if (reads.reference_name, reads.pos, reads.pos + 1) in modification_information_per_position:
                 position = (reads.reference_name, reads.pos, reads.pos + 1)
                 covered_positions.append(position)
                 read_counts = defaultdict(int)
-                sequences = reads.get_query_sequences()
+                try:
+                    sequences = reads.get_query_sequences()
+                except AssertionError:
+                    logs.exception("Failed getting query sequences (AssertionError, pysam)")
+                    continue
                 for pileup, seq in itertools.zip_longest(reads.pileups, sequences, fillvalue='BLANK'):
                     read_counts[(pileup.alignment.flag, seq)] += 1
-                if modification_information_per_position[position][3] == 'C' and non_zero_division(read_counts[(163, 'A')] + read_counts[(83, 'A')], (read_counts[(163, 'G')] + read_counts[(83, 'G')] + read_counts[(163, 'A')] + read_counts[(83, 'A')])) < 0.8:
-                    all_data = list((position[0], position[1], position[1] + 1, round(non_zero_division(read_counts[(99, 'T')] + read_counts[(147, 'T')], (read_counts[(147, 'C')] + read_counts[(99, 'C')] + read_counts[(147, 'T')] + read_counts[(99, 'T')])), 3), read_counts[(99, 'T')] + read_counts[(147, 'T')], read_counts[(147, 'C')] + read_counts[(99, 'C')], 'T', 'C', modification_information_per_position[position][0],modification_information_per_position[position][1], 'No'))
-                    statistics_calculator(mean_mod, mean_unmod, all_data, user_defined_context)
-                    modification_calls_writer(name, directory, all_data, header=header)
-                    header = False
-                elif modification_information_per_position[position][3] == 'C' and non_zero_division(read_counts[(163, 'A')] + read_counts[(83, 'A')],(read_counts[(163, 'G')] + read_counts[(83, 'G')] + read_counts[(163, 'A')] + read_counts[(83, 'A')])) >= 0.8:
-                    all_data = list((position[0], position[1], position[1] + 1, round(non_zero_division(read_counts[(99, 'T')] + read_counts[(147, 'T')], (read_counts[(147, 'C')] + read_counts[(99, 'C')] + read_counts[(147, 'T')] + read_counts[(99, 'T')])), 3), read_counts[(99, 'T')] + read_counts[(147, 'T')],read_counts[(147, 'C')] + read_counts[(99, 'C')], 'T', 'C', modification_information_per_position[position][0], modification_information_per_position[position][1], 'homozyguous'))
-                    statistics_calculator(mean_mod, mean_unmod, all_data, user_defined_context)
-                    modification_calls_writer(name, directory, all_data, header=header)
-                    header = False
-                elif modification_information_per_position[position][3] == 'G' and non_zero_division(read_counts[(99, 'T')] + read_counts[(147, 'T')],(read_counts[(147, 'C')] + read_counts[(99, 'C')] + read_counts[(147, 'T')] + read_counts[(99, 'T')])) < 0.8:
-                    all_data = list((position[0], position[1], position[1] + 1, round(non_zero_division(read_counts[(163, 'A')] + read_counts[(83, 'A')], (read_counts[(163, 'G')] + read_counts[(83, 'G')] + read_counts[(163, 'A')] + read_counts[(83, 'A')])), 3), read_counts[(163, 'A')] + read_counts[(83, 'A')],read_counts[(163, 'G')] + read_counts[(83, 'G')], 'A', 'G', modification_information_per_position[position][0],modification_information_per_position[position][1], 'No'))
-                    statistics_calculator(mean_mod, mean_unmod, all_data, user_defined_context)
-                    modification_calls_writer(name, directory, all_data, header=header)
-                    header = False
-                elif modification_information_per_position[position][3] == 'G' and non_zero_division(read_counts[(99, 'T')] + read_counts[(147, 'T')],(read_counts[(147, 'C')] + read_counts[(99, 'C')] + read_counts[(147, 'T')] + read_counts[(99, 'T')])) >= 0.8:
-                    all_data = list((position[0], position[1], position[1] + 1, round(non_zero_division(read_counts[(163, 'A')] + read_counts[(83, 'A')], (read_counts[(163, 'G')] + read_counts[(83, 'G')] + read_counts[(163, 'A')] + read_counts[(83, 'A')])), 3), read_counts[(163, 'A')] + read_counts[(83, 'A')],read_counts[(163, 'G')] + read_counts[(83, 'G')], 'A', 'G', modification_information_per_position[position][0], modification_information_per_position[position][1], 'homozyguous'))
-                    statistics_calculator(mean_mod, mean_unmod, all_data, user_defined_context)
-                    modification_calls_writer(name, directory, all_data, header=header)
-                    header = False
+                pillup_summary(modification_information_per_position, position, read_counts, mean_mod, mean_unmod, name, directory, user_defined_context, header)
+                cycles+=1
     if zero_coverage:
         positions_not_covered = [pos for pos in modification_information_per_position if pos not in covered_positions]
         positions_not_covered.sort()
@@ -182,7 +205,7 @@ def cytosine_modification_finder(input_file, fasta_file, context, zero_coverage,
                 modification_calls_writer(name, directory, all_data, header=header)
                 header = False
             elif modification_information_per_position[positions][3] == 'G':
-                all_data = list((positions[0], positions[1], positions[1] + 1, 0, 0, 0, 'A', 'G', modification_information_per_position[position][0], modification_information_per_position[positions][1], 'No'))
+                all_data = list((positions[0], positions[1], positions[1] + 1, 0, 0, 0, 'A', 'G', modification_information_per_position[positions][0], modification_information_per_position[positions][1], 'No'))
                 modification_calls_writer(name, directory, all_data, header=header)
                 header = False
     final_statistics_output(mean_mod, mean_unmod, directory, name, user_defined_context)
