@@ -10,7 +10,7 @@ def bam_file_opener(input_file, fetch):
     try:
         open(input_file, 'rb')
         inbam = pysam.AlignmentFile(input_file, "rb", header=True, threads=10)
-        if  isinstance(fetch, str):
+        if isinstance(fetch, str):
             bam_fetch = inbam.fetch(until_eof=True)
             return bam_fetch
         elif isinstance(fetch, tuple):

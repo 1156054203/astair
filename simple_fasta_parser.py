@@ -38,8 +38,12 @@ def fasta_splitting_by_sequence(fasta_file):
             fasta_sequence = fasta_handle.read()
             if re.match(r".*(?=\r\n)", fasta_sequence):
                 keys, sequences = fasta_operator("\r\n", fasta_sequence)
+            elif re.match(r".*(?=\n\r)", fasta_sequence):
+                keys, sequences = fasta_operator("\n\r", fasta_sequence)
             elif re.match(r".*(?=\n)", fasta_sequence):
                 keys, sequences = fasta_operator("\n", fasta_sequence)
+            else:
+                logs.error('The new line symbols in the presented fasta file do not match expected use cases. Please, change them to \n.', exc_info=True)
         for i in range(0, len(keys)):
             fastas[keys[i]] = sequences[i]
         return keys, fastas

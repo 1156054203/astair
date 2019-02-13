@@ -124,6 +124,7 @@ def final_statistics_output(mean_mod, mean_unmod, directory, name, user_defined_
         
         
 def pillup_summary(modification_information_per_position, position, read_counts, mean_mod, mean_unmod, name, directory, user_defined_context, header):
+    """Gives the modication call rows given strand information."""
     if modification_information_per_position[position][3] == 'C':
         desired_tuples = [(147, 'C'), (99, 'C'), (147, 'T'), (99, 'T')]
         undesired_tuples = [(163, 'G'), (83, 'G'), (163, 'A'), (83, 'A')]

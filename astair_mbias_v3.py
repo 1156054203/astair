@@ -10,6 +10,7 @@ import numpy
 from datetime import datetime
 import logging
 import warnings
+import pdb
 from os import path
 try:
     import matplotlib as mplot
@@ -23,16 +24,18 @@ except ImportError:
 
 from safe_division import non_zero_division
 from bam_file_parser import bam_file_opener
-
+from DNA_sequences_operations import complementary
 
 
 @click.command()
 @click.option('input_file', '--input_file', required=True, help='BAM format file containing sequencing reads.')
 @click.option('directory', '--directory', required=True, help='Output directory to save files.')
 @click.option('read_length', '--read_length', type=int, required=True, help='The read length is needed to calculate the M-bias.')
+@click.option('method', '--method', required=False, default = 'CmtoT', type=click.Choice(['CtoT', 'CmtoT']), help='Specify sequencing method, possible options are CtoT (unmodified cytosines are converted to thymines, bisulfite sequencing-like) and CmtoT (modified cytosines are converted to thymines, TAPS-like).')
 @click.option('plot', '--plot', required=False, is_flag=True, help='Phred scores will be visualised and output as a pdf file. Requires installed matplotlib.')
-def Mbias_exec(input_file, directory, read_length, plot):
-    Mbias_plotting(input_file, directory, read_length, plot)
+#@click.option('colors', '--colors', default=['skyblue', 'mediumaquamarine', 'khaki', 'lightcoral'], type=list, required=False, help="List of color values used for visualistion of A, C, G, T, they are given as color1,color2,color3,color4. Accepts valid matplotlib color names, RGB and RGBA hex strings and  single letters denoting color {'b', 'g', 'r', 'c', 'm', 'y', 'k', 'w'}. (Default skyblue,mediumaquamarine,khaki,lightcoral)")
+def Mbias_exec(input_file, directory, read_length, method, plot):
+    Mbias_plotting(input_file, directory, read_length, method, plot)
 
 
 warnings.simplefilter(action='ignore', category=FutureWarning)
@@ -65,24 +68,41 @@ def check_read_info(read):
             sys.exit(1)
 
 
-def mbias_calculator(read, read_length, read_mods_CpG, read_mods_CHG, read_mods_CHH, read_all_CpG, read_all_CHG, read_all_CHH):
+def strand_and_method(read, method):
+    """Takes the positions of interest in the read given the flag and the method."""
+    if read.flag == 99 or read.flag == 147:
+        cytosines_reference = [m.start() for m in re.finditer(r'C', read.get_reference_sequence(), re.IGNORECASE)]
+        if method == 'CmtoT':
+            thymines_read = [m.start() for m in re.finditer(r'T', read.query_sequence, re.IGNORECASE)]
+            positions = list(set(thymines_read).intersection(set(cytosines_reference)))
+        elif method == 'CtoT':
+            thymines_read = [m.start() for m in re.finditer(r'T', read.query_sequence, re.IGNORECASE)]
+            positions = list(set(cytosines_reference).difference(set(thymines_read)))
+    elif read.flag == 163 or read.flag == 83:
+        cytosines_reference = [m.start() for m in re.finditer(r'G', read.get_reference_sequence(), re.IGNORECASE)]
+        if method == 'CmtoT':
+            thymines_read = [m.start() for m in re.finditer(r'A', read.query_sequence, re.IGNORECASE)]
+            positions = list(set(thymines_read).intersection(set(cytosines_reference)))
+        elif method == 'CtoT':
+            thymines_read = [m.start() for m in re.finditer(r'A', read.query_sequence, re.IGNORECASE)]
+            positions = list(set(cytosines_reference).difference(set(thymines_read)))
+    return positions
+
+
+def mbias_calculator(read, read_length, read_mods_CpG, read_mods_CHG, read_mods_CHH, read_all_CpG, read_all_CHG, read_all_CHH, method):
     """Calculates the modification level per read position, pair orientation and cytosine context."""
-    read_data = check_read_info(read)
-    if re.search("(?:.*C.*)", read_data, re.IGNORECASE):
-        changes = [int(s) for s in re.findall(r'\d+', read_data)]
-        non_overlap = [x + 1 if x == 0 else x for x in changes]
-        names = list(re.findall(r'[^\W\d_]+', read_data))
-        positions = [x + 1 for x in list(itertools.accumulate(non_overlap))]
-        sequence = list(read.query_sequence)
-        positions = [x for x in positions if x <= len(sequence)]
-        for k in range(len(positions) - 1):
-            if len(names[k]) == 1:
-                element = positions[k]
-                sequence[element] = names[k]
-        reads = "".join(sequence)
-        cpg_all = [m.start() for m in re.finditer(r'CG', reads, re.IGNORECASE)]
-        chg_all = [m.start() for m in re.finditer(r'C(A|C|T)G', reads, re.IGNORECASE)]
-        chh_all = [m.start() for m in re.finditer(r'C(A|C|T)(A|T|C)', reads, re.IGNORECASE)]
+    positions = strand_and_method(read, method)
+    reads = read.query_sequence
+    if read.flag == 99 or read.flag == 147:
+        cpg_all = [m.start() for m in re.finditer(r'CG', read.get_reference_sequence(), re.IGNORECASE)]
+        chg_all = [m.start() for m in re.finditer(r'C(A|C|T)G', read.get_reference_sequence(), re.IGNORECASE)]
+        chh_all = [m.start() for m in re.finditer(r'C(A|C|T)(A|T|C)', read.get_reference_sequence(), re.IGNORECASE)]
+    elif read.flag == 163 or read.flag == 83:
+        #pdb.set_trace()
+        cpg_all = [m.start() + 1  for m in re.finditer(r'CG', read.get_reference_sequence(), re.IGNORECASE)]
+        chg_all = [m.start() for m in re.finditer(r'G(A|G|T)C', complementary(read.get_reference_sequence()), re.IGNORECASE)]
+        chh_all = [m.start() for m in re.finditer(r'G(A|G|T)(A|T|G)', complementary(read.get_reference_sequence()), re.IGNORECASE)]
+    if len(positions) >= 1:
         cpg_mods = [x for x in positions if x in cpg_all]
         chg_mods = [x for x in positions if x in chg_all]
         chh_mods = [x for x in positions if x in chh_all]
@@ -101,11 +121,6 @@ def mbias_calculator(read, read_length, read_mods_CpG, read_mods_CHG, read_mods_
                 elif i in cpg_all:
                     read_all_CpG[i] += 1
     else:
-        sequence = list(read.query_sequence)
-        reads = "".join(sequence)
-        cpg_all = [m.start() for m in re.finditer(r'CG', reads, re.IGNORECASE)]
-        chg_all = [m.start() for m in re.finditer(r'C(A|C|T)G', reads, re.IGNORECASE)]
-        chh_all = [m.start() for m in re.finditer(r'C(A|C|T)(A|T|C)', reads, re.IGNORECASE)]
         if len(reads) <= read_length:
             for i in range(0, len(reads)):
                 if i in chh_all:
@@ -117,27 +132,27 @@ def mbias_calculator(read, read_length, read_mods_CpG, read_mods_CHG, read_mods_
     return read_mods_CpG, read_mods_CHG, read_mods_CHH, read_all_CpG, read_all_CHG, read_all_CHH
 
 
-def mbias_evaluater(input_file, read_length):
+def mbias_evaluater(input_file, read_length, method):
     """Outputs the modification levels per read position, pair orientation and cytosine context."""
     read1_mods_CHH, read1_mods_CHG, read1_mods_CpG = initialise_data_counters(read_length)
     read1_all_CHH, read1_all_CHG, read1_all_CpG = initialise_data_counters(read_length)
     read2_mods_CHH, read2_mods_CHG, read2_mods_CpG = initialise_data_counters(read_length)
     read2_all_CHH, read2_all_CHG, read2_all_CpG = initialise_data_counters(read_length)
     for read in bam_file_opener(input_file, 'fetch'):
-        if read.flag == 99 or read.flag == 83:
-            mbias_calculator(read, read_length, read1_mods_CpG, read1_mods_CHG, read1_mods_CHH, read1_all_CpG, read1_all_CHG, read1_all_CHH)
-        if read.flag == 147 or read.flag == 163:
-            mbias_calculator(read, read_length, read2_mods_CpG, read2_mods_CHG, read2_mods_CHH, read2_all_CpG, read2_all_CHG, read2_all_CHH)
+        if read.flag == 83: #and read.flag == 83:
+            mbias_calculator(read, read_length, read1_mods_CpG, read1_mods_CHG, read1_mods_CHH, read1_all_CpG, read1_all_CHG, read1_all_CHH, method)
+        elif read.flag == 163: # and read.flag == 163:
+            mbias_calculator(read, read_length, read2_mods_CpG, read2_mods_CHG, read2_mods_CHH, read2_all_CpG, read2_all_CHG, read2_all_CHH, method)
     return read1_mods_CpG, read1_mods_CHG, read1_mods_CHH, read1_all_CpG, read1_all_CHG, read1_all_CHH,\
            read2_mods_CpG, read2_mods_CHG, read2_mods_CHH, read2_all_CpG, read2_all_CHG, read2_all_CHH
 
 
-def mbias_statistics_calculator(input_file, name, directory, read_length):
+def mbias_statistics_calculator(input_file, name, directory, read_length, method):
     """Creates a summary statistics of the modification levels per read position, pair orientation and cytosine context,
     and then writes them as a text file that can be used for independent visualisation."""
     read1_mods_CpG, read1_mods_CHG, read1_mods_CHH, read1_all_CpG, read1_all_CHG, read1_all_CHH,\
     read2_mods_CpG, read2_mods_CHG, read2_mods_CHH, read2_all_CpG, read2_all_CHG, read2_all_CHH \
-        = mbias_evaluater(input_file, read_length)
+        = mbias_evaluater(input_file, read_length, method)
     read_values_1_CpG, read_values_1_CHG, read_values_1_CHH = initialise_data_counters(read_length)
     read_values_2_CpG, read_values_2_CHG, read_values_2_CHH = initialise_data_counters(read_length)
     for i in range(0, read_length):
@@ -147,29 +162,49 @@ def mbias_statistics_calculator(input_file, name, directory, read_length):
         values_1_CHH = [(keys + 1, round(values[0], 3)) if isinstance(values, list) else (keys + 1, round(values, 3)) for keys, values in read_values_1_CHH.items()]
         values_1_CHG = [(keys + 1, round(values[0], 3)) if isinstance(values, list) else (keys + 1, round(values, 3)) for keys, values in read_values_1_CHG.items()]
         values_1_CpG = [(keys + 1, round(values[0], 3)) if isinstance(values, list) else (keys + 1, round(values, 3)) for keys, values in read_values_1_CpG.items()]
+        total_counts_1_CHH = [(keys + 1, round(values[0], 3)) if isinstance(values, list) else (keys + 1, round(values, 3)) for keys, values in read1_all_CHH.items()]
+        total_counts_1_CHG = [(keys + 1, round(values[0], 3)) if isinstance(values, list) else (keys + 1, round(values, 3)) for keys, values in read1_all_CHG.items()]
+        total_counts_1_CpG = [(keys + 1, round(values[0], 3)) if isinstance(values, list) else (keys + 1, round(values, 3)) for keys, values in read1_all_CpG.items()]
+        mod_counts_1_CHH = [(keys + 1, round(values[0], 3)) if isinstance(values, list) else (keys + 1, round(values, 3)) for keys, values in read1_mods_CHH.items()]
+        mod_counts_1_CHG = [(keys + 1, round(values[0], 3)) if isinstance(values, list) else (keys + 1, round(values, 3)) for keys, values in read1_mods_CHG.items()]
+        mod_counts_1_CpG = [(keys + 1, round(values[0], 3)) if isinstance(values, list) else (keys + 1, round(values, 3)) for keys, values in read1_mods_CpG.items()]
         read_values_2_CHH[i] = non_zero_division(read2_mods_CHH[i], read2_all_CHH[i]+read2_mods_CHH[i])*100
         read_values_2_CHG[i] = non_zero_division(read2_mods_CHG[i], read2_all_CHG[i]+read2_mods_CHG[i])*100
         read_values_2_CpG[i] = non_zero_division(read2_mods_CpG[i], read2_all_CpG[i]+read2_mods_CpG[i])*100
+        total_counts_2_CHH = [(keys + 1, round(values[0], 3)) if isinstance(values, list) else (keys + 1, round(values, 3)) for keys, values in read2_all_CHH.items()]
+        total_counts_2_CHG = [(keys + 1, round(values[0], 3)) if isinstance(values, list) else (keys + 1, round(values, 3)) for keys, values in read2_all_CHG.items()]
+        total_counts_2_CpG = [(keys + 1, round(values[0], 3)) if isinstance(values, list) else (keys + 1, round(values, 3)) for keys, values in read2_all_CpG.items()]
+        mod_counts_2_CHH = [(keys + 1, round(values[0], 3)) if isinstance(values, list) else (keys + 1, round(values, 3)) for keys, values in read2_mods_CHH.items()]
+        mod_counts_2_CHG = [(keys + 1, round(values[0], 3)) if isinstance(values, list) else (keys + 1, round(values, 3)) for keys, values in read2_mods_CHG.items()]
+        mod_counts_2_CpG = [(keys + 1, round(values[0], 3)) if isinstance(values, list) else (keys + 1, round(values, 3)) for keys, values in read2_mods_CpG.items()]
         values_2_CHH = [(keys + 1, round(values[0], 3)) if isinstance(values, list) else (keys + 1, round(values, 3)) for keys, values in read_values_2_CHH.items()]
         values_2_CHG = [(keys + 1, round(values[0], 3)) if isinstance(values, list) else (keys + 1, round(values, 3)) for keys, values in read_values_2_CHG.items()]
         values_2_CpG = [(keys + 1, round(values[0], 3)) if isinstance(values, list) else (keys + 1, round(values, 3)) for keys, values in read_values_2_CpG.items()]
-    all_values = [(*a1, *a2, *a3, *a4, *a5, *a6) for a1, a2, a3, a4, a5, a6 in itertools.zip_longest(values_1_CpG, values_2_CpG, values_1_CHG, values_2_CHG, values_1_CHH, values_2_CHH)]
-    all_values = [(x[0], x[1], x[3], x[5], x[7], x[9], x[11]) for x in all_values]
+    all_values = [(*a1, *a2, *a3, *a4, *a5, *a6, *a7, *a8, *a9, *a10, *a11, *a12, *a13, *a14, *a15, *a16, *a17, *a18)
+                  for a1, a2, a3, a4, a5, a6, a7, a8, a9, a10, a11, a12, a13, a14, a15, a16, a17, a18 in
+                  itertools.zip_longest(values_1_CpG, total_counts_1_CpG, mod_counts_1_CpG, values_2_CpG, total_counts_2_CpG, mod_counts_2_CpG,
+                                        values_1_CHG, total_counts_1_CHG, mod_counts_1_CHG,  values_2_CHG, total_counts_2_CHG, mod_counts_2_CHG,
+                                        values_1_CHH, total_counts_1_CHH, mod_counts_1_CHH,  values_2_CHH, total_counts_2_CHH, mod_counts_2_CHH)]
+    all_values = [(x[0], x[1], x[3], x[5], x[7], x[9], x[11], x[13], x[15], x[17], x[19], x[21], x[23], x[25], x[27], x[29], x[31], x[33], x[35]) for x in all_values]
     with open(directory + name + ".Mbias.txt", 'w', newline='') as stats_file:
         line = csv.writer(stats_file, delimiter='\t', lineterminator='\n')
-        line.writerow(['POSITION (bp)', 'CpG READ 1', 'CpG READ 2', 'CHG READ 1', 'CHG READ 2', 'CHH READ 1', 'CHH READ 2'])
+        line.writerow(['POSITION_(bp)', 'MOD_LVL_CpG_READ_1', 'UNMOD_COUNT_CpG_READ_1', 'MOD_COUNT_CpG_READ_1',
+                       'MOD_LVL_CpG_READ_2', 'UNMOD_COUNT_CpG_READ_2', 'MOD_COUNT_CpG_READ_2',
+                       'MOD_LVL_CHG_READ_1', 'UNMOD_COUNT_CHG_READ_1', 'MOD_COUNT_CHG_READ_1',
+                       'MOD_LVL_CHG_READ_2', 'UNMOD_COUNT_CHG_READ_2', 'MOD_COUNT_CHG_READ_2',
+                       'MOD_LVL_CHH_READ_1', 'UNMOD_COUNT_CHH_READ_1', 'MOD_COUNT_CHH_READ_1',
+                       'MOD_LVL_CHH_READ_2', 'UNMOD_COUNT_CHH_READ_2', 'MOD_COUNT_CHH_READ_2'])
         for row in all_values:
             line.writerow(row)
     return values_1_CpG, values_2_CpG, values_1_CHG, values_2_CHG, values_1_CHH, values_2_CHH
 
-
-def Mbias_plotting(input_file, directory, read_length, plot):
+def Mbias_plotting(input_file, directory, read_length, method, plot):
     """The general M-bias calculation and statistics output function, which might be also visualised if the plotting module is enabled."""
     name = path.splitext(path.basename(input_file))[0]
     directory = path.abspath(directory)
     if list(directory)[-1]!="/":
         directory = directory + "/"
-    values_1_CpG, values_2_CpG, values_1_CHG, values_2_CHG, values_1_CHH, values_2_CHH = mbias_statistics_calculator(input_file, name, directory, read_length)
+    values_1_CpG, values_2_CpG, values_1_CHG, values_2_CHG, values_1_CHH, values_2_CHH = mbias_statistics_calculator(input_file, name, directory, read_length, method)
     if plot:
         y_axis_CpG1, y_axis_CHG1, y_axis_CHH1, y_axis_CpG2, y_axis_CHG2, y_axis_CHH2 = list(), list(), list(), list(), list(), list()
         for row in values_1_CpG:
