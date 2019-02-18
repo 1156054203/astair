@@ -1,4 +1,5 @@
 import unittest
+import pdb
 
 from astair_mod_caller_v3 import sequence_context_set_creation
 from reference_context_search_triad import ahocorasick_search
@@ -53,8 +54,8 @@ class SequenceSearchOutputTest(unittest.TestCase):
         data_context = {}
         contexts, all_keys = sequence_context_set_creation('CpG', None)
         ahocorasick_search('CG', contexts, 'AAGCGTTTGccc', 'test_string', None, data_context)
-        self.assertEqual(data_context, {('test_string', 3, 4): ('CG', 'CpG', 'T', 'C'),
-                                        ('test_string', 4, 5): ('CG', 'CpG', 'A', 'G')})
+        ahocorasick_search('CGb', contexts, 'AAGCGTTTGccc', 'test_string', None, data_context)
+        self.assertEqual(data_context, {('test_string', 3, 4): ('CGT', 'CpG', 'T', 'C'), ('test_string', 4, 5): ('CGC', 'CpG', 'A', 'G')})
 
 if __name__ == '__main__':
     unittest.main()
