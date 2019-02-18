@@ -55,38 +55,29 @@ def initialise_data_counters(read_length):
     return all_read_data[0], all_read_data[1], all_read_data[2]
 
 
-def check_read_info(read):
-    """Checks if the MD column exist in the input bam file and takes its string."""
-    try:
-        if isinstance(read.tags[0][1], str) and read.tags[0][0] == 'MD':
-            data = read.tags[0][1]
-        elif isinstance(read.tags[1][1], str) and read.tags[1][0] == 'MD':
-            data = read.tags[1][1]
-        return data
-    except (IndexError, TypeError):
-            logs.error('The input file does not contain a MD tag column.', exc_info=True)
-            sys.exit(1)
-
-
 def strand_and_method(read, method):
     """Takes the positions of interest in the read given the flag and the method."""
-    if read.flag == 99 or read.flag == 147:
-        cytosines_reference = [m.start() for m in re.finditer(r'C', read.get_reference_sequence(), re.IGNORECASE)]
-        if method == 'CmtoT':
-            thymines_read = [m.start() for m in re.finditer(r'T', read.query_sequence, re.IGNORECASE)]
-            positions = list(set(thymines_read).intersection(set(cytosines_reference)))
-        elif method == 'CtoT':
-            thymines_read = [m.start() for m in re.finditer(r'T', read.query_sequence, re.IGNORECASE)]
-            positions = list(set(cytosines_reference).difference(set(thymines_read)))
-    elif read.flag == 163 or read.flag == 83:
-        cytosines_reference = [m.start() for m in re.finditer(r'G', read.get_reference_sequence(), re.IGNORECASE)]
-        if method == 'CmtoT':
-            thymines_read = [m.start() for m in re.finditer(r'A', read.query_sequence, re.IGNORECASE)]
-            positions = list(set(thymines_read).intersection(set(cytosines_reference)))
-        elif method == 'CtoT':
-            thymines_read = [m.start() for m in re.finditer(r'A', read.query_sequence, re.IGNORECASE)]
-            positions = list(set(cytosines_reference).difference(set(thymines_read)))
-    return positions
+    try:
+        if read.flag == 99 or read.flag == 147:
+            cytosines_reference = [m.start() for m in re.finditer(r'C', read.get_reference_sequence(), re.IGNORECASE)]
+            if method == 'CmtoT':
+                thymines_read = [m.start() for m in re.finditer(r'T', read.query_sequence, re.IGNORECASE)]
+                positions = list(set(thymines_read).intersection(set(cytosines_reference)))
+            elif method == 'CtoT':
+                thymines_read = [m.start() for m in re.finditer(r'T', read.query_sequence, re.IGNORECASE)]
+                positions = list(set(cytosines_reference).difference(set(thymines_read)))
+        elif read.flag == 163 or read.flag == 83:
+            cytosines_reference = [m.start() for m in re.finditer(r'G', read.get_reference_sequence(), re.IGNORECASE)]
+            if method == 'CmtoT':
+                thymines_read = [m.start() for m in re.finditer(r'A', read.query_sequence, re.IGNORECASE)]
+                positions = list(set(thymines_read).intersection(set(cytosines_reference)))
+            elif method == 'CtoT':
+                thymines_read = [m.start() for m in re.finditer(r'A', read.query_sequence, re.IGNORECASE)]
+                positions = list(set(cytosines_reference).difference(set(thymines_read)))
+        return positions
+    except (IndexError, TypeError, ValueError):
+            logs.error('The input file does not contain a MD tag column.', exc_info=True)
+            sys.exit(1)
 
 
 def mbias_calculator(read, read_length, read_mods_CpG, read_mods_CHG, read_mods_CHH, read_all_CpG, read_all_CHG, read_all_CHH, method):
@@ -98,8 +89,7 @@ def mbias_calculator(read, read_length, read_mods_CpG, read_mods_CHG, read_mods_
         chg_all = [m.start() for m in re.finditer(r'C(A|C|T)G', read.get_reference_sequence(), re.IGNORECASE)]
         chh_all = [m.start() for m in re.finditer(r'C(A|C|T)(A|T|C)', read.get_reference_sequence(), re.IGNORECASE)]
     elif read.flag == 163 or read.flag == 83:
-        #pdb.set_trace()
-        cpg_all = [m.start() + 1  for m in re.finditer(r'CG', read.get_reference_sequence(), re.IGNORECASE)]
+        cpg_all = [m.start() + 1 for m in re.finditer(r'CG', read.get_reference_sequence(), re.IGNORECASE)]
         chg_all = [m.start() for m in re.finditer(r'G(A|G|T)C', complementary(read.get_reference_sequence()), re.IGNORECASE)]
         chh_all = [m.start() for m in re.finditer(r'G(A|G|T)(A|T|G)', complementary(read.get_reference_sequence()), re.IGNORECASE)]
     if len(positions) >= 1:
@@ -139,9 +129,9 @@ def mbias_evaluater(input_file, read_length, method):
     read2_mods_CHH, read2_mods_CHG, read2_mods_CpG = initialise_data_counters(read_length)
     read2_all_CHH, read2_all_CHG, read2_all_CpG = initialise_data_counters(read_length)
     for read in bam_file_opener(input_file, 'fetch'):
-        if read.flag == 83: #and read.flag == 83:
+        if read.flag == 83: #or read.flag == 99:
             mbias_calculator(read, read_length, read1_mods_CpG, read1_mods_CHG, read1_mods_CHH, read1_all_CpG, read1_all_CHG, read1_all_CHH, method)
-        elif read.flag == 163: # and read.flag == 163:
+        elif read.flag == 163: # or read.flag == 147:
             mbias_calculator(read, read_length, read2_mods_CpG, read2_mods_CHG, read2_mods_CHH, read2_all_CpG, read2_all_CHG, read2_all_CHH, method)
     return read1_mods_CpG, read1_mods_CHG, read1_mods_CHH, read1_all_CpG, read1_all_CHG, read1_all_CHH,\
            read2_mods_CpG, read2_mods_CHG, read2_mods_CHH, read2_all_CpG, read2_all_CHG, read2_all_CHH

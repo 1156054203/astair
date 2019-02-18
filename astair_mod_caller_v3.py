@@ -55,14 +55,13 @@ def modification_calls_writer(name, directory, data_mods, header=False):
         else:
             data_line.writerow(data_mods)
 
-
 def statistics_calculator(mean_mod, mean_unmod, data_mod, user_defined_context):
     """Calculates the summary statistics of the cytosine modificaton levels."""
     for context in list(('CpG', 'CHH', 'CHG')):
         if re.match(context, data_mod[9]) and data_mod[10] == 'No':
             mean_mod[context] += data_mod[4]
             mean_unmod[context] += data_mod[5]
-    for context in list(('CAG', 'CCG', 'CTG', 'CTT', 'CCT', 'CAT', 'CTA', 'CTC', 'CAC', 'CAA', 'CCA', 'CCC')):
+    for context in list(('CAG', 'CCG', 'CTG', 'CTT', 'CCT', 'CAT', 'CTA', 'CTC', 'CAC', 'CAA', 'CCA', 'CCC', 'CGA', 'CGT', 'CGC', 'CGG')):
         if re.match(context, data_mod[8]) and data_mod[10] == 'No':
             mean_mod[context] += data_mod[4]
             mean_unmod[context] += data_mod[5]
@@ -86,6 +85,14 @@ def final_statistics_output(mean_mod, mean_unmod, directory, name, user_defined_
                         "_____________________________________________________________________________________________________________________________"])
         wr.writerow(["mean CpG modification rate: ",
                      str(round(non_zero_division(mean_mod['CpG'], mean_mod['CpG'] + mean_unmod['CpG']) * 100, 3)) + ' %'])
+        wr.writerow([" | " + "mean CGA modification rate:" + " | " + str(
+            round(non_zero_division(mean_mod['CGA'], mean_mod['CGA'] + mean_unmod['CGA']) * 100, 3)) + ' %'])
+        wr.writerow([" | " + "mean CGC modification rate:" + " | " + str(
+            round(non_zero_division(mean_mod['CGC'], mean_mod['CGC'] + mean_unmod['CGC']) * 100, 3)) + ' %'])
+        wr.writerow([" | " + "mean CGG modification rate:" + " | " + str(
+            round(non_zero_division(mean_mod['CGG'], mean_mod['CGG'] + mean_unmod['CGG']) * 100, 3)) + ' %'])
+        wr.writerow([" | " + "mean CGT modification rate:" + " | " + str(
+            round(non_zero_division(mean_mod['CGT'], mean_mod['CGT'] + mean_unmod['CGT']) * 100, 3)) + ' %'])
         wr.writerow(["mean CHG modification rate: ",
                      str(round(non_zero_division(mean_mod['CHG'], mean_mod['CHG'] + mean_unmod['CHG']) * 100, 3)) + ' %'])
         wr.writerow([" | " + "mean CAG modification rate:" + " | " + str(
@@ -121,6 +128,7 @@ def final_statistics_output(mean_mod, mean_unmod, directory, name, user_defined_
                 round(non_zero_division(mean_mod['user defined context'], mean_mod['user defined context'] + mean_unmod['user defined context']) * 100, 3)) + ' %'])
         wr.writerow([
                         "_____________________________________________________________________________________________________________________________"])
+        
         
         
 def pillup_summary(modification_information_per_position, position, read_counts, mean_mod, mean_unmod, name, directory, user_defined_context, header):
@@ -160,11 +168,11 @@ def cytosine_modification_finder(input_file, fasta_file, context, zero_coverage,
     name = path.splitext(path.basename(input_file))[0]
     directory = path.abspath(directory)
     if user_defined_context:
-        mean_mod = {'CHH': 0, 'CHG': 0, 'CpG': 0, 'Unknown': 0, 'CAG': 0, 'CCG': 0, 'CTG': 0, 'CTT': 0, 'CCT': 0, 'CAT': 0, 'CTA': 0, 'CTC': 0, 'CAC': 0, 'CAA': 0, 'CCA': 0, 'CCC': 0, 'user defined context': 0}
-        mean_unmod = {'CHH': 0, 'CHG': 0, 'CpG': 0, 'Unknown': 0, 'CAG': 0, 'CCG': 0, 'CTG': 0, 'CTT': 0, 'CCT': 0, 'CAT': 0, 'CTA': 0, 'CTC': 0, 'CAC': 0, 'CAA': 0, 'CCA': 0, 'CCC': 0, 'user defined context': 0}
+        mean_mod = {'CHH': 0, 'CHG': 0, 'CpG': 0, 'Unknown': 0, 'CAG': 0, 'CCG': 0, 'CTG': 0, 'CTT': 0, 'CCT': 0, 'CAT': 0, 'CTA': 0, 'CTC': 0, 'CAC': 0, 'CAA': 0, 'CCA': 0, 'CCC': 0, 'user defined context': 0,  'CGA':0, 'CGT':0, 'CGC':0, 'CGG':0}
+        mean_unmod = {'CHH': 0, 'CHG': 0, 'CpG': 0, 'Unknown': 0, 'CAG': 0, 'CCG': 0, 'CTG': 0, 'CTT': 0, 'CCT': 0, 'CAT': 0, 'CTA': 0, 'CTC': 0, 'CAC': 0, 'CAA': 0, 'CCA': 0, 'CCC': 0, 'user defined context': 0, 'CGA':0, 'CGT':0, 'CGC':0, 'CGG':0}
     else:
-        mean_mod = {'CHH': 0, 'CHG': 0, 'CpG': 0, 'Unknown': 0, 'CAG': 0, 'CCG': 0, 'CTG': 0, 'CTT': 0, 'CCT': 0, 'CAT': 0, 'CTA': 0, 'CTC': 0, 'CAC': 0, 'CAA': 0, 'CCA': 0, 'CCC': 0}
-        mean_unmod = {'CHH': 0, 'CHG': 0, 'CpG': 0, 'Unknown': 0, 'CAG': 0, 'CCG': 0, 'CTG': 0, 'CTT': 0, 'CCT': 0, 'CAT': 0, 'CTA': 0, 'CTC': 0, 'CAC': 0, 'CAA': 0, 'CCA': 0, 'CCC': 0}
+        mean_mod = {'CHH': 0, 'CHG': 0, 'CpG': 0, 'Unknown': 0, 'CAG': 0, 'CCG': 0, 'CTG': 0, 'CTT': 0, 'CCT': 0, 'CAT': 0, 'CTA': 0, 'CTC': 0, 'CAC': 0, 'CAA': 0, 'CCA': 0, 'CCC': 0, 'CGA':0, 'CGT':0, 'CGC':0, 'CGG':0}
+        mean_unmod = {'CHH': 0, 'CHG': 0, 'CpG': 0, 'Unknown': 0, 'CAG': 0, 'CCG': 0, 'CTG': 0, 'CTT': 0, 'CCT': 0, 'CAT': 0, 'CTA': 0, 'CTC': 0, 'CAC': 0, 'CAA': 0, 'CCA': 0, 'CCC': 0, 'CGA':0, 'CGT':0, 'CGC':0, 'CGG':0}
     inbam = bam_file_opener(input_file, None)
     keys, fastas = fasta_splitting_by_sequence(fasta_file)
     contexts, all_keys = sequence_context_set_creation(context, user_defined_context)

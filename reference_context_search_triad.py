@@ -1,5 +1,6 @@
 import ahocorasick
 import itertools
+import pdb
 
 from DNA_sequences_operations import complementary
 
@@ -14,23 +15,25 @@ def sequence_context_set_creation(desired_sequence, user_defined_context):
         CHGb = [y + x + z for x in letters_top for z in ['C', 'c'] for y in ['G', 'g']]
         CHH = [y + x + z for x in letters_top for y in ['C', 'c'] for z in letters_top]
         CHHb = [y + x + z for x in letters_top for z in ['C', 'c'] for y in letters_top]
-        CG = [y + z for y in ['C', 'c'] for z in ['G', 'g']]
+        CG = [y + z + x for y in ['C', 'c'] for z in ['G', 'g'] for x in ['A', 'C', 'T', 'a', 'c', 't', 'g', 'G']]
+        CGb = [x+z + y  for y in ['C', 'c'] for z in ['G', 'g'] for x in ['A', 'C', 'T', 'a', 'c', 't', 'g', 'G']]
         CN = [y + x + z for x in ['N', 'n'] for y in ['C', 'c'] for z in ['N', 'n']]
         CNb = [y + x + z for x in ['N', 'n'] for z in ['C', 'c'] for y in ['N', 'n']]
         if user_defined_context:
-            contexts = {'CHG': list(CHG), 'CHGb': list(CHGb), 'CHH': list(CHH), 'CHHb': list(CHHb), 'CG': list(CG),'CN': list(CN), 'CNb': list(CNb), 'user': list(user)}
-            all_keys = list(('CHG', 'CHGb', 'CHH', 'CHHb', 'CG', 'CN', 'CNb', 'user'))
+            contexts = {'CHG': list(CHG), 'CHGb': list(CHGb), 'CHH': list(CHH), 'CHHb': list(CHHb), 'CG': list(CG), 'CGb': list(CGb),'CN': list(CN), 'CNb': list(CNb), 'user': list(user)}
+            all_keys = list(('CHG', 'CHGb', 'CHH', 'CHHb', 'CG', 'CGb', 'CN', 'CNb', 'user'))
         else:
-            contexts = {'CHG': list(CHG), 'CHGb': list(CHGb), 'CHH': list(CHH), 'CHHb': list(CHHb), 'CG': list(CG),'CN': list(CN), 'CNb': list(CNb)}
-            all_keys = list(('CHG', 'CHGb', 'CHH', 'CHHb', 'CG', 'CN', 'CNb'))
+            contexts = {'CHG': list(CHG), 'CHGb': list(CHGb), 'CHH': list(CHH), 'CHHb': list(CHHb), 'CG': list(CG), 'CGb': list(CGb), 'CN': list(CN), 'CNb': list(CNb)}
+            all_keys = list(('CHG', 'CHGb', 'CHH', 'CHHb', 'CG', 'CGb', 'CN', 'CNb'))
     elif desired_sequence == 'CpG':
-        CG = [y + z for y in ['C', 'c'] for z in ['G', 'g']]
+        CG = [y + z + x for y in ['C', 'c'] for z in ['G', 'g'] for x in ['A', 'C', 'T', 'a', 'c', 't', 'g', 'G']]
+        CGb = [x+z + y  for y in ['C', 'c'] for z in ['G', 'g'] for x in ['A', 'C', 'T', 'a', 'c', 't', 'g', 'G']]
         if user_defined_context:
-            contexts = {'CG': list(CG), 'user': list(user)}
-            all_keys = list(( 'CG', 'user'))
+            contexts = {'CG': list(CG), 'CGb': list(CGb), 'user': list(user)}
+            all_keys = list(( 'CG', 'CGb', 'user'))
         else:
-            contexts = {'CG': list(CG)}
-            all_keys = list(('CG'))
+            contexts = {'CG': list(CG), 'CGb': list(CGb)}
+            all_keys = list(('CG', 'CGb'))
     elif desired_sequence == 'CHG':
         CHG = [y + x + z for x in letters_top for y in ['C', 'c'] for z in ['G', 'g']]
         CHGb = [y + x + z for x in letters_top for z in ['C', 'c'] for y in ['G', 'g']]
@@ -62,12 +65,13 @@ def ahocorasick_search(objects, context, string, string_name, user_defined_conte
         for end_ind, found in auto.iter(complementary(string)):
             reversed = list(found.upper())
             reversed.reverse()
-            data_context[(string_name, end_ind, end_ind + 1)] = tuple(
-                ("".join(reversed), objects[0:-1], 'A', 'G'))
+            if objects != 'CGb':
+                data_context[(string_name, end_ind, end_ind + 1)] = tuple(("".join(reversed), objects[0:-1], 'A', 'G'))
+            else:
+                data_context[(string_name, end_ind, end_ind + 1)] = tuple(("".join(reversed), 'CpG', 'A', 'G'))
     elif objects == 'CG':
         for end_ind, found in auto.iter(string):
-            data_context[(string_name, end_ind - 1, end_ind)] = tuple((found.upper(), 'CpG', 'T', 'C'))
-            data_context[(string_name, end_ind, end_ind + 1)] = tuple((found.upper(), 'CpG', 'A', 'G'))
+            data_context[(string_name, end_ind - 2, end_ind - 1)] = tuple((found.upper(), 'CpG', 'T', 'C'))
     elif objects == 'CHG' or objects == 'CHH':
         for end_ind, found in auto.iter(string):
             data_context[(string_name, end_ind - 2, end_ind - 1)] = tuple((found.upper(), objects, 'T', 'C'))
