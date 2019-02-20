@@ -2,11 +2,10 @@ import re
 import sys
 import logging
 
-
 logging.basicConfig(level=logging.DEBUG)
 logs = logging.getLogger(__name__)
 
-def fasta_operator(parser, fasta_sequence):
+def fasta_operator(parser, fasta_sequence, per_chromosome):
     """Parses fasta files with multiple genomes."""
     to_look_for_key = re.compile(r"(?<=>).*(?={})".format(parser))
     to_look_for_string = re.compile(r"(?<={})(?!>).*(?={})".format(parser, parser))
@@ -27,9 +26,13 @@ def fasta_operator(parser, fasta_sequence):
         joined_sequence = "".join(new_strings)
         sequences.append(joined_sequence)
         sequences.remove('')
+    if per_chromosome != None:
+        keys_index = keys.index(per_chromosome)
+        keys = keys[keys_index]
+        sequences = sequences[keys_index]
     return keys, sequences
 
-def fasta_splitting_by_sequence(fasta_file):
+def fasta_splitting_by_sequence(fasta_file, per_chromosome):
     """Checks line termination and enables parsing of fasta files with multiple genomes."""
     fastas = {}
     keys, sequences = list(), list()
@@ -37,15 +40,18 @@ def fasta_splitting_by_sequence(fasta_file):
         with open(fasta_file, 'r', newline='') as fasta_handle:
             fasta_sequence = fasta_handle.read()
             if re.match(r".*(?=\r\n)", fasta_sequence):
-                keys, sequences = fasta_operator("\r\n", fasta_sequence)
+                keys, sequences = fasta_operator("\r\n", fasta_sequence, per_chromosome)
             elif re.match(r".*(?=\n\r)", fasta_sequence):
-                keys, sequences = fasta_operator("\n\r", fasta_sequence)
+                keys, sequences = fasta_operator("\n\r", fasta_sequence, per_chromosome)
             elif re.match(r".*(?=\n)", fasta_sequence):
-                keys, sequences = fasta_operator("\n", fasta_sequence)
+                keys, sequences = fasta_operator("\n", fasta_sequence, per_chromosome)
             else:
                 logs.error('The new line symbols in the presented fasta file do not match expected use cases. Please, change them to \n.', exc_info=True)
-        for i in range(0, len(keys)):
-            fastas[keys[i]] = sequences[i]
+        if per_chromosome == None:
+            for i in range(0, len(keys)):
+                fastas[keys[i]] = sequences[i]
+        else:
+            fastas[keys] = sequences
         return keys, fastas
     except (SystemExit, KeyboardInterrupt, IOError, FileNotFoundError):
         logs.error('The genome reference fasta file does not exist.', exc_info=True)

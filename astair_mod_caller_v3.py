@@ -30,10 +30,11 @@ from reference_context_search_triad import context_sequence_search
 # @click.option('method', '--method', required=False, default = 'CmtoT', type=click.Choice(['CtoT', 'CmtoT']), help='Specify sequencing method, possible options are CtoT (unmodified cytosines are converted to thymines, bisulfite sequencing-like) and CmtoT (modified cytosines are converted to thymines, TAPS-like).')
 @click.option('skip_clip_overlap', '--skip_clip_overlap', required=False, is_flag=True, help='Skipping the random removal of overlapping bases between paired-end reads. Not recommended for paired-end libraries, unless the overlaps are removed prior to calling.')
 @click.option('minimum_base_quality', '--minimum_base_quality', required=False, type=int, default=20, help='Set the minimum base quality for a read base to be used in the pileup (Default 20).')
+@click.option('per_chromosome', '--per_chromosome', default=None, type=str, help='When used, it calculates the modification rates only per the chromosome given. (Default None')
 # @click.option('N_threads', '--N_threads', default = 1, required=True, help='The number of threads to spawn (the default value is 1).')
 @click.option('directory', '--directory', required=True, type=str, help='Output directory to save files.')
-def modification_finder_exec(input_file, fasta_file, context, zero_coverage, skip_clip_overlap, minimum_base_quality, user_defined_context, directory):
-        cytosine_modification_finder(input_file, fasta_file, context, zero_coverage, skip_clip_overlap, minimum_base_quality, user_defined_context, directory)
+def modification_finder_exec(input_file, fasta_file, context, zero_coverage, skip_clip_overlap, minimum_base_quality, user_defined_context, per_chromosome, directory):
+        cytosine_modification_finder(input_file, fasta_file, context, zero_coverage, skip_clip_overlap, minimum_base_quality, user_defined_context, per_chromosome, directory)
 
 
 warnings.simplefilter(action='ignore', category=FutureWarning)
@@ -44,9 +45,9 @@ logs = logging.getLogger(__name__)
 
 time_b = datetime.now()
 
-def modification_calls_writer(name, directory, data_mods, header=False):
+def modification_calls_writer(data_mods, file_name, header=False):
     """Outputs the modification calls per position in a tab-delimited format."""
-    with open(path.join(directory, name+".mods"), 'a', newline='') as calls_output:
+    with open(file_name, 'a', newline='') as calls_output:
         data_line = csv.writer(calls_output, delimiter='\t', lineterminator='\n')
         if header:
             data_line.writerow(["CHROM", "START", "END", "MOD_LEVEL", "MOD", "unmod", "ALT", "REF", "DEPTH", "CONTEXT",
@@ -73,9 +74,9 @@ def statistics_calculator(mean_mod, mean_unmod, data_mod, user_defined_context):
         mean_unmod['user defined context'] += data_mod[5]
 
 
-def final_statistics_output(mean_mod, mean_unmod, directory, name, user_defined_context):
+def final_statistics_output(mean_mod, mean_unmod, user_defined_context, file_name):
     """Writes the summary statistics of the cytosine modificaton levels."""
-    with open(path.join(directory, name+".stats"), 'a', newline='') as statistics_output:
+    with open(file_name, 'a', newline='') as statistics_output:
         wr = csv.writer(statistics_output, delimiter='\t', lineterminator='\n')
         wr.writerow([
                         "_____________________________________________________________________________________________________________________________"])
@@ -131,7 +132,7 @@ def final_statistics_output(mean_mod, mean_unmod, directory, name, user_defined_
         
         
         
-def pillup_summary(modification_information_per_position, position, read_counts, mean_mod, mean_unmod, name, directory, user_defined_context, header):
+def pillup_summary(modification_information_per_position, position, read_counts, mean_mod, mean_unmod, user_defined_context, header, file_name):
     """Gives the modication call rows given strand information."""
     if modification_information_per_position[position][3] == 'C':
         desired_tuples = [(147, 'C'), (99, 'C'), (147, 'T'), (99, 'T')]
@@ -152,20 +153,44 @@ def pillup_summary(modification_information_per_position, position, read_counts,
                                   + read_counts[undesired_tuples[2]] + read_counts[undesired_tuples[3]])) >= 0.8:
         snp = 'homozyguous'
     all_data = list((position[0], position[1], position[1] + 1, round(
-        non_zero_division(read_counts[desired_tuples[0]] + read_counts[desired_tuples[1]], (
+        non_zero_division(read_counts[desired_tuples[2]] + read_counts[desired_tuples[3]], (
             read_counts[desired_tuples[2]] + read_counts[desired_tuples[3]] + read_counts[desired_tuples[0]] + read_counts[
                 desired_tuples[1]])), 3), read_counts[desired_tuples[2]] + read_counts[desired_tuples[3]],
                      read_counts[desired_tuples[0]] + read_counts[desired_tuples[1]], modification, reference,
                      modification_information_per_position[position][0],
                      modification_information_per_position[position][1], snp))
     statistics_calculator(mean_mod, mean_unmod, all_data, user_defined_context)
-    modification_calls_writer(name, directory, all_data, header=header)
-    
+    modification_calls_writer(all_data, file_name, header=header)
 
-def cytosine_modification_finder(input_file, fasta_file, context, zero_coverage, skip_clip_overlap, minimum_base_quality, user_defined_context, directory):
+
+def clean_pileup(pileups, cycles, modification_information_per_position, mean_mod, mean_unmod, user_defined_context, file_name):
+    for reads in pileups:
+        if cycles == 0:
+            header = True
+        else:
+            header = False
+        if (reads.reference_name, reads.pos, reads.pos + 1) in modification_information_per_position:
+            position = (reads.reference_name, reads.pos, reads.pos + 1)
+            read_counts = defaultdict(int)
+            try:
+                sequences = reads.get_query_sequences()
+            except AssertionError:
+                logs.exception("Failed getting query sequences (AssertionError, pysam)")
+                continue
+            for pileup, seq in itertools.zip_longest(reads.pileups, sequences, fillvalue='BLANK'):
+                read_counts[(pileup.alignment.flag, seq)] += 1
+            pillup_summary(modification_information_per_position, position, read_counts, mean_mod, mean_unmod, user_defined_context, header, file_name)
+            cycles+=1
+            modification_information_per_position.pop(position)
+
+def cytosine_modification_finder(input_file, fasta_file, context, zero_coverage, skip_clip_overlap, minimum_base_quality, user_defined_context, per_chromosome, directory):
     """Searches for cytosine modification positions in the desired contexts and calculates the modificaton levels."""
     name = path.splitext(path.basename(input_file))[0]
     directory = path.abspath(directory)
+    if per_chromosome == None:
+        file_name = path.join(directory, name + "_" + context + ".mods")
+    else:
+        file_name = path.join(directory, name + "_" + per_chromosome + "_" + context + ".mods")
     if user_defined_context:
         mean_mod = {'CHH': 0, 'CHG': 0, 'CpG': 0, 'Unknown': 0, 'CAG': 0, 'CCG': 0, 'CTG': 0, 'CTT': 0, 'CCT': 0, 'CAT': 0, 'CTA': 0, 'CTC': 0, 'CAC': 0, 'CAA': 0, 'CCA': 0, 'CCC': 0, 'user defined context': 0,  'CGA':0, 'CGT':0, 'CGC':0, 'CGG':0}
         mean_unmod = {'CHH': 0, 'CHG': 0, 'CpG': 0, 'Unknown': 0, 'CAG': 0, 'CCG': 0, 'CTG': 0, 'CTT': 0, 'CCT': 0, 'CAT': 0, 'CTA': 0, 'CTC': 0, 'CAC': 0, 'CAA': 0, 'CCA': 0, 'CCC': 0, 'user defined context': 0, 'CGA':0, 'CGT':0, 'CGC':0, 'CGG':0}
@@ -173,49 +198,40 @@ def cytosine_modification_finder(input_file, fasta_file, context, zero_coverage,
         mean_mod = {'CHH': 0, 'CHG': 0, 'CpG': 0, 'Unknown': 0, 'CAG': 0, 'CCG': 0, 'CTG': 0, 'CTT': 0, 'CCT': 0, 'CAT': 0, 'CTA': 0, 'CTC': 0, 'CAC': 0, 'CAA': 0, 'CCA': 0, 'CCC': 0, 'CGA':0, 'CGT':0, 'CGC':0, 'CGG':0}
         mean_unmod = {'CHH': 0, 'CHG': 0, 'CpG': 0, 'Unknown': 0, 'CAG': 0, 'CCG': 0, 'CTG': 0, 'CTT': 0, 'CCT': 0, 'CAT': 0, 'CTA': 0, 'CTC': 0, 'CAC': 0, 'CAA': 0, 'CCA': 0, 'CCC': 0, 'CGA':0, 'CGT':0, 'CGC':0, 'CGG':0}
     inbam = bam_file_opener(input_file, None)
-    keys, fastas = fasta_splitting_by_sequence(fasta_file)
+    keys, fastas = fasta_splitting_by_sequence(fasta_file, per_chromosome)
     contexts, all_keys = sequence_context_set_creation(context, user_defined_context)
-    for i in range(0, len(keys)):
-        time_m = datetime.now()
-        logs.info("Starting modification calling on {} chromosome (sequence). {} seconds".format(keys[i], (time_m - time_b).total_seconds()))
-        modification_information_per_position = context_sequence_search(contexts, all_keys, fastas, keys[i], user_defined_context)
-        if skip_clip_overlap:
-            clip_overlap = False
-        else:
-            clip_overlap = True
-        pileups = inbam.pileup(keys[i], ignore_overlaps=clip_overlap, min_base_quality=minimum_base_quality, fasta_file=fasta_file, stepper='samtools', max_depth=8000)
-        cycles=0
-        for reads in pileups:
-            if cycles==0:
-                header = True
-            else:
-                header = False
-            if (reads.reference_name, reads.pos, reads.pos + 1) in modification_information_per_position:
-                position = (reads.reference_name, reads.pos, reads.pos + 1)
-                read_counts = defaultdict(int)
-                try:
-                    sequences = reads.get_query_sequences()
-                except AssertionError:
-                    logs.exception("Failed getting query sequences (AssertionError, pysam)")
-                    continue
-                for pileup, seq in itertools.zip_longest(reads.pileups, sequences, fillvalue='BLANK'):
-                    read_counts[(pileup.alignment.flag, seq)] += 1
-                pillup_summary(modification_information_per_position, position, read_counts, mean_mod, mean_unmod, name, directory, user_defined_context, header)
-                cycles+=1
-                modification_information_per_position.pop(position)
+    if skip_clip_overlap:
+        clip_overlap = False
+    else:
+        clip_overlap = True
+    time_m = datetime.now()
+    cycles = 0
+    if per_chromosome == None:
+        for i in range(0, len(keys)):
+            logs.info("Starting modification calling on {} chromosome (sequence). {} seconds".format(keys[i], (time_m - time_b).total_seconds()))
+            modification_information_per_position = context_sequence_search(contexts, all_keys, fastas, keys[i], user_defined_context)
+            pileups = inbam.pileup(keys[i], ignore_overlaps=clip_overlap, min_base_quality=minimum_base_quality, fasta_file=fasta_file, stepper='samtools', max_depth=8000)
+            clean_pileup(pileups, cycles, modification_information_per_position, mean_mod, mean_unmod, user_defined_context, file_name)
+    else:
+        logs.info("Starting modification calling on {} chromosome (sequence). {} seconds".format(keys, (time_m - time_b).total_seconds()))
+        modification_information_per_position = context_sequence_search(contexts, all_keys, fastas, keys, user_defined_context)
+        pileups = inbam.pileup(keys, ignore_overlaps=clip_overlap, min_base_quality=minimum_base_quality, fasta_file=fasta_file, stepper='samtools', max_depth=8000)
+        clean_pileup(pileups, cycles, modification_information_per_position, mean_mod, mean_unmod, user_defined_context, file_name)
     if zero_coverage:
-        not_covered = [items for items in modification_information_per_position.keys()]
-        not_covered.sort()
-        for position in not_covered:
+        for position in modification_information_per_position.keys():
             if modification_information_per_position[position][3] == 'C':
                 all_data = list((position[0], position[1], position[1] + 1, 0, 0, 0, 'T', 'C',
                 modification_information_per_position[position][0], modification_information_per_position[position][1], 'No'))
-                modification_calls_writer(name, directory, all_data, header=header)
+                modification_calls_writer(all_data, file_name, header=False)
             elif modification_information_per_position[position][3] == 'G':
                 all_data = list((position[0], position[1], position[1] + 1, 0, 0, 0, 'A', 'G',
                 modification_information_per_position[position][0], modification_information_per_position[position][1], 'No'))
-                modification_calls_writer(name, directory, all_data, header=header)
-    final_statistics_output(mean_mod, mean_unmod, directory, name, user_defined_context)
+                modification_calls_writer(all_data, file_name, header=False)
+    if per_chromosome == None:
+        file_name = path.join(directory, name + "_" + context + ".stats")
+    else:
+        file_name = path.join(directory, name + "_" + per_chromosome + "_" + context + ".stats")
+    final_statistics_output(mean_mod, mean_unmod, user_defined_context, file_name)
     time_e = datetime.now()
     logs.info("asTair modification finder finished running. {} seconds".format((time_e - time_b).total_seconds()))
 
