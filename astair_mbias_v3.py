@@ -33,9 +33,9 @@ from DNA_sequences_operations import complementary
 @click.option('read_length', '--read_length', type=int, required=True, help='The read length is needed to calculate the M-bias.')
 @click.option('method', '--method', required=False, default = 'CmtoT', type=click.Choice(['CtoT', 'CmtoT']), help='Specify sequencing method, possible options are CtoT (unmodified cytosines are converted to thymines, bisulfite sequencing-like) and CmtoT (modified cytosines are converted to thymines, TAPS-like).')
 @click.option('plot', '--plot', required=False, is_flag=True, help='Phred scores will be visualised and output as a pdf file. Requires installed matplotlib.')
-#@click.option('colors', '--colors', default=['skyblue', 'mediumaquamarine', 'khaki', 'lightcoral'], type=list, required=False, help="List of color values used for visualistion of A, C, G, T, they are given as color1,color2,color3,color4. Accepts valid matplotlib color names, RGB and RGBA hex strings and  single letters denoting color {'b', 'g', 'r', 'c', 'm', 'y', 'k', 'w'}. (Default skyblue,mediumaquamarine,khaki,lightcoral)")
-def Mbias_exec(input_file, directory, read_length, method, plot):
-    Mbias_plotting(input_file, directory, read_length, method, plot)
+@click.option('colors', '--colors', default=['teal', 'gray', 'maroon'], type=list, required=False, help="List of color values used for visualistion of CpG, CHG and CHH modification levels per read, which are given as color1,color2,color3. Accepts valid matplotlib color names, RGB and RGBA hex strings and  single letters denoting color {'b', 'g', 'r', 'c', 'm', 'y', 'k', 'w'}. (Default 'teal','gray','maroon')")
+def Mbias_exec(input_file, directory, read_length, method, plot, colors):
+    Mbias_plotting(input_file, directory, read_length, method, plot, colors)
 
 
 warnings.simplefilter(action='ignore', category=FutureWarning)
@@ -80,7 +80,7 @@ def strand_and_method(read, method):
             sys.exit(1)
 
 
-def mbias_calculator(read, read_length, read_mods_CpG, read_mods_CHG, read_mods_CHH, read_all_CpG, read_all_CHG, read_all_CHH, method):
+def mbias_calculator(read, read_length, read_mods_CpG, read_mods_CHG, read_mods_CHH, read_umod_CpG, read_umod_CHG, read_umod_CHH, method):
     """Calculates the modification level per read position, pair orientation and cytosine context."""
     positions = strand_and_method(read, method)
     reads = read.query_sequence
@@ -105,76 +105,67 @@ def mbias_calculator(read, read_length, read_mods_CpG, read_mods_CHG, read_mods_
                 elif i in cpg_mods:
                     read_mods_CpG[i] += 1
                 elif i in chh_all:
-                    read_all_CHH[i] += 1
+                    read_umod_CHH[i] += 1
                 elif i in chg_all:
-                    read_all_CHG[i] += 1
+                    read_umod_CHG[i] += 1
                 elif i in cpg_all:
-                    read_all_CpG[i] += 1
+                    read_umod_CpG[i] += 1
     else:
         if len(reads) <= read_length:
             for i in range(0, len(reads)):
                 if i in chh_all:
-                    read_all_CHH[i] += 1
+                    read_umod_CHH[i] += 1
                 if i in chg_all:
-                    read_all_CHG[i] += 1
+                    read_umod_CHG[i] += 1
                 if i in cpg_all:
-                    read_all_CpG[i] += 1
-    return read_mods_CpG, read_mods_CHG, read_mods_CHH, read_all_CpG, read_all_CHG, read_all_CHH
+                    read_umod_CpG[i] += 1
+    return read_mods_CpG, read_mods_CHG, read_mods_CHH, read_umod_CpG, read_umod_CHG, read_umod_CHH
 
 
 def mbias_evaluater(input_file, read_length, method):
     """Outputs the modification levels per read position, pair orientation and cytosine context."""
     read1_mods_CHH, read1_mods_CHG, read1_mods_CpG = initialise_data_counters(read_length)
-    read1_all_CHH, read1_all_CHG, read1_all_CpG = initialise_data_counters(read_length)
+    read1_umod_CHH, read1_umod_CHG, read1_umod_CpG = initialise_data_counters(read_length)
     read2_mods_CHH, read2_mods_CHG, read2_mods_CpG = initialise_data_counters(read_length)
-    read2_all_CHH, read2_all_CHG, read2_all_CpG = initialise_data_counters(read_length)
+    read2_umod_CHH, read2_umod_CHG, read2_umod_CpG = initialise_data_counters(read_length)
     for read in bam_file_opener(input_file, 'fetch'):
-        if read.flag == 83: #or read.flag == 99:
-            mbias_calculator(read, read_length, read1_mods_CpG, read1_mods_CHG, read1_mods_CHH, read1_all_CpG, read1_all_CHG, read1_all_CHH, method)
-        elif read.flag == 163: # or read.flag == 147:
-            mbias_calculator(read, read_length, read2_mods_CpG, read2_mods_CHG, read2_mods_CHH, read2_all_CpG, read2_all_CHG, read2_all_CHH, method)
-    return read1_mods_CpG, read1_mods_CHG, read1_mods_CHH, read1_all_CpG, read1_all_CHG, read1_all_CHH,\
-           read2_mods_CpG, read2_mods_CHG, read2_mods_CHH, read2_all_CpG, read2_all_CHG, read2_all_CHH
+        if read.flag == 83 or read.flag == 99:
+            mbias_calculator(read, read_length, read1_mods_CpG, read1_mods_CHG, read1_mods_CHH, read1_umod_CpG, read1_umod_CHG, read1_umod_CHH, method)
+        elif read.flag == 163 or read.flag == 147:
+            mbias_calculator(read, read_length, read2_mods_CpG, read2_mods_CHG, read2_mods_CHH, read2_umod_CpG, read2_umod_CHG, read2_umod_CHH, method)
+    return read1_mods_CpG, read1_mods_CHG, read1_mods_CHH, read1_umod_CpG, read1_umod_CHG, read1_umod_CHH,\
+           read2_mods_CpG, read2_mods_CHG, read2_mods_CHH, read2_umod_CpG, read2_umod_CHG, read2_umod_CHH
+
+
+def context_calculator(i, read_mods, read_umods, read_values):
+    """Calculates summary statistics per context and read orientation."""
+    read_values[i] = non_zero_division(read_mods[i], read_umods[i] + read_mods[i]) * 100
+    values = [(keys + 1, round(vals[0], 3)) if isinstance(vals, list) else (keys + 1, round(vals, 3)) for keys, vals in read_values.items()]
+    umod_counts = [(keys + 1, round(vals[0], 3)) if isinstance(vals, list) else (keys + 1, round(vals, 3)) for keys, vals in read_umods.items()]
+    mod_counts = [(keys + 1, round(vals[0], 3)) if isinstance(vals, list) else (keys + 1, round(vals, 3)) for keys, vals in read_mods.items()]
+    return read_values, values, umod_counts, mod_counts
 
 
 def mbias_statistics_calculator(input_file, name, directory, read_length, method):
     """Creates a summary statistics of the modification levels per read position, pair orientation and cytosine context,
     and then writes them as a text file that can be used for independent visualisation."""
-    read1_mods_CpG, read1_mods_CHG, read1_mods_CHH, read1_all_CpG, read1_all_CHG, read1_all_CHH,\
-    read2_mods_CpG, read2_mods_CHG, read2_mods_CHH, read2_all_CpG, read2_all_CHG, read2_all_CHH \
+    read1_mods_CpG, read1_mods_CHG, read1_mods_CHH, read1_umod_CpG, read1_umod_CHG, read1_umod_CHH,\
+    read2_mods_CpG, read2_mods_CHG, read2_mods_CHH, read2_umod_CpG, read2_umod_CHG, read2_umod_CHH \
         = mbias_evaluater(input_file, read_length, method)
     read_values_1_CpG, read_values_1_CHG, read_values_1_CHH = initialise_data_counters(read_length)
     read_values_2_CpG, read_values_2_CHG, read_values_2_CHH = initialise_data_counters(read_length)
     for i in range(0, read_length):
-        read_values_1_CHH[i] = non_zero_division(read1_mods_CHH[i], read1_all_CHH[i]+read1_mods_CHH[i])*100
-        read_values_1_CHG[i] = non_zero_division(read1_mods_CHG[i], read1_all_CHG[i]+read1_mods_CHG[i])*100
-        read_values_1_CpG[i] = non_zero_division(read1_mods_CpG[i], read1_all_CpG[i]+read1_mods_CpG[i])*100
-        values_1_CHH = [(keys + 1, round(values[0], 3)) if isinstance(values, list) else (keys + 1, round(values, 3)) for keys, values in read_values_1_CHH.items()]
-        values_1_CHG = [(keys + 1, round(values[0], 3)) if isinstance(values, list) else (keys + 1, round(values, 3)) for keys, values in read_values_1_CHG.items()]
-        values_1_CpG = [(keys + 1, round(values[0], 3)) if isinstance(values, list) else (keys + 1, round(values, 3)) for keys, values in read_values_1_CpG.items()]
-        total_counts_1_CHH = [(keys + 1, round(values[0], 3)) if isinstance(values, list) else (keys + 1, round(values, 3)) for keys, values in read1_all_CHH.items()]
-        total_counts_1_CHG = [(keys + 1, round(values[0], 3)) if isinstance(values, list) else (keys + 1, round(values, 3)) for keys, values in read1_all_CHG.items()]
-        total_counts_1_CpG = [(keys + 1, round(values[0], 3)) if isinstance(values, list) else (keys + 1, round(values, 3)) for keys, values in read1_all_CpG.items()]
-        mod_counts_1_CHH = [(keys + 1, round(values[0], 3)) if isinstance(values, list) else (keys + 1, round(values, 3)) for keys, values in read1_mods_CHH.items()]
-        mod_counts_1_CHG = [(keys + 1, round(values[0], 3)) if isinstance(values, list) else (keys + 1, round(values, 3)) for keys, values in read1_mods_CHG.items()]
-        mod_counts_1_CpG = [(keys + 1, round(values[0], 3)) if isinstance(values, list) else (keys + 1, round(values, 3)) for keys, values in read1_mods_CpG.items()]
-        read_values_2_CHH[i] = non_zero_division(read2_mods_CHH[i], read2_all_CHH[i]+read2_mods_CHH[i])*100
-        read_values_2_CHG[i] = non_zero_division(read2_mods_CHG[i], read2_all_CHG[i]+read2_mods_CHG[i])*100
-        read_values_2_CpG[i] = non_zero_division(read2_mods_CpG[i], read2_all_CpG[i]+read2_mods_CpG[i])*100
-        total_counts_2_CHH = [(keys + 1, round(values[0], 3)) if isinstance(values, list) else (keys + 1, round(values, 3)) for keys, values in read2_all_CHH.items()]
-        total_counts_2_CHG = [(keys + 1, round(values[0], 3)) if isinstance(values, list) else (keys + 1, round(values, 3)) for keys, values in read2_all_CHG.items()]
-        total_counts_2_CpG = [(keys + 1, round(values[0], 3)) if isinstance(values, list) else (keys + 1, round(values, 3)) for keys, values in read2_all_CpG.items()]
-        mod_counts_2_CHH = [(keys + 1, round(values[0], 3)) if isinstance(values, list) else (keys + 1, round(values, 3)) for keys, values in read2_mods_CHH.items()]
-        mod_counts_2_CHG = [(keys + 1, round(values[0], 3)) if isinstance(values, list) else (keys + 1, round(values, 3)) for keys, values in read2_mods_CHG.items()]
-        mod_counts_2_CpG = [(keys + 1, round(values[0], 3)) if isinstance(values, list) else (keys + 1, round(values, 3)) for keys, values in read2_mods_CpG.items()]
-        values_2_CHH = [(keys + 1, round(values[0], 3)) if isinstance(values, list) else (keys + 1, round(values, 3)) for keys, values in read_values_2_CHH.items()]
-        values_2_CHG = [(keys + 1, round(values[0], 3)) if isinstance(values, list) else (keys + 1, round(values, 3)) for keys, values in read_values_2_CHG.items()]
-        values_2_CpG = [(keys + 1, round(values[0], 3)) if isinstance(values, list) else (keys + 1, round(values, 3)) for keys, values in read_values_2_CpG.items()]
+        read_values_1_CHH, values_1_CHH, umod_counts_1_CHH, mod_counts_1_CHH = context_calculator(i, read1_mods_CHH, read1_umod_CHH, read_values_1_CHH)
+        read_values_1_CHG, values_1_CHG, umod_counts_1_CHG, mod_counts_1_CHG = context_calculator(i, read1_mods_CHG, read1_umod_CHG, read_values_1_CHG)
+        read_values_1_CpG, values_1_CpG, umod_counts_1_CpG, mod_counts_1_CpG = context_calculator(i, read1_mods_CpG, read1_umod_CpG, read_values_1_CpG)
+        read_values_2_CHH, values_2_CHH, umod_counts_2_CHH, mod_counts_2_CHH = context_calculator(i, read2_mods_CHH, read2_umod_CHH, read_values_2_CHH)
+        read_values_2_CHG, values_2_CHG, umod_counts_2_CHG, mod_counts_2_CHG = context_calculator(i, read2_mods_CHG, read2_umod_CHG, read_values_2_CHG)
+        read_values_2_CpG, values_2_CpG, umod_counts_2_CpG, mod_counts_2_CpG = context_calculator(i, read2_mods_CpG, read2_umod_CpG, read_values_2_CpG)
     all_values = [(*a1, *a2, *a3, *a4, *a5, *a6, *a7, *a8, *a9, *a10, *a11, *a12, *a13, *a14, *a15, *a16, *a17, *a18)
                   for a1, a2, a3, a4, a5, a6, a7, a8, a9, a10, a11, a12, a13, a14, a15, a16, a17, a18 in
-                  itertools.zip_longest(values_1_CpG, total_counts_1_CpG, mod_counts_1_CpG, values_2_CpG, total_counts_2_CpG, mod_counts_2_CpG,
-                                        values_1_CHG, total_counts_1_CHG, mod_counts_1_CHG,  values_2_CHG, total_counts_2_CHG, mod_counts_2_CHG,
-                                        values_1_CHH, total_counts_1_CHH, mod_counts_1_CHH,  values_2_CHH, total_counts_2_CHH, mod_counts_2_CHH)]
+                  itertools.zip_longest(values_1_CpG, umod_counts_1_CpG, mod_counts_1_CpG, values_2_CpG, umod_counts_2_CpG, mod_counts_2_CpG,
+                                        values_1_CHG, umod_counts_1_CHG, mod_counts_1_CHG,  values_2_CHG, umod_counts_2_CHG, mod_counts_2_CHG,
+                                        values_1_CHH, umod_counts_1_CHH, mod_counts_1_CHH,  values_2_CHH, umod_counts_2_CHH, mod_counts_2_CHH)]
     all_values = [(x[0], x[1], x[3], x[5], x[7], x[9], x[11], x[13], x[15], x[17], x[19], x[21], x[23], x[25], x[27], x[29], x[31], x[33], x[35]) for x in all_values]
     with open(directory + name + ".Mbias.txt", 'w', newline='') as stats_file:
         line = csv.writer(stats_file, delimiter='\t', lineterminator='\n')
@@ -188,7 +179,7 @@ def mbias_statistics_calculator(input_file, name, directory, read_length, method
             line.writerow(row)
     return values_1_CpG, values_2_CpG, values_1_CHG, values_2_CHG, values_1_CHH, values_2_CHH
 
-def Mbias_plotting(input_file, directory, read_length, method, plot):
+def Mbias_plotting(input_file, directory, read_length, method, plot, colors):
     """The general M-bias calculation and statistics output function, which might be also visualised if the plotting module is enabled."""
     name = path.splitext(path.basename(input_file))[0]
     directory = path.abspath(directory)
@@ -196,6 +187,8 @@ def Mbias_plotting(input_file, directory, read_length, method, plot):
         directory = directory + "/"
     values_1_CpG, values_2_CpG, values_1_CHG, values_2_CHG, values_1_CHH, values_2_CHH = mbias_statistics_calculator(input_file, name, directory, read_length, method)
     if plot:
+        if colors != ['teal', 'gray', 'maroon']:
+            colors = "".join(colors).split(',')
         y_axis_CpG1, y_axis_CHG1, y_axis_CHH1, y_axis_CpG2, y_axis_CHG2, y_axis_CHH2 = list(), list(), list(), list(), list(), list()
         for row in values_1_CpG:
             y_axis_CpG1.append(row[1])
@@ -217,17 +210,17 @@ def Mbias_plotting(input_file, directory, read_length, method, plot):
         pyp.subplots_adjust(right=1)
         fq[0].set_ylabel('Modification level, %', fontsize=12)
         fq[0].set_xlabel('First in pair base positions', fontsize=12)
-        fq[0].plot(x_axis, y_axis_CpG1, linewidth=1.0, linestyle='-', color='teal')
-        fq[0].plot(x_axis, y_axis_CHG1, linewidth=1.0, linestyle='-', color='gray')
-        fq[0].plot(x_axis, y_axis_CHH1, linewidth=1.0, linestyle='-', color='maroon')
+        fq[0].plot(x_axis, y_axis_CpG1, linewidth=1.0, linestyle='-', color=colors[0])
+        fq[0].plot(x_axis, y_axis_CHG1, linewidth=1.0, linestyle='-', color=colors[1])
+        fq[0].plot(x_axis, y_axis_CHH1, linewidth=1.0, linestyle='-', color=colors[2])
         fq[0].xaxis.set_ticks(numpy.arange(0, read_length + 1, step=ceil(read_length/10)))
         fq[0].yaxis.set_ticks(numpy.arange(0, 101, step=10))
         fq[0].grid(color='lightgray', linestyle='solid', linewidth=1)
         fq[1].set_ylabel('Modification level, %', fontsize=12)
         fq[1].set_xlabel('Second in pair base positions', fontsize=12)
-        fq[1].plot(x_axis, y_axis_CpG2, linewidth=1.0, linestyle='-', color='teal')
-        fq[1].plot(x_axis, y_axis_CHG2, linewidth=1.0, linestyle='-', color='gray')
-        fq[1].plot(x_axis, y_axis_CHH2, linewidth=1.0, linestyle='-', color='maroon')
+        fq[1].plot(x_axis, y_axis_CpG2, linewidth=1.0, linestyle='-', color=colors[0])
+        fq[1].plot(x_axis, y_axis_CHG2, linewidth=1.0, linestyle='-', color=colors[1])
+        fq[1].plot(x_axis, y_axis_CHH2, linewidth=1.0, linestyle='-', color=colors[2])
         fq[1].xaxis.set_ticks(numpy.arange(0, read_length + 1, step=ceil(read_length/10)))
         fq[1].yaxis.set_ticks(numpy.arange(0, 101, step=10))
         fq[1].grid(color='lightgray', linestyle='solid', linewidth=1)
