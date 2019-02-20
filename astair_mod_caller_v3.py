@@ -164,7 +164,6 @@ def pillup_summary(modification_information_per_position, position, read_counts,
 
 def cytosine_modification_finder(input_file, fasta_file, context, zero_coverage, skip_clip_overlap, minimum_base_quality, user_defined_context, directory):
     """Searches for cytosine modification positions in the desired contexts and calculates the modificaton levels."""
-    #header = True
     name = path.splitext(path.basename(input_file))[0]
     directory = path.abspath(directory)
     if user_defined_context:
@@ -180,12 +179,11 @@ def cytosine_modification_finder(input_file, fasta_file, context, zero_coverage,
         time_m = datetime.now()
         logs.info("Starting modification calling on {} chromosome (sequence). {} seconds".format(keys[i], (time_m - time_b).total_seconds()))
         modification_information_per_position = context_sequence_search(contexts, all_keys, fastas, keys[i], user_defined_context)
-        covered_positions = list()
         if skip_clip_overlap:
             clip_overlap = False
         else:
             clip_overlap = True
-        pileups = inbam.pileup(keys[i], ignore_overlaps=clip_overlap, min_base_quality=minimum_base_quality, fasta_file=fasta_file, stepper='samtools', max_depth=100000)
+        pileups = inbam.pileup(keys[i], ignore_overlaps=clip_overlap, min_base_quality=minimum_base_quality, fasta_file=fasta_file, stepper='samtools', max_depth=8000)
         cycles=0
         for reads in pileups:
             if cycles==0:
@@ -194,7 +192,6 @@ def cytosine_modification_finder(input_file, fasta_file, context, zero_coverage,
                 header = False
             if (reads.reference_name, reads.pos, reads.pos + 1) in modification_information_per_position:
                 position = (reads.reference_name, reads.pos, reads.pos + 1)
-                covered_positions.append(position)
                 read_counts = defaultdict(int)
                 try:
                     sequences = reads.get_query_sequences()
@@ -205,18 +202,19 @@ def cytosine_modification_finder(input_file, fasta_file, context, zero_coverage,
                     read_counts[(pileup.alignment.flag, seq)] += 1
                 pillup_summary(modification_information_per_position, position, read_counts, mean_mod, mean_unmod, name, directory, user_defined_context, header)
                 cycles+=1
+                modification_information_per_position.pop(position)
     if zero_coverage:
-        positions_not_covered = [pos for pos in modification_information_per_position if pos not in covered_positions]
-        positions_not_covered.sort()
-        for positions in positions_not_covered:
-            if modification_information_per_position[positions][3] == 'C':
-                all_data = list((positions[0], positions[1], positions[1] + 1, 0, 0, 0, 'T', 'C', modification_information_per_position[positions][0], modification_information_per_position[positions][1], 'No'))
+        not_covered = [items for items in modification_information_per_position.keys()]
+        not_covered.sort()
+        for position in not_covered:
+            if modification_information_per_position[position][3] == 'C':
+                all_data = list((position[0], position[1], position[1] + 1, 0, 0, 0, 'T', 'C',
+                modification_information_per_position[position][0], modification_information_per_position[position][1], 'No'))
                 modification_calls_writer(name, directory, all_data, header=header)
-                header = False
-            elif modification_information_per_position[positions][3] == 'G':
-                all_data = list((positions[0], positions[1], positions[1] + 1, 0, 0, 0, 'A', 'G', modification_information_per_position[positions][0], modification_information_per_position[positions][1], 'No'))
+            elif modification_information_per_position[position][3] == 'G':
+                all_data = list((position[0], position[1], position[1] + 1, 0, 0, 0, 'A', 'G',
+                modification_information_per_position[position][0], modification_information_per_position[position][1], 'No'))
                 modification_calls_writer(name, directory, all_data, header=header)
-                header = False
     final_statistics_output(mean_mod, mean_unmod, directory, name, user_defined_context)
     time_e = datetime.now()
     logs.info("asTair modification finder finished running. {} seconds".format((time_e - time_b).total_seconds()))
