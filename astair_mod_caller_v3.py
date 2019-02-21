@@ -50,7 +50,7 @@ def modification_calls_writer(data_mods, file_name, header=False):
     with open(file_name, 'a', newline='') as calls_output:
         data_line = csv.writer(calls_output, delimiter='\t', lineterminator='\n')
         if header:
-            data_line.writerow(["CHROM", "START", "END", "MOD_LEVEL", "MOD", "unmod", "ALT", "REF", "DEPTH", "CONTEXT",
+            data_line.writerow(["CHROM", "START", "END", "MOD_LEVEL", "MOD", "UNMOD", "ALT", "REF",  "CONTEXT",
                          "SPECIFIC_CONTEXT", 'SNV'])
             data_line.writerow(data_mods)
         else:
@@ -164,6 +164,7 @@ def pillup_summary(modification_information_per_position, position, read_counts,
 
 
 def clean_pileup(pileups, cycles, modification_information_per_position, mean_mod, mean_unmod, user_defined_context, file_name):
+    """Takes reads from the piled-up region and calculates modification levels."""
     for reads in pileups:
         if cycles == 0:
             header = True
@@ -204,27 +205,28 @@ def cytosine_modification_finder(input_file, fasta_file, context, zero_coverage,
         clip_overlap = False
     else:
         clip_overlap = True
-    time_m = datetime.now()
     cycles = 0
     if per_chromosome == None:
         for i in range(0, len(keys)):
+            time_m = datetime.now()
             logs.info("Starting modification calling on {} chromosome (sequence). {} seconds".format(keys[i], (time_m - time_b).total_seconds()))
             modification_information_per_position = context_sequence_search(contexts, all_keys, fastas, keys[i], user_defined_context)
-            pileups = inbam.pileup(keys[i], ignore_overlaps=clip_overlap, min_base_quality=minimum_base_quality, fasta_file=fasta_file, stepper='samtools', max_depth=8000)
+            pileups = inbam.pileup(keys[i], ignore_overlaps=clip_overlap, min_base_quality=minimum_base_quality, fasta_file=fasta_file, stepper='samtools', max_depth=250)
             clean_pileup(pileups, cycles, modification_information_per_position, mean_mod, mean_unmod, user_defined_context, file_name)
     else:
+        time_m = datetime.now()
         logs.info("Starting modification calling on {} chromosome (sequence). {} seconds".format(keys, (time_m - time_b).total_seconds()))
         modification_information_per_position = context_sequence_search(contexts, all_keys, fastas, keys, user_defined_context)
-        pileups = inbam.pileup(keys, ignore_overlaps=clip_overlap, min_base_quality=minimum_base_quality, fasta_file=fasta_file, stepper='samtools', max_depth=8000)
+        pileups = inbam.pileup(keys, ignore_overlaps=clip_overlap, min_base_quality=minimum_base_quality, fasta_file=fasta_file, stepper='samtools', max_depth=250)
         clean_pileup(pileups, cycles, modification_information_per_position, mean_mod, mean_unmod, user_defined_context, file_name)
     if zero_coverage:
         for position in modification_information_per_position.keys():
             if modification_information_per_position[position][3] == 'C':
-                all_data = list((position[0], position[1], position[1] + 1, 0, 0, 0, 'T', 'C',
+                all_data = list((position[0], position[1], position[1] + 1, 'NA', 0, 0, 'T', 'C',
                 modification_information_per_position[position][0], modification_information_per_position[position][1], 'No'))
                 modification_calls_writer(all_data, file_name, header=False)
             elif modification_information_per_position[position][3] == 'G':
-                all_data = list((position[0], position[1], position[1] + 1, 0, 0, 0, 'A', 'G',
+                all_data = list((position[0], position[1], position[1] + 1, 'NA', 0, 0, 'A', 'G',
                 modification_information_per_position[position][0], modification_information_per_position[position][1], 'No'))
                 modification_calls_writer(all_data, file_name, header=False)
     if per_chromosome == None:
