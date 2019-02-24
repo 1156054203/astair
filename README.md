@@ -5,6 +5,8 @@ _These scripts transform aligned reads to bed-like file containing cytosine posi
 
 Contents:
 
+[TOC]
+
 1. [Creating a python virtual environment](#pyenv)
 2. [Installation of dependencies with _pip_](#pip)
 3. [Creating a conda virtual environment and installing requirements](#conda)
