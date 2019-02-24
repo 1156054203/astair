@@ -3,18 +3,10 @@
 A little tool for analysis of bisulfite-free and base-resolution sequencing data generated with TET Assisted Pic-borane Sequencing (TAPS) or other modified cytosine to thymine conversion methods (CmtoT).
 _These scripts transform aligned reads to bed-like file containing cytosine positions and their modification level._
 
-Contents:
 
 [TOC]
 
-1. [Creating a python virtual environment](#pyenv)
-2. [Installation of dependencies with _pip_](#pip)
-3. [Creating a conda virtual environment and installing requirements](#conda)
-4. [Add asTair to the path and begin the analysis](#path)
-5. [Analysis of TAPS  or other modified cytosine to thymine conversion methods (CmtoT) data ](#taps)
-6. [Recommendations and extras](#extra)
 
-<a name="pyenv"></a>
 ### Creating a python virtual environment 
 
 Using python virtualenv and creating an environment folder for your project:
@@ -39,7 +31,7 @@ To use the python environment you can add it to the path or use it directly:
   
 export PATH=$PATH:/path/to/environment/your_project_name/bin/python(2 or 3)
 ```
-<a name="pip"></a>
+
 ### Installation of dependencies with _pip_
 For python 2.7:
 ```bash
@@ -51,7 +43,6 @@ For python 3 (>=3.5):
 pip3 install -r requirements.txt
 ```
 
-<a name="conda"></a>
 ### Creating a conda virtual environment and installing requirements
 
 For python 2.7:
@@ -74,14 +65,13 @@ Finally, add the the directory of the conda virual environment to the path:
 export PATH=$PATH:/path/to/conda/environment/your_project_name/bin/
 ```
 
-<a name="path"></a>
+
 ### Add asTair to the path and begin the analysis
 
 ```bash
 export PATH=$PATH:/dir/to/asTair
 ```
 
-<a name="taps"></a>
 ### Analysis of TAPS  or other modified cytosine to thymine conversion methods (CmtoT) data 
 _Let us have an example paired-end sequencing data from step 1 called `lambda.phage_test_sample_R1.fastq.gz` and `lambda.phage_test_sample_R2.fastq.gz` to guide us through the process._
 
@@ -99,7 +89,7 @@ astair_aligner_v3.py -bp /dir/to/bwa -sp /dir/to/samtools -f lambda.phage.fa -1 
 astair_mod_caller_v3.py -i lambda.phage_test_sample.bam (cram) -f lambda_phage.fa -co CpG -sc -bq 13 -d /output/directory/
 ```
   
-<a name="extra"></a>
+
 ### Recommendations and extras
 
 1 - Do QC check of the sequencing reads and do quality trimming before mapping and dispose of very short reads. 
