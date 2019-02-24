@@ -65,8 +65,9 @@ export PATH=$PATH:/path/to/conda/environment/your_project_name/bin/
 
 ### Add asTair to the path and begin the analysis
 
+```bash
 export PATH=$PATH:/dir/to/asTair
-
+```
 
 ### Analysis of TAPS  or other modified cytosine to thymine conversion methods (CmtoT) data 
 _Let us have an example paired-end sequencing data from step 1 called `lambda.phage_test_sample_R1.fastq.gz` and `lambda.phage_test_sample_R2.fastq.gz` to guide us through the process._
