@@ -23,6 +23,7 @@ _Let us have an example paired-end sequencing data from step 1 called `lambda.ph
 
 1 - Get your data hot from the sequencing center.  
 2 - Choose genomic aligner of preference. Ours was  `bwa mem`, which we wrapped in astair_aligner_v3.py, for which we currently require samtools.
+
 ```bash
 astair_aligner_v3.py -bp /dir/to/bwa -sp /dir/to/samtools -f lambda.phage.fa -1 lambda.phage_test_sample_R1.fastq.gz -2 lambda.phage_test_sample_R2.fastq.gz -d /output/directory/
 ```
@@ -40,13 +41,13 @@ astair_mod_caller_v3.py -i lambda.phage_test_sample.bam (cram) -f lambda_phage.f
 
 2 - If the DNA fragmentation during the library construction was random, it will be best to remove PCR duplicates after step 3 before calling samtools mpileup.
 
-3 - Check the fragment (insert) size distribution and decide on overlap removal method for paired-end reads. The simplest option is the default removal of overlaps handled by astair_mod_caller_v3.py, which can be disabled by the -sc option.  
+3 - Check the fragment (insert) size distribution and decide on overlap removal method for paired-end reads. The simplest option is the default removal of overlaps handled by astair_mod_caller_v3.py, which can be disabled by the `-sc` option.  
 
 ```bash
 clipOverlap --in lambda.phage_test_sample.bam --out lambda.phage_test_sample_clipped.bam
 ```
 
-4 - Some more scripts can give your fuller information about the sequencing calling. Currently, in this category are astair_phred_values_v3.py that outputs the average quality per read (if available) for each of the four bases T, C, A, G, and astair_mbias_v3.py that gives modification bias along the reads in tabular format and as an image. Another script that might be helpful is astair_taps_modification_simulation_v3.py that enables modified data simulation.  
+4 - Some more scripts can give your fuller information about the sequencing calling. Currently, in this category are `astair_phred_values_v3.py` that outputs the average quality per read (if available) for each of the four bases T, C, A, G, and `astair_mbias_v3.py` that gives modification bias along the reads in tabular format and as an image. Another script that might be helpful is `astair_taps_modification_simulation_v3.py` that enables modified data simulation.  
 
 4.1
 
