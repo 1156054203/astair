@@ -179,7 +179,8 @@ def clean_pileup(pileups, cycles, modification_information_per_position, mean_mo
                 logs.exception("Failed getting query sequences (AssertionError, pysam)")
                 continue
             for pileup, seq in itertools.zip_longest(reads.pileups, sequences, fillvalue='BLANK'):
-                read_counts[(pileup.alignment.flag, seq.upper())] += 1
+                if pileup.indel == 0 and pileup.is_del == 0 and pileup.is_refskip == 0:
+                    read_counts[(pileup.alignment.flag, seq.upper())] += 1
             pillup_summary(modification_information_per_position, position, read_counts, mean_mod, mean_unmod, user_defined_context, header, file_name)
             cycles+=1
             modification_information_per_position.pop(position)
