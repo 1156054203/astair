@@ -1,6 +1,3 @@
-# asTair
-
-A little tool for analysis of bisulfite-free and base-resolution sequencing data generated with TET Assisted Pic-borane Sequencing (TAPS) or other modified cytosine to thymine conversion methods (CmtoT).
 _These scripts transform aligned reads to bed-like file containing cytosine positions and their modification level._
 
 
