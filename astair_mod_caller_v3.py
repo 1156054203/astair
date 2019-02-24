@@ -20,19 +20,19 @@ from reference_context_search_triad import sequence_context_set_creation
 from reference_context_search_triad import context_sequence_search
 
 @click.command()
-@click.option('input_file', '--input_file', required=True, help='BAM format file containing sequencing reads.')
-# @click.option('control_file', '--control_file', required=False, help='BAM format file containing sequencing reads of a matched control.')
-@click.option('fasta_file', '--fasta_file', required=True, help='DNA sequence in fasta format used for aligning the sequencing reads and mpileup.')
-@click.option('zero_coverage', '--zero_coverage', default=False, is_flag=True, help='When set to True, outputs positions not covered in the bam file. Uncovering zero coverage positions takes longer time than using the default option.')
-@click.option('context', '--context', required=False, default='all',  type=click.Choice(['all', 'CpG', 'CHG', 'CHH']), help='Explains which cytosine sequence contexts are to be expected in the output file. Default behaviour is all, which includes CpG, CHG, CHH contexts and their sub-contexts for downstream filtering and analysis.')
-@click.option('user_defined_context', '--user_defined_context', required=False, type=str, help='At least two-letter contexts other than CG, CHH and CHG to be evaluated, will return the genomic coordinates for the first cytosine in the string.')
-# @click.option('library', '--library', required=False, default = 'directional',  type=click.Choice(['directional', 'RR', 'PMAT']), help='Provides information for the library preparation protocol (RR is reduced representation and PMAT is post-method adapter-tagging).')
-# @click.option('method', '--method', required=False, default = 'CmtoT', type=click.Choice(['CtoT', 'CmtoT']), help='Specify sequencing method, possible options are CtoT (unmodified cytosines are converted to thymines, bisulfite sequencing-like) and CmtoT (modified cytosines are converted to thymines, TAPS-like).')
-@click.option('skip_clip_overlap', '--skip_clip_overlap', required=False, is_flag=True, help='Skipping the random removal of overlapping bases between paired-end reads. Not recommended for paired-end libraries, unless the overlaps are removed prior to calling.')
-@click.option('minimum_base_quality', '--minimum_base_quality', required=False, type=int, default=20, help='Set the minimum base quality for a read base to be used in the pileup (Default 20).')
-@click.option('per_chromosome', '--per_chromosome', default=None, type=str, help='When used, it calculates the modification rates only per the chromosome given. (Default None')
-# @click.option('N_threads', '--N_threads', default = 1, required=True, help='The number of threads to spawn (the default value is 1).')
-@click.option('directory', '--directory', required=True, type=str, help='Output directory to save files.')
+@click.option('input_file', '--input_file', '-i', required=True, help='BAM format file containing sequencing reads.')
+# @click.option('control_file', '--control_file', '-c', required=False, help='BAM format file containing sequencing reads of a matched control.')
+@click.option('fasta_file', '--fasta_file', '-f', required=True, help='DNA sequence in fasta format used for aligning the sequencing reads and mpileup.')
+@click.option('zero_coverage', '--zero_coverage', '-z', default=False, is_flag=True, help='When set to True, outputs positions not covered in the bam file. Uncovering zero coverage positions takes longer time than using the default option.')
+@click.option('context', '--context', '-co', required=False, default='all',  type=click.Choice(['all', 'CpG', 'CHG', 'CHH']), help='Explains which cytosine sequence contexts are to be expected in the output file. Default behaviour is all, which includes CpG, CHG, CHH contexts and their sub-contexts for downstream filtering and analysis.')
+@click.option('user_defined_context', '--user_defined_context', '-uc', required=False, type=str, help='At least two-letter contexts other than CG, CHH and CHG to be evaluated, will return the genomic coordinates for the first cytosine in the string.')
+# @click.option('library', '--library', '-l', required=False, default = 'directional',  type=click.Choice(['directional', 'RR', 'PMAT']), help='Provides information for the library preparation protocol (RR is reduced representation and PMAT is post-method adapter-tagging).')
+# @click.option('method', '--method', '-m', required=False, default = 'CmtoT', type=click.Choice(['CtoT', 'CmtoT']), help='Specify sequencing method, possible options are CtoT (unmodified cytosines are converted to thymines, bisulfite sequencing-like) and CmtoT (modified cytosines are converted to thymines, TAPS-like).')
+@click.option('skip_clip_overlap', '--skip_clip_overlap', '-sc', required=False, is_flag=True, help='Skipping the random removal of overlapping bases between paired-end reads. Not recommended for paired-end libraries, unless the overlaps are removed prior to calling.')
+@click.option('minimum_base_quality', '--minimum_base_quality', '-bq', required=False, type=int, default=20, help='Set the minimum base quality for a read base to be used in the pileup (Default 20).')
+@click.option('per_chromosome', '--per_chromosome', '-chr', default=None, type=str, help='When used, it calculates the modification rates only per the chromosome given. (Default None')
+# @click.option('N_threads', '--N_threads', '-t', default = 1, required=True, help='The number of threads to spawn (the default value is 1).')
+@click.option('directory', '--directory', '-d', required=True, type=str, help='Output directory to save files.')
 def modification_finder_exec(input_file, fasta_file, context, zero_coverage, skip_clip_overlap, minimum_base_quality, user_defined_context, per_chromosome, directory):
         cytosine_modification_finder(input_file, fasta_file, context, zero_coverage, skip_clip_overlap, minimum_base_quality, user_defined_context, per_chromosome, directory)
 
@@ -136,12 +136,12 @@ def pillup_summary(modification_information_per_position, position, read_counts,
     """Gives the modication call rows given strand information."""
     if modification_information_per_position[position][3] == 'C':
         desired_tuples = [(147, 'C'), (99, 'C'), (147, 'T'), (99, 'T')]
-        undesired_tuples = [(163, 'G'), (83, 'G'), (163, 'A'), (83, 'A')]
+        undesired_tuples = [(163, 'C'), (83, 'C'), (163, 'T'), (83, 'T')]
         modification = 'T'
         reference = 'C'
     elif modification_information_per_position[position][3] == 'G':
         desired_tuples = [(163, 'G'), (83, 'G'), (163, 'A'), (83, 'A')]
-        undesired_tuples = [(147, 'C'), (99, 'C'), (147, 'T'), (99, 'T')]
+        undesired_tuples = [(147, 'G'), (99, 'G'), (147, 'A'), (99, 'A')]
         modification = 'A'
         reference = 'G'
     if non_zero_division(read_counts[undesired_tuples[2]] + read_counts[undesired_tuples[3]],
@@ -179,7 +179,7 @@ def clean_pileup(pileups, cycles, modification_information_per_position, mean_mo
                 logs.exception("Failed getting query sequences (AssertionError, pysam)")
                 continue
             for pileup, seq in itertools.zip_longest(reads.pileups, sequences, fillvalue='BLANK'):
-                read_counts[(pileup.alignment.flag, seq)] += 1
+                read_counts[(pileup.alignment.flag, seq.upper())] += 1
             pillup_summary(modification_information_per_position, position, read_counts, mean_mod, mean_unmod, user_defined_context, header, file_name)
             cycles+=1
             modification_information_per_position.pop(position)

@@ -28,12 +28,12 @@ from DNA_sequences_operations import complementary
 
 
 @click.command()
-@click.option('input_file', '--input_file', required=True, help='BAM format file containing sequencing reads.')
-@click.option('directory', '--directory', required=True, help='Output directory to save files.')
-@click.option('read_length', '--read_length', type=int, required=True, help='The read length is needed to calculate the M-bias.')
-@click.option('method', '--method', required=False, default = 'CmtoT', type=click.Choice(['CtoT', 'CmtoT']), help='Specify sequencing method, possible options are CtoT (unmodified cytosines are converted to thymines, bisulfite sequencing-like) and CmtoT (modified cytosines are converted to thymines, TAPS-like).')
-@click.option('plot', '--plot', required=False, is_flag=True, help='Phred scores will be visualised and output as a pdf file. Requires installed matplotlib.')
-@click.option('colors', '--colors', default=['teal', 'gray', 'maroon'], type=list, required=False, help="List of color values used for visualistion of CpG, CHG and CHH modification levels per read, which are given as color1,color2,color3. Accepts valid matplotlib color names, RGB and RGBA hex strings and  single letters denoting color {'b', 'g', 'r', 'c', 'm', 'y', 'k', 'w'}. (Default 'teal','gray','maroon')")
+@click.option('input_file', '--input_file', '-i', required=True, help='BAM format file containing sequencing reads.')
+@click.option('directory', '--directory', '-d', required=True, help='Output directory to save files.')
+@click.option('read_length', '--read_length', '-l', type=int, required=True, help='The read length is needed to calculate the M-bias.')
+@click.option('method', '--method', '-m',  required=False, default='CmtoT', type=click.Choice(['CtoT', 'CmtoT']), help='Specify sequencing method, possible options are CtoT (unmodified cytosines are converted to thymines, bisulfite sequencing-like) and CmtoT (modified cytosines are converted to thymines, TAPS-like).')
+@click.option('plot', '--plot', '-p', required=False, is_flag=True, help='Phred scores will be visualised and output as a pdf file. Requires installed matplotlib.')
+@click.option('colors', '--colors', '-c', default=['teal', 'gray', 'maroon'], type=list, required=False, help="List of color values used for visualistion of CpG, CHG and CHH modification levels per read, which are given as color1,color2,color3. Accepts valid matplotlib color names, RGB and RGBA hex strings and  single letters denoting color {'b', 'g', 'r', 'c', 'm', 'y', 'k', 'w'}. (Default 'teal','gray','maroon')")
 def Mbias_exec(input_file, directory, read_length, method, plot, colors):
     Mbias_plotting(input_file, directory, read_length, method, plot, colors)
 
