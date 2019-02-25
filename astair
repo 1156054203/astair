@@ -4,7 +4,7 @@ show_help()
     # Print help text to STDERR
     cat 1>&2 <<EOF
 
-Program: astair (tools for processing cytosine modification sequencing data)
+Program: asTair (tools for processing cytosine modification sequencing data)
 Version: 3.0
 
 Usage: astair [-h -3] command [command specific options/arguments]
@@ -13,6 +13,9 @@ Commands:
   
   align         Align reads
   call          Call methylation
+  simulate      Simulate TAPS or WGBS data
+  mbias         Visualise modification bias
+  phred         Visualise Phred scores
 
 General arguments:
 
@@ -20,7 +23,7 @@ General arguments:
   -3      Force use of python3 over python2
 
 ___________________________ About ___________________________
-astair was written by Gergana Velikova and Benjamin 
+asTair was written by Gergana V. Velikova and Benjamin 
 Schuster-Boeckler. This code is made available under the 
 GNU General Public License, see LICENSE.txt for more details.
 
@@ -64,6 +67,15 @@ case "$COMMAND" in
         ;;
     call)
         $PYTHON $SCRIPTPATH/astair_mod_caller_v3.py $@
+        ;;
+    simulate)
+        $PYTHON $SCRIPTPATH/astair_taps_modification_simulation_v3.py $@
+        ;;
+    mbias)
+        $PYTHON $SCRIPTPATH/astair_mbias_v3.py $@
+        ;;
+    phred)
+        $PYTHON $SCRIPTPATH/astair_phred_values_v3.py $@
         ;;
     *)
         echo "ERROR: unknown command: $COMMAND" 1>&2
