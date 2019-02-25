@@ -166,21 +166,13 @@ def absolute_modification_information(modified_positions_data, modification_info
         pass
 
 
-def modification_simulator(fasta_file, read_length, input_file, method, library, simulation_input, modification_level,
-                           modified_positions, coverage, context, region, directory, seed, user_defined_context):
-    header = True
-    name = path.splitext(path.basename(input_file))[0]
-    directory = path.abspath(directory)
-    if list(directory)[-1]!="/":
-        directory = directory + "/"
-    if region.count(None)==0:
-        region = region[2]-region[1]
-    else:
-        region = None
-    modified_positions_data = list()
-    outbam = pysam.AlignmentFile(path.join(directory, name + '_' + str(modification_level) + ".bam"), "wb", template=bam_file_opener(input_file, None), header=True)
+def bam_input_simulation(directory, name, modification_level, context, input_file, fasta_file, user_defined_context,
+    modified_positions, library, seed, region, modified_positions_data, method):
+    outbam = pysam.AlignmentFile(path.join(directory, name + '_' + str(modification_level) + '_' + context + ".bam"),
+                                 "wb", template=bam_file_opener(input_file, None), header=True)
     modification_information = cytosine_modification_lookup(fasta_file, 'all', user_defined_context, modified_positions)
-    modification_level, random_sample = random_position_modification(modification_information, modification_level, modified_positions, library, seed, context)
+    modification_level, random_sample = random_position_modification(modification_information, modification_level,
+                                                                     modified_positions, library, seed, context)
     for read in bam_file_opener(input_file, 'fetch'):
         general_read_information_output(name, directory, read, modification_level, header, region)
         quals = read.query_qualities
@@ -201,7 +193,8 @@ def modification_simulator(fasta_file, read_length, input_file, method, library,
                     outbam.write(read)
 
             else:
-                indices = [position[1] - read.reference_start for position in positions if position not in random_sample.intersection(positions)]
+                indices = [position[1] - read.reference_start for position in positions if
+                           position not in random_sample.intersection(positions)]
                 strand = list(read.query_sequence)
                 replace = list(base * len(indices))
                 for (index, replacement) in zip(indices, replace):
@@ -212,7 +205,25 @@ def modification_simulator(fasta_file, read_length, input_file, method, library,
             header = False
         else:
             pass
-    absolute_modification_information(modified_positions_data, modification_information, modified_positions, name,
+    return modification_information
+
+
+def modification_simulator(fasta_file, read_length, input_file, method, library, simulation_input, modification_level,
+                           modified_positions, coverage, context, region, directory, seed, user_defined_context):
+    header = True
+    name = path.splitext(path.basename(input_file))[0]
+    directory = path.abspath(directory)
+    if list(directory)[-1]!="/":
+        directory = directory + "/"
+    if region.count(None)==0:
+        region = region[2]-region[1]
+    else:
+        region = None
+    modified_positions_data = list()
+    if simulation_input == 'bam':
+        modification_information = bam_input_simulation(directory, name, modification_level, context, input_file,
+        fasta_file, user_defined_context, modified_positions, library, seed, region, modified_positions_data, method)
+        absolute_modification_information(modified_positions_data, modification_information, modified_positions, name,
                                       directory, modification_level, context, True)
     time_m = datetime.now()
     logs.info("asTair's cytosine modification simulator has finished running. {} seconds".format((
