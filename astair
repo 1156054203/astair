@@ -1,0 +1,74 @@
+#!/bin/sh
+show_help()
+{
+    # Print help text to STDERR
+    cat 1>&2 <<EOF
+
+Program: astair (tools for processing cytosine modification sequencing data)
+Version: 3.0
+
+Usage: astair [-h -3] command [command specific options/arguments]
+
+Commands:
+  
+  align         Align reads
+  call          Call methylation
+
+General arguments:
+
+  -h      Show this help
+  -3      Force use of python3 over python2
+
+___________________________ About ___________________________
+astair was written by Gergana Velikova and Benjamin 
+Schuster-Boeckler. This code is made available under the 
+GNU General Public License, see LICENSE.txt for more details.
+
+EOF
+}
+
+# A POSIX variable
+OPTIND=1  # Reset in case getopts has been used previously in the shell.
+
+SCRIPTPATH="$( cd "$(dirname "$0")" ; pwd -P )"
+
+# Initialize our own variables:
+PYTHON=python3
+
+while getopts "h?2" opt; do
+    case "$opt" in
+        h|\?)
+            show_help
+            exit 0
+            ;;
+        2)  PYTHON=python
+            ;;
+    esac
+done
+
+# remove parameters from input
+shift $((OPTIND-1))
+
+if [ $# -eq 0 ]; then
+    echo "ERROR: no command given" 1>&2
+    show_help
+    exit 1
+fi
+
+COMMAND=$1
+shift
+
+case "$COMMAND" in
+    align)
+        $PYTHON $SCRIPTPATH/astair_aligner_v3.py $@
+        ;;
+    call)
+        $PYTHON $SCRIPTPATH/astair_mod_caller_v3.py $@
+        ;;
+    *)
+        echo "ERROR: unknown command: $COMMAND" 1>&2
+        show_help
+        exit 1
+        ;;
+esac
+# End of file
