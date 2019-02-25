@@ -10,6 +10,7 @@ import csv
 from os import path
 import click
 import pysam
+import pdb
 from datetime import datetime
 
 from bam_file_parser import bam_file_opener
@@ -52,21 +53,20 @@ time_b = datetime.now()
 
 
 def cytosine_modification_lookup(fasta_file, context, user_defined_context, modified_positions):
-    keys, fastas = fasta_splitting_by_sequence(fasta_file)
+    keys, fastas = fasta_splitting_by_sequence(fasta_file, None)
     if modified_positions is None:
         contexts, all_keys = sequence_context_set_creation(context, user_defined_context)
         for i in range(0, len(keys)):
             modification_information = context_sequence_search(contexts, all_keys, fastas, keys[i], user_defined_context)
         return modification_information
     else:
-        tupler, list_to_use = list(), set()
+        tupler = list()
         try:
             with open(modified_positions, newline='') as csvfile:
                 position_reader = csv.reader(csvfile, delimiter='\t', lineterminator='\n')
                 for row in position_reader:
-                    tupler.append(row)
-            list_to_use.union(set((x[0], int(x[1]), int(x[2])) for x in tupler))
-            return list_to_use
+                    tupler.append(tuple((str(row[0]), int(row[1]), int(row[2]))))
+            return tupler
         except (SystemExit, KeyboardInterrupt, IOError, FileNotFoundError):
             logs.error('The cytosine positions file does not exist.', exc_info=True)
             sys.exit(1)
@@ -84,19 +84,24 @@ def modification_level_transformation(modification_level, modified_positions):
 
 def random_position_modification(modification_information, modification_level, modified_positions, library, seed, context):
     modification_level = modification_level_transformation(modification_level, modified_positions)
-    if context == 'all':
+    if context == 'all' and modified_positions == None:
         modification_list_by_context = set()
         all_keys = list(('CHG','CHH','CpG'))
         for context_string in all_keys:
             modification_list_by_context = modification_list_by_context.union(set((keys) for keys, vals in modification_information.items() if vals[1] == context_string))
-    else:
+        required = round((len(modification_list_by_context)) * modification_level)
+    elif context != 'all' and modified_positions == None:
         modification_list_by_context = set((keys) for keys, vals in modification_information.items() if vals[1] == context)
-    required = round((len(modification_list_by_context)) * modification_level)
-    if seed is not None:
+        required = round((len(modification_list_by_context)) * modification_level)
+    else:
+        random_sample = set(modification_information)
+        modification_level = 'custom'
+    if seed is not None and modified_positions == None:
         random.seed(seed)
         random_sample = set(random.sample(modification_list_by_context, required))
     else:
-        random_sample = set(random.sample(modification_list_by_context, required))
+        if modified_positions == None:
+            random_sample = set(random.sample(modification_list_by_context, required))
     return modification_level, random_sample
 
 
