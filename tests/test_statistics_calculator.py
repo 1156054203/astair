@@ -1,8 +1,7 @@
 import unittest
+from collections import defaultdict
 
 from astair_mod_caller_v3 import statistics_calculator
-
-
 
 
 class StatisticsCalculationTest(unittest.TestCase):
@@ -15,8 +14,9 @@ class StatisticsCalculationTest(unittest.TestCase):
         """Tests whether a CHH context will be discovered and its modified and unmodified bases counted."""
         mean_mod = {'CHH':0, 'CAT':0}
         mean_unmod = {'CHH':0, 'CAT':0}
+        context_sample_counts = defaultdict(int)
         data_mod = ['some_reference_genome', 1, 2, 0.8, 8, 2, 'T', 'C', 'CAT', 'CHH', 'No']
-        statistics_calculator(mean_mod, mean_unmod, data_mod, None)
+        statistics_calculator(mean_mod, mean_unmod, data_mod, None, context_sample_counts)
         self.assertEqual(mean_mod, {'CHH': 8, 'CAT': 8})
         self.assertEqual(mean_unmod, {'CHH': 2, 'CAT': 2})
 
@@ -24,8 +24,9 @@ class StatisticsCalculationTest(unittest.TestCase):
         """Tests whether a SNV in CHH context will not be counted as a modification."""
         mean_mod = {'CHH':0, 'CAT':0}
         mean_unmod = {'CHH':0, 'CAT':0}
+        context_sample_counts = defaultdict(int)
         data_mod = ['some_reference_genome', 1, 2, 0.8, 8, 2, 'T', 'C', 'CAT', 'CHH', 'homozyguous']
-        statistics_calculator(mean_mod, mean_unmod, data_mod, None)
+        statistics_calculator(mean_mod, mean_unmod, data_mod, None, context_sample_counts)
         self.assertEqual(mean_mod, {'CHH': 0, 'CAT': 0})
         self.assertEqual(mean_unmod, {'CHH': 0, 'CAT': 0})
 

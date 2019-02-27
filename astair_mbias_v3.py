@@ -1,17 +1,17 @@
 #!/usr/bin/env python3
 
-import click
 import re
 import sys
-import itertools
 import csv
-from math import ceil
+import pdb
 import numpy
-from datetime import datetime
+import click
 import logging
 import warnings
-import pdb
+import itertools
 from os import path
+from math import ceil
+from datetime import datetime
 try:
     import matplotlib as mplot
     mplot.use('Agg')

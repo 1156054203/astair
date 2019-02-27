@@ -1,17 +1,17 @@
 #!/usr/bin/env python3
 
-import click
-import logging
-from os import path
-import itertools
+import re
 import csv
 import sys
-import re
-from datetime import datetime
-from threading import Thread
-from queue import Queue
 import gzip
+import click
 import random
+import logging
+import itertools
+from os import path
+from queue import Queue
+from threading import Thread
+from datetime import datetime
 try:
     import matplotlib as mplot
     mplot.use('Agg')
@@ -21,7 +21,6 @@ try:
     pyp.ioff()
 except ImportError:
     pass
-
 
 from safe_division import non_zero_division_NA
 from statistics_summary import general_statistics_summary

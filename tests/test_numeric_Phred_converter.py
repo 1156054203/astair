@@ -3,9 +3,6 @@ import unittest
 from astair_phred_values_v3 import numeric_Phred_score
 
 
-
-
-
 class NumericPhredOutputTest(unittest.TestCase):
     """Tests whether a correct translation of ASCII characters encoding Phred scores to numerical scores will be achieved."""
 

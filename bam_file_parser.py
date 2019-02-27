@@ -5,11 +5,11 @@ import logging
 logging.basicConfig(level=logging.DEBUG)
 logs = logging.getLogger(__name__)
 
-def bam_file_opener(input_file, fetch):
+def bam_file_opener(input_file, fetch, threads):
     """Opens neatly and separately the bam file as an iterator."""
     try:
         open(input_file, 'rb')
-        inbam = pysam.AlignmentFile(input_file, "rb", header=True, threads=10)
+        inbam = pysam.AlignmentFile(input_file, "rb", header=True, threads=threads)
         if isinstance(fetch, str):
             bam_fetch = inbam.fetch(until_eof=True)
             return bam_fetch
