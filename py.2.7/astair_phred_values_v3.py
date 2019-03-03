@@ -1,16 +1,22 @@
-#!/usr/bin/env python3
+#!/usr/bin/env python2
+
+
+from __future__ import division
+from __future__ import with_statement
 
 import re
 import csv
 import sys
+import pdb
 import gzip
 import pysam
 import click
+import string
 import random
 import logging
 import itertools
 from os import path
-from queue import Queue
+from Queue import Queue
 from threading import Thread
 from datetime import datetime
 try:
@@ -56,7 +62,7 @@ def clean_open_file(input_file):
     try:
         fastq_file = gzip.open(input_file, "rt")
         return fastq_file
-    except (SystemExit, KeyboardInterrupt, IOError, FileNotFoundError):
+    except (SystemExit, KeyboardInterrupt, IOError):
         logs.error('The input file does not exist.', exc_info=True)
         sys.exit(1)
 
@@ -77,8 +83,8 @@ def Phred_score_statistics_calculation(input_file, sample_size, calculation_mode
         elif cycle_count == 3 or cycle_count % 4 == 3:
             read_base_qualities = re.findall(r"(?<!@)(?!@).*[^+|^\n].*(?!@\n)", line)
             read_base_qualities = numeric_Phred_score(read_base_qualities[0])
-            results = [(i, *j) for i, j in
-                       itertools.zip_longest(read_base_qualities, read_sequence, fillvalue='BLANK')]
+            results = [(i, j) for i, j in
+                       itertools.izip_longest(read_base_qualities, read_sequence, fillvalue='BLANK')]
             thymines = [x[0] for x in results if 'T' in x[:]]
             cytosines = [x[0] for x in results if 'C' in x[:]]
             adenines = [x[0] for x in results if 'A' in x[:]]
@@ -145,7 +151,7 @@ def main_Phred_score_calculation_output(fq1, fq2, sample_size, directory, name, 
 
 def summary_statistics_output(directory, name, statistics_data, read_orientation):
     """Outputs the Phred score calculation statistics as a text file that can be visualised independently from the plotting module."""
-    with open(directory + name + '_total_Phred.txt', 'a', newline='') as new_file:
+    with open(directory + name + '_total_Phred.txt', 'a') as new_file:
         data_line = csv.writer(new_file, delimiter='\t', lineterminator='\n')
         if read_orientation == 'F':
             read_orientation_string = 'First in pair_'

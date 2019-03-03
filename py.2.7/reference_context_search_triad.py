@@ -1,3 +1,6 @@
+
+from __future__ import print_function
+
 import re
 import pdb
 import itertools
@@ -63,6 +66,7 @@ def ahocorasick_search(objects, context, string, string_name, user_defined_conte
     for pattern in context[objects]:
         auto.add_word(pattern, pattern)
     auto.make_automaton()
+   # pdb.set_trace()
     if objects[-1] == 'b':
         for end_ind, found in auto.iter(complementary(string)):
             context_total_counts[objects] += 1

@@ -1,4 +1,6 @@
-#!/usr/bin/env python3
+#!/usr/bin/env python2
+
+from __future__ import division
 
 import re
 import os
@@ -80,7 +82,7 @@ def cytosine_modification_lookup(fasta_file, context, user_defined_context, modi
     else:
         tupler = list()
         try:
-            with open(modified_positions, newline='') as csvfile:
+            with open(modified_positions) as csvfile:
                 position_reader = csv.reader(csvfile, delimiter='\t', lineterminator='\n')
                 for row in position_reader:
                     tupler.append(tuple((str(row[0]), int(row[1]), int(row[2]))))
@@ -120,10 +122,10 @@ def random_position_modification(modification_information, modification_level, m
         modification_level = 'custom'
     if seed is not None and modified_positions == None:
         random.seed(seed)
-        random_sample = set(random.sample(modification_list_by_context, required))
+        random_sample = set(random.sample(modification_list_by_context, int(required)))
     else:
         if modified_positions == None:
-            random_sample = set(random.sample(modification_list_by_context, required))
+            random_sample = set(random.sample(modification_list_by_context, int(required)))
     return modification_level, random_sample
 
 
@@ -169,8 +171,7 @@ def absolute_modification_information(modified_positions_data, modification_info
         else:
             context_list_length = len(set(keys for keys, vals in modification_information.items() if vals[1] == context))
         mod_level = round((len(modified_positions_data) / context_list_length) * 100, 3)
-        with open(path.join(directory, name + '_' + method + '_' + str(modification_level) + '_' + context + '_modified_positions_information.txt'), 'w',
-                  newline='') as reads_info_output:
+        with open(path.join(directory, name + '_' + method + '_' + str(modification_level) + '_' + context + '_modified_positions_information.txt'), 'w') as reads_info_output:
             line = csv.writer(reads_info_output, delimiter='\t', lineterminator='\n')
             line.writerow(['__________________________________________________________________________________________________'])
             line.writerow(['Absolute modified positions: ' + str(len(modified_positions_data)) + '   |   ' +

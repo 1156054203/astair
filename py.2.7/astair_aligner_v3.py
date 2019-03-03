@@ -1,4 +1,7 @@
-#!/usr/bin/env python3
+#!/usr/bin/env python2
+
+from __future__ import division
+from __future__ import with_statement
 
 import os
 import re

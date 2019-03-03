@@ -1,4 +1,9 @@
-#!/usr/bin/env python3
+#!/usr/bin/env python2
+
+
+
+from __future__ import division
+from __future__ import with_statement
 
 import re
 import os
@@ -35,7 +40,7 @@ from reference_context_search_triad import context_sequence_search
 @click.option('adjust_acapq_threshold', '--adjust_capq_threshold', '-amq', required=False, type=int, default=0, help='Used to adjust the mapping quality with default 0 for no adjustment and a recommended value for adjustment 50. (Default 0).')
 @click.option('mark_matches', '--mark_matches', '-mm', required=False, default=True, type=bool, help='Output bases matching the reference per strand (Default True).')
 @click.option('mark_ends', '--mark_ends', '-me', required=False, default=True, type=bool, help='Marks head and tail bases in the read (Default True).')
-@click.option('add_indels', '--add_indels', '-ai', required=False, default=True, type=bool, help='Adds inserted bases and ‘N’s for base skipped from the reference (Default True).')
+@click.option('add_indels', '--add_indels', '-ai', required=False, default=True, type=bool, help='Adds inserted bases and Ns for base skipped from the reference (Default True).')
 @click.option('redo_baq', '--redo_baq', '-rbq', required=False, default=False, type=bool, help='Re-calculates per-Base Alignment Qualities ignoring existing base qualities (Default False).')
 @click.option('compute_baq', '--compute_baq', '-cbq', required=False, default=True, type=bool, help='Performs re-alignment computing of per-Base Alignment Qualities (Default True).')
 @click.option('ignore_orphans', '--ignore_orphans', '-io', required=False, default=True, type=bool, help='Ignore reads not in proper pairs (Default True).')
@@ -59,7 +64,7 @@ time_b = datetime.now()
 
 def modification_calls_writer(data_mods, file_name, header=False):
     """Outputs the modification calls per position in a tab-delimited format."""
-    with open(file_name, 'a', newline='') as calls_output:
+    with open(file_name, 'a') as calls_output:
         data_line = csv.writer(calls_output, delimiter='\t', lineterminator='\n')
         if header:
             data_line.writerow(["CHROM", "START", "END", "MOD_LEVEL", "MOD", "UNMOD", "REF", "ALT", "CONTEXT",
@@ -67,7 +72,6 @@ def modification_calls_writer(data_mods, file_name, header=False):
             data_line.writerow(data_mods)
         else:
             data_line.writerow(data_mods)
-
 
 def statistics_calculator(mean_mod, mean_unmod, data_mod, user_defined_context, context_sample_counts):
     """Calculates the summary statistics of the cytosine modificaton levels."""
@@ -93,7 +97,7 @@ def final_statistics_output(mean_mod, mean_unmod, user_defined_context, file_nam
     """Writes the summary statistics of the cytosine modificaton levels.
     Cytosine modification rate given as the percentage total modified cytosines
     divided by the total number of cytosines covered."""
-    with open(file_name, 'w', newline='') as statistics_output:
+    with open(file_name, 'w') as statistics_output:
         wr = csv.writer(statistics_output, delimiter='\t', lineterminator='\n')
         wr.writerow(["CONTEXT", "SPECIFIC_CONTEXT", "MEAN_MODIFICATION_RATE_PERCENT", "TOTAL_POSITIONS", "COVERED_POSITIONS"])
         wr.writerow(["CpG", "", round(non_zero_division(mean_mod['CpG'], mean_mod['CpG'] + mean_unmod['CpG']) * 100, 3),
@@ -185,7 +189,6 @@ def pillup_summary(modification_information_per_position, position, read_counts,
                          modification_information_per_position[position][0],
                          modification_information_per_position[position][1], snp, depth))
     statistics_calculator(mean_mod, mean_unmod, all_data, user_defined_context, context_sample_counts)
-    modification_calls_writer(all_data, file_name, header=header)
 
 
 def clean_pileup(pileups, cycles, modification_information_per_position, mean_mod, mean_unmod, user_defined_context, file_name, method,
@@ -205,7 +208,7 @@ def clean_pileup(pileups, cycles, modification_information_per_position, mean_mo
             except AssertionError:
                 logs.exception("Failed getting query sequences (AssertionError, pysam). Please decrease the max_depth parameter.")
                 continue
-            for pileup, seq in itertools.zip_longest(reads.pileups, sequences, fillvalue='BLANK'):
+            for pileup, seq in itertools.izip_longest(reads.pileups, sequences, fillvalue='BLANK'):
                 if pileup != 'BLANK':
                     read_counts[(pileup.alignment.flag, seq.upper())] += 1
             pillup_summary(modification_information_per_position, position, read_counts, mean_mod, mean_unmod, user_defined_context, header,
@@ -241,19 +244,19 @@ def cytosine_modification_finder(input_file, fasta_file, context, zero_coverage,
                 logs.info("Starting modification calling on {} chromosome (sequence). {} seconds".format(keys[i], (time_m - time_b).total_seconds()))
                 modification_information_per_position = context_sequence_search(contexts, all_keys, fastas, keys[i], user_defined_context, context_total_counts, None)
                 pileups = inbam.pileup(keys[i], ignore_overlaps=skip_clip_overlap, min_base_quality=minimum_base_quality, fasta_file=fasta_file, stepper='samtools',
-                                       max_depth=max_depth, redo_baq=redo_baq, ignore_orphans=ignore_orphans, compute_baq=compute_baq,
-                                       min_mapping_quality=minimum_mapping_quality, adjust_acapq_threshold=adjust_acapq_threshold)
+                                    max_depth=max_depth, redo_baq=redo_baq, ignore_orphans=ignore_orphans, compute_baq=compute_baq,
+                                    min_mapping_quality=minimum_mapping_quality, adjust_acapq_threshold=adjust_acapq_threshold)
                 clean_pileup(pileups, cycles, modification_information_per_position, mean_mod, mean_unmod, user_defined_context, file_name, method,
-                             mark_matches, mark_ends, add_indels, context_sample_counts)
+                            mark_matches, mark_ends, add_indels, context_sample_counts)
         else:
             time_m = datetime.now()
             logs.info("Starting modification calling on {} chromosome (sequence). {} seconds".format(keys, (time_m - time_b).total_seconds()))
             modification_information_per_position = context_sequence_search(contexts, all_keys, fastas, keys, user_defined_context, context_total_counts, None)
             pileups = inbam.pileup(keys, ignore_overlaps=skip_clip_overlap, min_base_quality=minimum_base_quality, fasta_file=fasta_file, stepper='samtools',
-                                   max_depth=max_depth, redo_baq=redo_baq, ignore_orphans=ignore_orphans, compute_baq=compute_baq,
-                                   min_mapping_quality=minimum_mapping_quality, adjust_acapq_threshold=adjust_acapq_threshold)
+                                max_depth=max_depth, redo_baq=redo_baq, ignore_orphans=ignore_orphans, compute_baq=compute_baq,
+                                min_mapping_quality=minimum_mapping_quality, adjust_acapq_threshold=adjust_acapq_threshold)
             clean_pileup(pileups, cycles, modification_information_per_position, mean_mod, mean_unmod, user_defined_context, file_name, method,
-                         mark_matches, mark_ends, add_indels, context_sample_counts)
+                        mark_matches, mark_ends, add_indels, context_sample_counts)
         if zero_coverage:
             for position in modification_information_per_position.keys():
                 if modification_information_per_position[position][3] == 'C':

@@ -1,4 +1,7 @@
-#!/usr/bin/env python3
+#!/usr/bin/env python2
+
+from __future__ import division
+from __future__ import with_statement
 
 import re
 import sys
@@ -162,16 +165,20 @@ def mbias_statistics_calculator(input_file, name, directory, read_length, method
         read_values_2_CHH, values_2_CHH, umod_counts_2_CHH, mod_counts_2_CHH = context_calculator(i, read2_mods_CHH, read2_umod_CHH, read_values_2_CHH)
         read_values_2_CHG, values_2_CHG, umod_counts_2_CHG, mod_counts_2_CHG = context_calculator(i, read2_mods_CHG, read2_umod_CHG, read_values_2_CHG)
         read_values_2_CpG, values_2_CpG, umod_counts_2_CpG, mod_counts_2_CpG = context_calculator(i, read2_mods_CpG, read2_umod_CpG, read_values_2_CpG)
-    all_values = [(*a1, *a2, *a3, *a4, *a5, *a6, *a7, *a8, *a9, *a10, *a11, *a12, *a13, *a14, *a15, *a16, *a17, *a18)
-                  for a1, a2, a3, a4, a5, a6, a7, a8, a9, a10, a11, a12, a13, a14, a15, a16, a17, a18 in
-                  itertools.zip_longest(values_1_CpG, umod_counts_1_CpG, mod_counts_1_CpG, values_2_CpG, umod_counts_2_CpG, mod_counts_2_CpG,
-                                        values_1_CHG, umod_counts_1_CHG, mod_counts_1_CHG,  values_2_CHG, umod_counts_2_CHG, mod_counts_2_CHG,
-                                        values_1_CHH, umod_counts_1_CHH, mod_counts_1_CHH,  values_2_CHH, umod_counts_2_CHH, mod_counts_2_CHH)]
-    all_values = [(x[0], x[1], x[3], x[5], x[7], x[9], x[11], x[13], x[15], x[17], x[19], x[21], x[23], x[25], x[27], x[29], x[31], x[33], x[35]) for x in all_values]
-    with open(directory + name + ".Mbias.txt", 'w', newline='') as stats_file:
+    all_values = [(a1, a2, a3, a4, a5, a6, a7, a8, a9, a10, a11, a12, a13, a14, a15, a16, a17, a18) for
+                  a1, a2, a3, a4, a5, a6, a7, a8, a9, a10, a11, a12, a13, a14, a15, a16, a17, a18 in
+                  itertools.izip_longest(values_1_CpG, umod_counts_1_CpG, mod_counts_1_CpG, values_2_CpG,
+                                            umod_counts_2_CpG, mod_counts_2_CpG,values_1_CHG, umod_counts_1_CHG,
+                                            mod_counts_1_CHG,  values_2_CHG, umod_counts_2_CHG, mod_counts_2_CHG,
+                                            values_1_CHH, umod_counts_1_CHH, mod_counts_1_CHH,  values_2_CHH, umod_counts_2_CHH, mod_counts_2_CHH)]
+    all_values = [(all_values[i][0][0], all_values[i][0][1], all_values[i][1][1], all_values[i][2][1], all_values[i][3][1],
+                   all_values[i][4][1], all_values[i][5][1], all_values[i][6][1], all_values[i][7][1], all_values[i][8][1],
+                   all_values[i][9][1], all_values[i][10][1], all_values[i][11][1], all_values[i][12][1], all_values[i][13][1],
+                   all_values[i][14][1], all_values[i][15][1], all_values[i][16][1], all_values[i][17][1]) for i in range(0, len(all_values))]
+    with open(directory + name + ".Mbias.txt", 'w') as stats_file:
         line = csv.writer(stats_file, delimiter='\t', lineterminator='\n')
         line.writerow(['POSITION_(bp)', 'MOD_LVL_CpG_READ_1', 'UNMOD_COUNT_CpG_READ_1', 'MOD_COUNT_CpG_READ_1',
-                       'MOD_LVL_CpG_READ_2', 'UNMOD_COUNT_CpG_READ_2', 'MOD_COUNT_CpG_READ_2',
+                        'MOD_LVL_CpG_READ_2', 'UNMOD_COUNT_CpG_READ_2', 'MOD_COUNT_CpG_READ_2',
                        'MOD_LVL_CHG_READ_1', 'UNMOD_COUNT_CHG_READ_1', 'MOD_COUNT_CHG_READ_1',
                        'MOD_LVL_CHG_READ_2', 'UNMOD_COUNT_CHG_READ_2', 'MOD_COUNT_CHG_READ_2',
                        'MOD_LVL_CHH_READ_1', 'UNMOD_COUNT_CHH_READ_1', 'MOD_COUNT_CHH_READ_1',
