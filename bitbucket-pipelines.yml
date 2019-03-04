@@ -22,7 +22,11 @@ pipelines:
           caches:
             - pip3
           script:
-            - pip3 install -r requirements.txt
-            - pip3 install -r test_requirements.txt
+            - pip3 --cache-dir ~/.cache/pip3 install -r requirements.txt
+            - pip3 --cache-dir ~/.cache/pip3 install -r test_requirements.txt
             - mkdir -p test-results
             - nosetests --with-xunit --xunit-file=test-results/py3_combined_results.xml --with-coverage --cover-erase --cover-xml --cover-xml-file=test-results/py3_coverage.xml  --cover-package=. py.3/tests/
+
+definitions:
+  caches:
+    pip3: ~/.cache/pip3
