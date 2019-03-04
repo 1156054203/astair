@@ -5,7 +5,6 @@ Contents:
 
 [TOC]
 
-
 ### Creating a python virtual environment 
 
 Using python virtualenv and creating an environment folder for your project:
@@ -69,6 +68,14 @@ export PATH=$PATH:/path/to/conda/environment/your_project_name/bin/
 
 ```bash
 export PATH=$PATH:/dir/to/asTair
+```
+
+### Downloading the test data
+
+All files needed to starting testing asTair can be downloaded from Zenodo:
+
+```bash
+wget -nc -np -nd -A bam,bam.bai,fa,fa.fai,fq.gz  -P path/to/test_data -r https://zenodo.org/record/2582855/
 ```
 
 ### Analysis of TAPS  or other modified cytosine to thymine conversion methods (CmtoT) data 
