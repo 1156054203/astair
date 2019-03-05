@@ -10,7 +10,7 @@ setup(
     name="asTair",
     version="3.0",
     packages=find_packages(),
-    scripts=['/py.3/astair_aligner_v3.py', '/py.3/astair_mbias_v3.py', '/py.3/astair_mod_caller_v3.py', '/py.3/astair_phred_values_v3.py', '/py.3/astair_taps_modification_simulation_v3.py', '/py.2.7/astair_aligner_v3.py', '/py.2.7/astair_mbias_v3.py', '/py.2.7/astair_mod_caller_v3.py', '/py.2.7/astair_phred_values_v3.py', '/py.2.7/astair_taps_modification_simulation_v3.py'],
+    scripts=['/astair/astair_aligner_v3.py', '/astair/astair_mbias_v3.py', '/astair/astair_mod_caller_v3.py', '/astair/astair_phred_values_v3.py', '/astair/astair_taps_modification_simulation_v3.py'],
     install_requires=['click', 'pysam >= 0.15.0', 'pyahocorasick', 'numpy'],
     extras_require={'Plot':  ["matplotlib"],},
     python_requires='>=2.7', '>=3.5',
