@@ -61,6 +61,31 @@ class SequenceSearchOutputTest(unittest.TestCase):
         ahocorasick_search('CG', contexts, 'AAGCGTTTGccc', 'test_string', None, data_context, context_total_counts, None)
         ahocorasick_search('CGb', contexts, 'AAGCGTTTGccc', 'test_string', None, data_context, context_total_counts, None)
         self.assertEqual(data_context, {('test_string', 3, 4): ('CGT', 'CpG', 'T', 'C'), ('test_string', 4, 5): ('CGC', 'CpG', 'A', 'G')})
+        
+    def test_ahocorasick_search_user_short(self):
+        """Tests whether the expected short context positions will be discovered."""
+        data_context = {}
+        context_total_counts = defaultdict(int)
+        contexts, all_keys = sequence_context_set_creation('CpG', 'AAcTG')
+        ahocorasick_search('user', contexts, 'AAcTGCGTTTGcccTTGAC', 'test_string', 'AAcTG', data_context, context_total_counts, None)
+        self.assertEqual(data_context, {('test_string', 2, 3): ('AAcTG', 'user defined context', 'T', 'C'), ('test_string', 16, 17): ('AAcTG', 'user defined context', 'A', 'G')})
+        
+    def test_ahocorasick_search_user_long(self):
+        """Tests whether the expected long context positions will be discovered."""
+        data_context = {}
+        context_total_counts = defaultdict(int)
+        contexts, all_keys = sequence_context_set_creation('CpG', 'AATTTCCCGAcgt')
+        ahocorasick_search('user', contexts, 'AATTTCCCGAcgtAAcTGTTaaagggcTgcACGTTTGcccTTGAC', 'test_string', 'AATTTCCCGAcgt', data_context, context_total_counts, None)
+        self.assertEqual(data_context, {('test_string', 5, 6): ('AATTTCCCGAcgt', 'user defined context', 'T', 'C'), ('test_string', 28, 29): ('AATTTCCCGAcgt', 'user defined context', 'A', 'G')})
+        
+    def test_ahocorasick_search_user_none(self):
+        """Tests whether no positions will be returned if cytosine is 
+        not found in the user-provided sequence."""
+        data_context = {}
+        context_total_counts = defaultdict(int)
+        contexts, all_keys = sequence_context_set_creation('CpG', 'AATTT')
+        ahocorasick_search('user', contexts, 'AAcTGCGTTTGcccTTGAC', 'test_string', 'AATTT', data_context, context_total_counts, None)
+        self.assertEqual(data_context, {})
 
 if __name__ == '__main__':
     unittest.main()

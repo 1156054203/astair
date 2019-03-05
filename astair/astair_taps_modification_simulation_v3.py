@@ -21,10 +21,10 @@ from reference_context_search_triad import sequence_context_set_creation
 
 
 @click.command()
-@click.option('reference', '--reference', '-f', required=True, help='Reference DNA sequence in FASTA format used for generation and modification the sequencing reads at desired contexts.')
+@click.option('reference', '--reference', '-f', required=True, help='Reference DNA sequence in FASTA format used for generation and modification of the sequencing reads at desired contexts.')
 @click.option('read_length', '--read_length', '-l', type=int, required=True, help='Desired length of pair-end sequencing reads.')
-@click.option('input_file', '--input_file', '-i', required=True, help='Sequencing reads as a Bam file or fasta sequence to generate reads.')
-@click.option('simulation_input', '--simulation_input', '-si', type=click.Choice(['bam']), default='bam', required=False, help='Input file format according to the desired outcome. Bam files can be generated with other WGS simulators allowing for sequencing errors and read distributions or can be real-life sequencing data.')
+@click.option('input_file', '--input_file', '-i', required=True, help='Sequencing reads as a BAM|CRAM file or fasta sequence to generate reads.')
+@click.option('simulation_input', '--simulation_input', '-si', type=click.Choice(['bam']), default='bam', required=False, help='Input file format according to the desired outcome. BAM|CRAM files can be generated with other WGS simulators allowing for sequencing errors and read distributions or can be real-life sequencing data.')
 @click.option('method', '--method', '-m', required=False, default='mCtoT', type=click.Choice(['CtoT', 'mCtoT']), help='Specify sequencing method, possible options are CtoT (unmodified cytosines are converted to thymines, bisulfite sequencing-like) and mCtoT (modified cytosines are converted to thymines, TAPS-like). (Default mCtoT)')
 @click.option('modification_level', '--modification_level', '-ml',  type=int, required=False, help='Desired modification level; can take any value between 0 and 100.')
 @click.option('library', '--library', '-lb',  type=click.Choice(['directional']), default='directional', required=False, help='Provide the correct library construction method. NB: Non-directional methods under development.')
@@ -134,6 +134,8 @@ def general_read_information_output(name, directory, read, modification_level, h
     else:
         orientation = '/2'
     try:
+        if not isinstance(modification_level, str):
+            modification_level = modification_level*100
         with open(path.join(directory, name + '_' + method + '_' + str(modification_level) + '_' + context + '_read_information.txt'), 'a') as reads_info_output:
             line = csv.writer(reads_info_output, delimiter='\t', lineterminator='\n')
             if header == True:
@@ -187,10 +189,14 @@ def absolute_modification_information(modified_positions_data, modification_info
 
 
 def bam_input_simulation(directory, name, modification_level, context, input_file, reference, user_defined_context,
-    modified_positions, library, seed, region, modified_positions_data, method, N_threads, header, overwrite):
-    """Inserts modification information acording to method and context to a bam file."""
-    if not os.path.isfile(path.join(directory, name + '_' + method + '_' + str(modification_level) + '_' + context + '.bam')) or overwrite is True:
-        outbam = pysam.AlignmentFile(path.join(directory, name + '_' + method + '_' + str(modification_level) + '_' + context + ".bam"),
+    modified_positions, library, seed, region, modified_positions_data, method, N_threads, header, overwrite, extension):
+    """Inserts modification information acording to method and context to a bam or cram file."""
+    if not os.path.isfile(path.join(directory, name + '_' + method + '_' + str(modification_level) + '_' + context + extension)) or overwrite is True:
+        if pysam.AlignmentFile(input_file).is_cram:
+            outbam = pysam.AlignmentFile(path.join(directory, name + '_' + method + '_' + str(modification_level) + '_' + context + extension),
+                "wc", reference_filename=reference, template=bam_file_opener(input_file, None, N_threads), header=header)
+        else:
+            outbam = pysam.AlignmentFile(path.join(directory, name + '_' + method + '_' + str(modification_level) + '_' + context + extension),
                                      "wb", template=bam_file_opener(input_file, None, N_threads), header=header)
         modification_information = cytosine_modification_lookup(reference, 'all', user_defined_context, modified_positions, region)
         modification_level, random_sample = random_position_modification(modification_information, modification_level,
@@ -241,11 +247,15 @@ def modification_simulator(reference, read_length, input_file, method, library, 
         region = None
     modified_positions_data = list()
     if simulation_input == 'bam':
+        if pysam.AlignmentFile(input_file).is_cram:
+            extension = '.cram'
+        else:
+            extension = '.bam'
         try:
             modification_information = bam_input_simulation(directory, name, modification_level, context, input_file,
-            reference, user_defined_context, modified_positions, library, seed, region, modified_positions_data, method, N_threads, header, overwrite)
+            reference, user_defined_context, modified_positions, library, seed, region, modified_positions_data, method, N_threads, header, overwrite, extension)
             absolute_modification_information(modified_positions_data, modification_information, modified_positions,name,directory, modification_level, context, method)
-            pysam.index(path.join(directory, name + '_' + method + '_' + str(modification_level) + '_' + context + ".bam"))
+            pysam.index(path.join(directory, name + '_' + method + '_' + str(modification_level) + '_' + context + extension))
         except AttributeError:
             logs.error(
                 'The output files will not be overwritten. Please rename the input or the existing output files before rerunning if the input is different.',

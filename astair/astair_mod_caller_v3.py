@@ -30,9 +30,9 @@ from reference_context_search_triad import context_sequence_search
 
 
 @click.command()
-@click.option('input_file', '--input_file', '-i', required=True, help='BAM format file containing sequencing reads.')
+@click.option('input_file', '--input_file', '-i', required=True, help='BAM|CRAM format file containing sequencing reads.')
 # @click.option('control_file', '--control_file', '-c', required=False, help='BAM format file containing sequencing reads of a matched control.')
-@click.option('reference', '--reference', '-f', required=True, help='Reference DNA sequence in FASTA format used for aligning the sequencing reads and pileup.')
+@click.option('reference', '--reference', '-f', required=True, help='Reference DNA sequence in FASTA format used for aligning of the sequencing reads and for pileup.')
 @click.option('zero_coverage', '--zero_coverage', '-z', default=False, is_flag=True, help='When set to True, outputs positions not covered in the bam file. Uncovering zero coverage positions takes longer time than using the default option.')
 @click.option('context', '--context', '-co', required=False, default='all',  type=click.Choice(['all', 'CpG', 'CHG', 'CHH']), help='Explains which cytosine sequence contexts are to be expected in the output file. Default behaviour is all, which includes CpG, CHG, CHH contexts and their sub-contexts for downstream filtering and analysis.')
 @click.option('user_defined_context', '--user_defined_context', '-uc', required=False, type=str, help='At least two-letter contexts other than CG, CHH and CHG to be evaluated, will return the genomic coordinates for the first cytosine in the string.')
@@ -96,7 +96,7 @@ def statistics_calculator(mean_mod, mean_unmod, data_mod, user_defined_context, 
     if re.match(r"CN", data_mod[9]) and data_mod[10] == 'No':
         mean_mod['Unknown'] += data_mod[4]
         mean_unmod['Unknown'] += data_mod[5]
-    if user_defined_context and re.match(user_defined_context, data_mod[9]) and data_mod[10] == 'No':
+    if user_defined_context and re.match('user defined context', data_mod[9]) and data_mod[10] == 'No':
         mean_mod['user defined context'] += data_mod[4]
         mean_unmod['user defined context'] += data_mod[5]
 
@@ -181,15 +181,13 @@ def flags_expectation(modification_information_per_position, position, ignore_or
 def pillup_summary(modification_information_per_position, position, read_counts, mean_mod, mean_unmod, user_defined_context,
                    header, file_name, desired_tuples, undesired_tuples, modification, reference, depth, method, context_sample_counts, ignore_orphans):
     """Gives the modication call rows given strand information."""
-    if non_zero_division(read_counts[undesired_tuples[2]] + read_counts[undesired_tuples[3]],
-                         (read_counts[undesired_tuples[0]] + read_counts[undesired_tuples[1]]
-                              + read_counts[undesired_tuples[2]] + read_counts[undesired_tuples[3]])) < 0.8:
-        snp = 'No'
-    elif non_zero_division(read_counts[undesired_tuples[2]] + read_counts[undesired_tuples[3]],
-                             (read_counts[undesired_tuples[0]] + read_counts[undesired_tuples[1]]
-                                  + read_counts[undesired_tuples[2]] + read_counts[undesired_tuples[3]])) >= 0.8:
-        snp = 'homozyguous'
     if ignore_orphans:
+        if non_zero_division(read_counts[undesired_tuples[2]] + read_counts[undesired_tuples[3]],
+                             (read_counts[undesired_tuples[0]] + read_counts[undesired_tuples[1]]
+                                  + read_counts[undesired_tuples[2]] + read_counts[undesired_tuples[3]])) < 0.8:
+            snp = 'No'
+        else:
+            snp = 'homozyguous'
         if method == 'mCtoT':
             all_data = list((position[0], position[1], position[1] + 1, round(
             non_zero_division(read_counts[desired_tuples[2]] + read_counts[desired_tuples[3]], (
@@ -207,6 +205,13 @@ def pillup_summary(modification_information_per_position, position, read_counts,
                              modification_information_per_position[position][0],
                              modification_information_per_position[position][1], snp, depth))
     else:
+        if non_zero_division(read_counts[undesired_tuples[2]] + read_counts[undesired_tuples[3]] + read_counts[undesired_tuples[6]] + read_counts[undesired_tuples[7]],
+                             (read_counts[undesired_tuples[0]] + read_counts[undesired_tuples[1]]
+                                  + read_counts[undesired_tuples[2]] + read_counts[undesired_tuples[3]] + read_counts[undesired_tuples[4]] + read_counts[undesired_tuples[5]]
+                                  + read_counts[undesired_tuples[6]] + read_counts[undesired_tuples[7]])) < 0.8:
+            snp = 'No'
+        else:
+            snp = 'homozyguous'
         if method == 'mCtoT':
             all_data = list((position[0], position[1], position[1] + 1, round(
             non_zero_division(read_counts[desired_tuples[2]] + read_counts[desired_tuples[3]] + read_counts[desired_tuples[6]] + read_counts[desired_tuples[7]], (
