@@ -16,7 +16,7 @@ pipelines:
             - pip install -r test_requirements.txt
             - mkdir -p test-results
            # - cd astair
-            - nosetests --with-xunit --xunit-file=../test-results/py2_combined_results.xml --with-coverage --cover-erase --cover-xml --cover-xml-file=../test-results/py2_coverage.xml  --cover-package=. tests/
+            - nosetests --with-xunit --xunit-file=./test-results/py2_combined_results.xml --with-coverage --cover-erase --cover-xml --cover-xml-file=./test-results/py2_coverage.xml  --cover-package=. tests/
       - step:
           image: python:3.5.6
           name: Build and test Python3
@@ -27,7 +27,7 @@ pipelines:
             - pip3 --cache-dir ~/.cache/pip3 install -r test_requirements.txt
             - mkdir -p test-results
            # - cd astair
-            - nosetests --with-xunit --xunit-file=../test-results/py3_combined_results.xml --with-coverage --cover-erase --cover-xml --cover-xml-file=../test-results/py3_coverage.xml  --cover-package=. tests/
+            - nosetests --with-xunit --xunit-file=./test-results/py3_combined_results.xml --with-coverage --cover-erase --cover-xml --cover-xml-file=./test-results/py3_coverage.xml  --cover-package=. tests/
 
 definitions:
   caches:
