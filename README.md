@@ -78,7 +78,7 @@ All files needed to starting testing asTair can be downloaded from Zenodo:
 wget -nc -np -nd -A bam,bam.bai,fa,fa.fai,fq.gz  -P path/to/test_data -r https://zenodo.org/record/2582855/
 ```
 
-### Analysis of TAPS  or other modified cytosine to thymine conversion methods (CmtoT) data 
+### Analysis of TAPS  or other modified cytosine to thymine conversion methods (mCtoT) data 
 _Let us have an example paired-end sequencing data from step 1 called `lambda.phage_test_sample_R1.fastq.gz` and `lambda.phage_test_sample_R2.fastq.gz` to guide us through the process._
 
 1 - Get your data hot from the sequencing center.  
