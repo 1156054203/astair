@@ -1,7 +1,4 @@
-#!/usr/bin/env python2
-
-from __future__ import division
-from __future__ import with_statement
+#!/usr/bin/env python
 
 import re
 import sys
@@ -11,10 +8,17 @@ import numpy
 import click
 import logging
 import warnings
-import itertools
 from os import path
 from math import ceil
 from datetime import datetime
+
+if sys.version[0] == '3':
+    from itertools import zip_longest
+elif sys.version[0] == '2':
+    from itertools import izip_longest as zip_longest
+else:
+    raise Exception("This is not the python we're looking for (version {})".format(sys.version[0]))
+
 try:
     import matplotlib as mplot
     mplot.use('Agg')
@@ -23,7 +27,8 @@ try:
     pyp.style.use('seaborn-whitegrid')
     pyp.ioff()
 except ImportError:
-    pass
+    raise Exception("Matplotlib was not found, visualisation output will not be supported.")
+
 
 from safe_division import non_zero_division
 from bam_file_parser import bam_file_opener
@@ -59,49 +64,48 @@ def initialise_data_counters(read_length):
     return all_read_data[0], all_read_data[1], all_read_data[2]
 
 
-def strand_and_method(read, method):
+def strand_and_method(flag, ref_sequence, read_sequence, method):
     """Takes the positions of interest in the read given the flag and the method."""
     try:
-        if read.flag == 99 or read.flag == 147:
-            cytosines_reference = [m.start() for m in re.finditer(r'C', read.get_reference_sequence(), re.IGNORECASE)]
+        if flag == 99 or flag == 147:
+            cytosines_reference = [m.start() for m in re.finditer(r'C', ref_sequence, re.IGNORECASE)]
             if method == 'mCtoT':
-                thymines_read = [m.start() for m in re.finditer(r'T', read.query_sequence, re.IGNORECASE)]
+                thymines_read = [m.start() for m in re.finditer(r'T', read_sequence, re.IGNORECASE)]
                 positions = list(set(thymines_read).intersection(set(cytosines_reference)))
             elif method == 'CtoT':
-                thymines_read = [m.start() for m in re.finditer(r'T', read.query_sequence, re.IGNORECASE)]
+                thymines_read = [m.start() for m in re.finditer(r'T', read_sequence, re.IGNORECASE)]
                 positions = list(set(cytosines_reference).difference(set(thymines_read)))
-        elif read.flag == 163 or read.flag == 83:
-            cytosines_reference = [m.start() for m in re.finditer(r'G', read.get_reference_sequence(), re.IGNORECASE)]
+        elif flag == 163 or flag == 83:
+            guanines_reference = [m.start() for m in re.finditer(r'G', ref_sequence, re.IGNORECASE)]
             if method == 'mCtoT':
-                thymines_read = [m.start() for m in re.finditer(r'A', read.query_sequence, re.IGNORECASE)]
-                positions = list(set(thymines_read).intersection(set(cytosines_reference)))
+                adenines_read = [m.start() for m in re.finditer(r'A', read_sequence, re.IGNORECASE)]
+                positions = list(set(adenines_read).intersection(set(guanines_reference)))
             elif method == 'CtoT':
-                thymines_read = [m.start() for m in re.finditer(r'A', read.query_sequence, re.IGNORECASE)]
-                positions = list(set(cytosines_reference).difference(set(thymines_read)))
+                adenines_read = [m.start() for m in re.finditer(r'A', read_sequence, re.IGNORECASE)]
+                positions = list(set(guanines_reference).difference(set(adenines_read)))
         return positions
     except (IndexError, TypeError, ValueError):
             logs.error('The input file does not contain a MD tag column.', exc_info=True)
             sys.exit(1)
 
 
-def mbias_calculator(read, read_length, read_mods_CpG, read_mods_CHG, read_mods_CHH, read_umod_CpG, read_umod_CHG, read_umod_CHH, method):
+def mbias_calculator(flag, ref_sequence, read_sequence, read_length, read_mods_CpG, read_mods_CHG, read_mods_CHH, read_umod_CpG, read_umod_CHG, read_umod_CHH, method):
     """Calculates the modification level per read position, pair orientation and cytosine context."""
-    positions = strand_and_method(read, method)
-    reads = read.query_sequence
-    if read.flag == 99 or read.flag == 147:
-        cpg_all = [m.start() for m in re.finditer(r'CG', read.get_reference_sequence(), re.IGNORECASE)]
-        chg_all = [m.start() for m in re.finditer(r'C(A|C|T)G', read.get_reference_sequence(), re.IGNORECASE)]
-        chh_all = [m.start() for m in re.finditer(r'C(A|C|T)(A|T|C)', read.get_reference_sequence(), re.IGNORECASE)]
-    elif read.flag == 163 or read.flag == 83:
-        cpg_all = [m.start() + 1 for m in re.finditer(r'CG', read.get_reference_sequence(), re.IGNORECASE)]
-        chg_all = [m.start() for m in re.finditer(r'G(A|G|T)C', complementary(read.get_reference_sequence()), re.IGNORECASE)]
-        chh_all = [m.start() for m in re.finditer(r'G(A|G|T)(A|T|G)', complementary(read.get_reference_sequence()), re.IGNORECASE)]
+    positions = strand_and_method(flag, ref_sequence, read_sequence, method)
+    if flag == 99 or flag == 147:
+        cpg_all = [m.start() for m in re.finditer(r'CG', ref_sequence, re.IGNORECASE)]
+        chg_all = [m.start() for m in re.finditer(r'C(A|C|T)G', ref_sequence, re.IGNORECASE)]
+        chh_all = [m.start() for m in re.finditer(r'C(A|C|T)(A|T|C)', ref_sequence, re.IGNORECASE)]
+    elif flag == 163 or flag == 83:
+        cpg_all = [m.start() + 1 for m in re.finditer(r'CG', ref_sequence, re.IGNORECASE)]
+        chg_all = [m.start() for m in re.finditer(r'G(A|G|T)C', complementary(ref_sequence), re.IGNORECASE)]
+        chh_all = [m.start() for m in re.finditer(r'G(A|G|T)(A|T|G)', complementary(ref_sequence), re.IGNORECASE)]
     if len(positions) >= 1:
         cpg_mods = [x for x in positions if x in cpg_all]
         chg_mods = [x for x in positions if x in chg_all]
         chh_mods = [x for x in positions if x in chh_all]
-        if len(reads) <= read_length:
-            for i in range(0, len(reads)):
+        if len(read_sequence) <= read_length:
+            for i in range(0, len(read_sequence)):
                 if i in chh_mods:
                     read_mods_CHH[i] += 1
                 elif i in chg_mods:
@@ -115,8 +119,8 @@ def mbias_calculator(read, read_length, read_mods_CpG, read_mods_CHG, read_mods_
                 elif i in cpg_all:
                     read_umod_CpG[i] += 1
     else:
-        if len(reads) <= read_length:
-            for i in range(0, len(reads)):
+        if len(read_sequence) <= read_length:
+            for i in range(0, len(read_sequence)):
                 if i in chh_all:
                     read_umod_CHH[i] += 1
                 if i in chg_all:
@@ -134,9 +138,11 @@ def mbias_evaluater(input_file, read_length, method, N_threads):
     read2_umod_CHH, read2_umod_CHG, read2_umod_CpG = initialise_data_counters(read_length)
     for read in bam_file_opener(input_file, 'fetch', N_threads):
         if read.flag == 83 or read.flag == 99:
-            mbias_calculator(read, read_length, read1_mods_CpG, read1_mods_CHG, read1_mods_CHH, read1_umod_CpG, read1_umod_CHG, read1_umod_CHH, method)
+            mbias_calculator(read.flag, read.get_reference_sequence(), read.query_sequence, read_length,
+                             read1_mods_CpG, read1_mods_CHG, read1_mods_CHH, read1_umod_CpG, read1_umod_CHG, read1_umod_CHH, method)
         elif read.flag == 163 or read.flag == 147:
-            mbias_calculator(read, read_length, read2_mods_CpG, read2_mods_CHG, read2_mods_CHH, read2_umod_CpG, read2_umod_CHG, read2_umod_CHH, method)
+            mbias_calculator(read.flag, read.get_reference_sequence(), read.query_sequence, read_length,
+                             read2_mods_CpG, read2_mods_CHG, read2_mods_CHH, read2_umod_CpG, read2_umod_CHG, read2_umod_CHH, method)
     return read1_mods_CpG, read1_mods_CHG, read1_mods_CHH, read1_umod_CpG, read1_umod_CHG, read1_umod_CHH,\
            read2_mods_CpG, read2_mods_CHG, read2_mods_CHH, read2_umod_CpG, read2_umod_CHG, read2_umod_CHH
 
@@ -167,7 +173,7 @@ def mbias_statistics_calculator(input_file, name, directory, read_length, method
         read_values_2_CpG, values_2_CpG, umod_counts_2_CpG, mod_counts_2_CpG = context_calculator(i, read2_mods_CpG, read2_umod_CpG, read_values_2_CpG)
     all_values = [(a1, a2, a3, a4, a5, a6, a7, a8, a9, a10, a11, a12, a13, a14, a15, a16, a17, a18) for
                   a1, a2, a3, a4, a5, a6, a7, a8, a9, a10, a11, a12, a13, a14, a15, a16, a17, a18 in
-                  itertools.izip_longest(values_1_CpG, umod_counts_1_CpG, mod_counts_1_CpG, values_2_CpG,
+                  zip_longest(values_1_CpG, umod_counts_1_CpG, mod_counts_1_CpG, values_2_CpG,
                                             umod_counts_2_CpG, mod_counts_2_CpG,values_1_CHG, umod_counts_1_CHG,
                                             mod_counts_1_CHG,  values_2_CHG, umod_counts_2_CHG, mod_counts_2_CHG,
                                             values_1_CHH, umod_counts_1_CHH, mod_counts_1_CHH,  values_2_CHH, umod_counts_2_CHH, mod_counts_2_CHH)]
@@ -175,16 +181,19 @@ def mbias_statistics_calculator(input_file, name, directory, read_length, method
                    all_values[i][4][1], all_values[i][5][1], all_values[i][6][1], all_values[i][7][1], all_values[i][8][1],
                    all_values[i][9][1], all_values[i][10][1], all_values[i][11][1], all_values[i][12][1], all_values[i][13][1],
                    all_values[i][14][1], all_values[i][15][1], all_values[i][16][1], all_values[i][17][1]) for i in range(0, len(all_values))]
-    with open(directory + name + ".Mbias.txt", 'w') as stats_file:
-        line = csv.writer(stats_file, delimiter='\t', lineterminator='\n')
-        line.writerow(['POSITION_(bp)', 'MOD_LVL_CpG_READ_1', 'UNMOD_COUNT_CpG_READ_1', 'MOD_COUNT_CpG_READ_1',
-                        'MOD_LVL_CpG_READ_2', 'UNMOD_COUNT_CpG_READ_2', 'MOD_COUNT_CpG_READ_2',
-                       'MOD_LVL_CHG_READ_1', 'UNMOD_COUNT_CHG_READ_1', 'MOD_COUNT_CHG_READ_1',
-                       'MOD_LVL_CHG_READ_2', 'UNMOD_COUNT_CHG_READ_2', 'MOD_COUNT_CHG_READ_2',
-                       'MOD_LVL_CHH_READ_1', 'UNMOD_COUNT_CHH_READ_1', 'MOD_COUNT_CHH_READ_1',
-                       'MOD_LVL_CHH_READ_2', 'UNMOD_COUNT_CHH_READ_2', 'MOD_COUNT_CHH_READ_2'])
-        for row in all_values:
-            line.writerow(row)
+    try:
+        with open(directory + name + ".Mbias.txt", 'w') as stats_file:
+            line = csv.writer(stats_file, delimiter='\t', lineterminator='\n')
+            line.writerow(['POSITION_(bp)', 'MOD_LVL_CpG_READ_1', 'UNMOD_COUNT_CpG_READ_1', 'MOD_COUNT_CpG_READ_1',
+                           'MOD_LVL_CpG_READ_2', 'UNMOD_COUNT_CpG_READ_2', 'MOD_COUNT_CpG_READ_2',
+                           'MOD_LVL_CHG_READ_1', 'UNMOD_COUNT_CHG_READ_1', 'MOD_COUNT_CHG_READ_1',
+                           'MOD_LVL_CHG_READ_2', 'UNMOD_COUNT_CHG_READ_2', 'MOD_COUNT_CHG_READ_2',
+                           'MOD_LVL_CHH_READ_1', 'UNMOD_COUNT_CHH_READ_1', 'MOD_COUNT_CHH_READ_1',
+                           'MOD_LVL_CHH_READ_2', 'UNMOD_COUNT_CHH_READ_2', 'MOD_COUNT_CHH_READ_2'])
+            for row in all_values:
+                line.writerow(row)
+    except IOError:
+        logs.error('asTair cannot write to Mbias file.', exc_info=True)
     return values_1_CpG, values_2_CpG, values_1_CHG, values_2_CHG, values_1_CHH, values_2_CHH
 
 def Mbias_plotting(input_file, directory, read_length, method, plot, colors, N_threads):
@@ -194,47 +203,50 @@ def Mbias_plotting(input_file, directory, read_length, method, plot, colors, N_t
     if list(directory)[-1]!="/":
         directory = directory + "/"
     values_1_CpG, values_2_CpG, values_1_CHG, values_2_CHG, values_1_CHH, values_2_CHH = mbias_statistics_calculator(input_file, name, directory, read_length, method, N_threads)
-    if plot:
-        if colors != ['teal', 'gray', 'maroon']:
-            colors = "".join(colors).split(',')
-        y_axis_CpG1, y_axis_CHG1, y_axis_CHH1, y_axis_CpG2, y_axis_CHG2, y_axis_CHH2 = list(), list(), list(), list(), list(), list()
-        for row in values_1_CpG:
-            y_axis_CpG1.append(row[1])
-        for row in values_1_CHG:
-            y_axis_CHG1.append(row[1])
-        for row in values_1_CHH:
-            y_axis_CHH1.append(row[1])
-        for row in values_2_CpG:
-            y_axis_CpG2.append(row[1])
-        for row in values_2_CHG:
-            y_axis_CHG2.append(row[1])
-        for row in values_2_CHH:
-            y_axis_CHH2.append(row[1])
-        x_axis = [x for x in range(1,read_length+1)]
-        pyp.figure()
-        fig, fq = pyp.subplots(2, 1)
-        fig.suptitle('Sequencing M-bias', fontsize=14)
-        pyp.subplots_adjust(hspace=0.4)
-        pyp.subplots_adjust(right=1)
-        fq[0].set_ylabel('Modification level, %', fontsize=12)
-        fq[0].set_xlabel('First in pair base positions', fontsize=12)
-        fq[0].plot(x_axis, y_axis_CpG1, linewidth=1.0, linestyle='-', color=colors[0])
-        fq[0].plot(x_axis, y_axis_CHG1, linewidth=1.0, linestyle='-', color=colors[1])
-        fq[0].plot(x_axis, y_axis_CHH1, linewidth=1.0, linestyle='-', color=colors[2])
-        fq[0].xaxis.set_ticks(numpy.arange(0, read_length + 1, step=ceil(read_length/10)))
-        fq[0].yaxis.set_ticks(numpy.arange(0, 101, step=10))
-        fq[0].grid(color='lightgray', linestyle='solid', linewidth=1)
-        fq[1].set_ylabel('Modification level, %', fontsize=12)
-        fq[1].set_xlabel('Second in pair base positions', fontsize=12)
-        fq[1].plot(x_axis, y_axis_CpG2, linewidth=1.0, linestyle='-', color=colors[0])
-        fq[1].plot(x_axis, y_axis_CHG2, linewidth=1.0, linestyle='-', color=colors[1])
-        fq[1].plot(x_axis, y_axis_CHH2, linewidth=1.0, linestyle='-', color=colors[2])
-        fq[1].xaxis.set_ticks(numpy.arange(0, read_length + 1, step=ceil(read_length/10)))
-        fq[1].yaxis.set_ticks(numpy.arange(0, 101, step=10))
-        fq[1].grid(color='lightgray', linestyle='solid', linewidth=1)
-        pyp.figlegend(['CpG', 'CHG', 'CHH'], loc='center left', bbox_to_anchor=(1, 0.5))
-        pyp.savefig(directory + name + '_M-bias_plot.pdf', figsize=(16, 12), dpi=330, bbox_inches='tight', pad_inches=0.15)
-        pyp.close()
+    try:
+        if plot:
+            if colors != ['teal', 'gray', 'maroon']:
+                colors = "".join(colors).split(',')
+            y_axis_CpG1, y_axis_CHG1, y_axis_CHH1, y_axis_CpG2, y_axis_CHG2, y_axis_CHH2 = list(), list(), list(), list(), list(), list()
+            for row in values_1_CpG:
+                y_axis_CpG1.append(row[1])
+            for row in values_1_CHG:
+                y_axis_CHG1.append(row[1])
+            for row in values_1_CHH:
+                y_axis_CHH1.append(row[1])
+            for row in values_2_CpG:
+                y_axis_CpG2.append(row[1])
+            for row in values_2_CHG:
+                y_axis_CHG2.append(row[1])
+            for row in values_2_CHH:
+                y_axis_CHH2.append(row[1])
+            x_axis = [x for x in range(1,read_length+1)]
+            pyp.figure()
+            fig, fq = pyp.subplots(2, 1)
+            fig.suptitle('Sequencing M-bias', fontsize=14)
+            pyp.subplots_adjust(hspace=0.4)
+            pyp.subplots_adjust(right=1)
+            fq[0].set_ylabel('Modification level, %', fontsize=12)
+            fq[0].set_xlabel('First in pair base positions', fontsize=12)
+            fq[0].plot(x_axis, y_axis_CpG1, linewidth=1.0, linestyle='-', color=colors[0])
+            fq[0].plot(x_axis, y_axis_CHG1, linewidth=1.0, linestyle='-', color=colors[1])
+            fq[0].plot(x_axis, y_axis_CHH1, linewidth=1.0, linestyle='-', color=colors[2])
+            fq[0].xaxis.set_ticks(numpy.arange(0, read_length + 1, step=ceil(read_length/10)))
+            fq[0].yaxis.set_ticks(numpy.arange(0, 101, step=10))
+            fq[0].grid(color='lightgray', linestyle='solid', linewidth=1)
+            fq[1].set_ylabel('Modification level, %', fontsize=12)
+            fq[1].set_xlabel('Second in pair base positions', fontsize=12)
+            fq[1].plot(x_axis, y_axis_CpG2, linewidth=1.0, linestyle='-', color=colors[0])
+            fq[1].plot(x_axis, y_axis_CHG2, linewidth=1.0, linestyle='-', color=colors[1])
+            fq[1].plot(x_axis, y_axis_CHH2, linewidth=1.0, linestyle='-', color=colors[2])
+            fq[1].xaxis.set_ticks(numpy.arange(0, read_length + 1, step=ceil(read_length/10)))
+            fq[1].yaxis.set_ticks(numpy.arange(0, 101, step=10))
+            fq[1].grid(color='lightgray', linestyle='solid', linewidth=1)
+            pyp.figlegend(['CpG', 'CHG', 'CHH'], loc='center left', bbox_to_anchor=(1, 0.5))
+            pyp.savefig(directory + name + '_M-bias_plot.pdf', figsize=(16, 12), dpi=330, bbox_inches='tight', pad_inches=0.15)
+            pyp.close()
+    except Exception:
+        logs.error('asTair cannot output the Mbias plot.', exc_info=True)
     else:
         pass
     time_m = datetime.now()

@@ -1,4 +1,6 @@
-#!/usr/bin/env python3
+#!/usr/bin/env python
+
+from __future__ import print_function
 
 import re
 import os
@@ -8,10 +10,16 @@ import csv
 import click
 import logging
 import warnings
-import itertools
 from os import path
 from datetime import datetime
 from collections import defaultdict
+
+if sys.version[0] == '3':
+    from itertools import zip_longest
+elif sys.version[0] == '2':
+    from itertools import izip_longest as zip_longest
+else:
+    raise Exception("This is not the python we're looking for (version {})".format(sys.version[0]))
 
 from safe_division import non_zero_division
 from bam_file_parser import bam_file_opener
@@ -35,7 +43,7 @@ from reference_context_search_triad import context_sequence_search
 @click.option('adjust_acapq_threshold', '--adjust_capq_threshold', '-amq', required=False, type=int, default=0, help='Used to adjust the mapping quality with default 0 for no adjustment and a recommended value for adjustment 50. (Default 0).')
 @click.option('mark_matches', '--mark_matches', '-mm', required=False, default=True, type=bool, help='Output bases matching the reference per strand (Default True).')
 @click.option('mark_ends', '--mark_ends', '-me', required=False, default=True, type=bool, help='Marks head and tail bases in the read (Default True).')
-@click.option('add_indels', '--add_indels', '-ai', required=False, default=True, type=bool, help='Adds inserted bases and ‘N’s for base skipped from the reference (Default True).')
+@click.option('add_indels', '--add_indels', '-ai', required=False, default=True, type=bool, help='Adds inserted bases and Ns for base skipped from the reference (Default True).')
 @click.option('redo_baq', '--redo_baq', '-rbq', required=False, default=False, type=bool, help='Re-calculates per-Base Alignment Qualities ignoring existing base qualities (Default False).')
 @click.option('compute_baq', '--compute_baq', '-cbq', required=False, default=True, type=bool, help='Performs re-alignment computing of per-Base Alignment Qualities (Default True).')
 @click.option('ignore_orphans', '--ignore_orphans', '-io', required=False, default=True, type=bool, help='Ignore reads not in proper pairs (Default True).')
@@ -59,14 +67,17 @@ time_b = datetime.now()
 
 def modification_calls_writer(data_mods, file_name, header=False):
     """Outputs the modification calls per position in a tab-delimited format."""
-    with open(file_name, 'a', newline='') as calls_output:
-        data_line = csv.writer(calls_output, delimiter='\t', lineterminator='\n')
-        if header:
-            data_line.writerow(["CHROM", "START", "END", "MOD_LEVEL", "MOD", "UNMOD", "REF", "ALT", "CONTEXT",
-                         "SPECIFIC_CONTEXT", 'SNV', 'TOTAL_DEPTH'])
-            data_line.writerow(data_mods)
-        else:
-            data_line.writerow(data_mods)
+    try:
+        with open(file_name, 'a') as calls_output:
+            data_line = csv.writer(calls_output, delimiter='\t', lineterminator='\n')
+            if header:
+                data_line.writerow(["CHROM", "START", "END", "MOD_LEVEL", "MOD", "UNMOD", "REF", "ALT", "CONTEXT",
+                             "SPECIFIC_CONTEXT", 'SNV', 'TOTAL_DEPTH'])
+                data_line.writerow(data_mods)
+            else:
+                data_line.writerow(data_mods)
+    except IOError:
+        logs.error('asTair cannot write to modification calls file.', exc_info=True)
 
 
 def statistics_calculator(mean_mod, mean_unmod, data_mod, user_defined_context, context_sample_counts):
@@ -93,54 +104,57 @@ def final_statistics_output(mean_mod, mean_unmod, user_defined_context, file_nam
     """Writes the summary statistics of the cytosine modificaton levels.
     Cytosine modification rate given as the percentage total modified cytosines
     divided by the total number of cytosines covered."""
-    with open(file_name, 'w', newline='') as statistics_output:
-        wr = csv.writer(statistics_output, delimiter='\t', lineterminator='\n')
-        wr.writerow(["CONTEXT", "SPECIFIC_CONTEXT", "MEAN_MODIFICATION_RATE_PERCENT", "TOTAL_POSITIONS", "COVERED_POSITIONS"])
-        wr.writerow(["CpG", "", round(non_zero_division(mean_mod['CpG'], mean_mod['CpG'] + mean_unmod['CpG']) * 100, 3),
-        context_total_counts['CG']+context_total_counts['CGb'], context_sample_counts['CpG']])
-        wr.writerow(["", "CGA", round(non_zero_division(mean_mod['CGA'], mean_mod['CGA'] + mean_unmod['CGA']) * 100, 3),
-                     context_total_counts['CGA'], context_sample_counts['CGA']])
-        wr.writerow(["", "CGC", round(non_zero_division(mean_mod['CGC'], mean_mod['CGC'] + mean_unmod['CGC']) * 100, 3),
-                     context_total_counts['CGC'], context_sample_counts['CGC']])
-        wr.writerow(["", "CGG", round(non_zero_division(mean_mod['CGG'], mean_mod['CGG'] + mean_unmod['CGG']) * 100, 3),
-                     context_total_counts['CGG'], context_sample_counts['CGG']])
-        wr.writerow(["", "CGT", round(non_zero_division(mean_mod['CGT'], mean_mod['CGT'] + mean_unmod['CGT']) * 100, 3),
-                     context_total_counts['CGT'], context_sample_counts['CGT']])
-        wr.writerow(["CHG", "", round(non_zero_division(mean_mod['CHG'], mean_mod['CHG'] + mean_unmod['CHG']) * 100, 3),
-                     context_total_counts['CHG']+context_total_counts['CHGb'], context_sample_counts['CHG']])
-        wr.writerow(["CAG", "", round(non_zero_division(mean_mod['CAG'], mean_mod['CAG'] + mean_unmod['CAG']) * 100, 3),
-                     context_total_counts['CAG'], context_sample_counts['CAG']])
-        wr.writerow(["CCG", "", round(non_zero_division(mean_mod['CCG'], mean_mod['CCG'] + mean_unmod['CCG']) * 100, 3),
-                     context_total_counts['CCG'], context_sample_counts['CCG']])
-        wr.writerow(["CTG", "", round(non_zero_division(mean_mod['CTG'], mean_mod['CTG'] + mean_unmod['CTG']) * 100, 3),
-                     context_total_counts['CTG'], context_sample_counts['CTG']])
-        wr.writerow(["CHH", "", round(non_zero_division(mean_mod['CHH'], mean_mod['CHH'] + mean_unmod['CHH']) * 100, 3),
-                     context_total_counts['CHH']+context_total_counts['CHHb'], context_sample_counts['CHH']])
-        wr.writerow(["", "CTT", round(non_zero_division(mean_mod['CTT'], mean_mod['CTT'] + mean_unmod['CTT']) * 100, 3),
-                     context_total_counts['CTT'], context_sample_counts['CTT']])
-        wr.writerow(["", "CAT", round(non_zero_division(mean_mod['CAT'], mean_mod['CAT'] + mean_unmod['CAT']) * 100, 3),
-                     context_total_counts['CAT'], context_sample_counts['CAT']])
-        wr.writerow(["", "CCT", round(non_zero_division(mean_mod['CCT'], mean_mod['CCT'] + mean_unmod['CCT']) * 100, 3),
-                     context_total_counts['CCT'], context_sample_counts['CCT']])
-        wr.writerow(["", "CTA", round(non_zero_division(mean_mod['CTA'], mean_mod['CTA'] + mean_unmod['CTA']) * 100, 3),
-                     context_total_counts['CTA'], context_sample_counts['CTA']])
-        wr.writerow(["", "CAA", round(non_zero_division(mean_mod['CAA'], mean_mod['CAA'] + mean_unmod['CAA']) * 100, 3),
-                     context_total_counts['CAA'], context_sample_counts['CAA']])
-        wr.writerow(["", "CCA", round(non_zero_division(mean_mod['CCA'], mean_mod['CCA'] + mean_unmod['CCA']) * 100, 3),
-                     context_total_counts['CCA'], context_sample_counts['CCA']])
-        wr.writerow(["", "CTC", round(non_zero_division(mean_mod['CTC'], mean_mod['CTC'] + mean_unmod['CTC']) * 100, 3),
-                     context_total_counts['CTC'], context_sample_counts['CTC']])
-        wr.writerow(["", "CAC", round(non_zero_division(mean_mod['CAC'], mean_mod['CAC'] + mean_unmod['CAC']) * 100, 3),
-                     context_total_counts['CAC'], context_sample_counts['CAC']])
-        wr.writerow(["", "CCC", round(non_zero_division(mean_mod['CCC'], mean_mod['CCC'] + mean_unmod['CCC']) * 100, 3),
-                     context_total_counts['CCC'], context_sample_counts['CCC']])
+    try:
+        with open(file_name, 'w') as statistics_output:
+            wr = csv.writer(statistics_output, delimiter='\t', lineterminator='\n')
+            wr.writerow(["CONTEXT", "SPECIFIC_CONTEXT", "MEAN_MODIFICATION_RATE_PERCENT", "TOTAL_POSITIONS", "COVERED_POSITIONS"])
+            wr.writerow(["CpG", "", round(non_zero_division(mean_mod['CpG'], mean_mod['CpG'] + mean_unmod['CpG']) * 100, 3),
+            context_total_counts['CG']+context_total_counts['CGb'], context_sample_counts['CpG']])
+            wr.writerow(["", "CGA", round(non_zero_division(mean_mod['CGA'], mean_mod['CGA'] + mean_unmod['CGA']) * 100, 3),
+                         context_total_counts['CGA'], context_sample_counts['CGA']])
+            wr.writerow(["", "CGC", round(non_zero_division(mean_mod['CGC'], mean_mod['CGC'] + mean_unmod['CGC']) * 100, 3),
+                         context_total_counts['CGC'], context_sample_counts['CGC']])
+            wr.writerow(["", "CGG", round(non_zero_division(mean_mod['CGG'], mean_mod['CGG'] + mean_unmod['CGG']) * 100, 3),
+                         context_total_counts['CGG'], context_sample_counts['CGG']])
+            wr.writerow(["", "CGT", round(non_zero_division(mean_mod['CGT'], mean_mod['CGT'] + mean_unmod['CGT']) * 100, 3),
+                         context_total_counts['CGT'], context_sample_counts['CGT']])
+            wr.writerow(["CHG", "", round(non_zero_division(mean_mod['CHG'], mean_mod['CHG'] + mean_unmod['CHG']) * 100, 3),
+                         context_total_counts['CHG']+context_total_counts['CHGb'], context_sample_counts['CHG']])
+            wr.writerow(["", "CAG", round(non_zero_division(mean_mod['CAG'], mean_mod['CAG'] + mean_unmod['CAG']) * 100, 3),
+                         context_total_counts['CAG'], context_sample_counts['CAG']])
+            wr.writerow(["", "CCG", round(non_zero_division(mean_mod['CCG'], mean_mod['CCG'] + mean_unmod['CCG']) * 100, 3),
+                         context_total_counts['CCG'], context_sample_counts['CCG']])
+            wr.writerow(["", "CTG", round(non_zero_division(mean_mod['CTG'], mean_mod['CTG'] + mean_unmod['CTG']) * 100, 3),
+                         context_total_counts['CTG'], context_sample_counts['CTG']])
+            wr.writerow(["CHH", "", round(non_zero_division(mean_mod['CHH'], mean_mod['CHH'] + mean_unmod['CHH']) * 100, 3),
+                         context_total_counts['CHH']+context_total_counts['CHHb'], context_sample_counts['CHH']])
+            wr.writerow(["", "CTT", round(non_zero_division(mean_mod['CTT'], mean_mod['CTT'] + mean_unmod['CTT']) * 100, 3),
+                         context_total_counts['CTT'], context_sample_counts['CTT']])
+            wr.writerow(["", "CAT", round(non_zero_division(mean_mod['CAT'], mean_mod['CAT'] + mean_unmod['CAT']) * 100, 3),
+                         context_total_counts['CAT'], context_sample_counts['CAT']])
+            wr.writerow(["", "CCT", round(non_zero_division(mean_mod['CCT'], mean_mod['CCT'] + mean_unmod['CCT']) * 100, 3),
+                         context_total_counts['CCT'], context_sample_counts['CCT']])
+            wr.writerow(["", "CTA", round(non_zero_division(mean_mod['CTA'], mean_mod['CTA'] + mean_unmod['CTA']) * 100, 3),
+                         context_total_counts['CTA'], context_sample_counts['CTA']])
+            wr.writerow(["", "CAA", round(non_zero_division(mean_mod['CAA'], mean_mod['CAA'] + mean_unmod['CAA']) * 100, 3),
+                         context_total_counts['CAA'], context_sample_counts['CAA']])
+            wr.writerow(["", "CCA", round(non_zero_division(mean_mod['CCA'], mean_mod['CCA'] + mean_unmod['CCA']) * 100, 3),
+                         context_total_counts['CCA'], context_sample_counts['CCA']])
+            wr.writerow(["", "CTC", round(non_zero_division(mean_mod['CTC'], mean_mod['CTC'] + mean_unmod['CTC']) * 100, 3),
+                         context_total_counts['CTC'], context_sample_counts['CTC']])
+            wr.writerow(["", "CAC", round(non_zero_division(mean_mod['CAC'], mean_mod['CAC'] + mean_unmod['CAC']) * 100, 3),
+                         context_total_counts['CAC'], context_sample_counts['CAC']])
+            wr.writerow(["", "CCC", round(non_zero_division(mean_mod['CCC'], mean_mod['CCC'] + mean_unmod['CCC']) * 100, 3),
+                         context_total_counts['CCC'], context_sample_counts['CCC']])
 
-        wr.writerow(["CNN", "", round(non_zero_division(mean_mod['Unknown'], mean_mod['Unknown'] + mean_unmod['Unknown']) * 100, 3),
-                     context_total_counts['CN']+context_total_counts['CNb'], context_sample_counts['CN']])
-        if user_defined_context:
-            wr.writerow([user_defined_context, "",round(non_zero_division(mean_mod['user defined context'], mean_mod['user defined context'] +
-                    mean_unmod['user defined context']) * 100, 3), context_total_counts['user defined context'], context_sample_counts['user defined context']])
-        
+            wr.writerow(["CNN", "", round(non_zero_division(mean_mod['Unknown'], mean_mod['Unknown'] + mean_unmod['Unknown']) * 100, 3),
+                         context_total_counts['CN']+context_total_counts['CNb'], context_sample_counts['CN']])
+            if user_defined_context:
+                wr.writerow([user_defined_context, "",round(non_zero_division(mean_mod['user defined context'], mean_mod['user defined context'] +
+                        mean_unmod['user defined context']) * 100, 3), context_total_counts['user defined context'], context_sample_counts['user defined context']])
+    except IOError:
+        logs.error('asTair cannot write to statistics summary file.', exc_info=True)
+
 
 def flags_expectation(modification_information_per_position, position):
     """Gives the expected flag-base couples, the reference and the modified base."""
@@ -205,7 +219,7 @@ def clean_pileup(pileups, cycles, modification_information_per_position, mean_mo
             except AssertionError:
                 logs.exception("Failed getting query sequences (AssertionError, pysam). Please decrease the max_depth parameter.")
                 continue
-            for pileup, seq in itertools.zip_longest(reads.pileups, sequences, fillvalue='BLANK'):
+            for pileup, seq in zip_longest(reads.pileups, sequences, fillvalue='BLANK'):
                 if pileup != 'BLANK':
                     read_counts[(pileup.alignment.flag, seq.upper())] += 1
             pillup_summary(modification_information_per_position, position, read_counts, mean_mod, mean_unmod, user_defined_context, header,
@@ -225,13 +239,25 @@ def cytosine_modification_finder(input_file, fasta_file, context, zero_coverage,
         file_name = path.join(directory, name + "_" + method + "_" + per_chromosome + "_" + context + ".mods")
     if not os.path.isfile(file_name):
         if user_defined_context:
-            mean_mod = {'CHH': 0, 'CHG': 0, 'CpG': 0, 'Unknown': 0, 'CAG': 0, 'CCG': 0, 'CTG': 0, 'CTT': 0, 'CCT': 0, 'CAT': 0, 'CTA': 0, 'CTC': 0, 'CAC': 0, 'CAA': 0, 'CCA': 0, 'CCC': 0, 'user defined context': 0,  'CGA':0, 'CGT':0, 'CGC':0, 'CGG':0}
-            mean_unmod = {'CHH': 0, 'CHG': 0, 'CpG': 0, 'Unknown': 0, 'CAG': 0, 'CCG': 0, 'CTG': 0, 'CTT': 0, 'CCT': 0, 'CAT': 0, 'CTA': 0, 'CTC': 0, 'CAC': 0, 'CAA': 0, 'CCA': 0, 'CCC': 0, 'user defined context': 0, 'CGA':0, 'CGT':0, 'CGC':0, 'CGG':0}
+            mean_mod = {'CHH': 0, 'CHG': 0, 'CpG': 0, 'Unknown': 0, 'CAG': 0, 'CCG': 0, 'CTG': 0, 'CTT': 0, 'CCT': 0,
+                        'CAT': 0, 'CTA': 0, 'CTC': 0, 'CAC': 0, 'CAA': 0, 'CCA': 0, 'CCC': 0, 'user defined context': 0,
+                        'CGA':0, 'CGT':0, 'CGC':0, 'CGG':0}
+            mean_unmod = {'CHH': 0, 'CHG': 0, 'CpG': 0, 'Unknown': 0, 'CAG': 0, 'CCG': 0, 'CTG': 0, 'CTT': 0, 'CCT': 0,
+                          'CAT': 0, 'CTA': 0, 'CTC': 0, 'CAC': 0, 'CAA': 0, 'CCA': 0, 'CCC': 0, 'user defined context': 0,
+                          'CGA':0, 'CGT':0, 'CGC':0, 'CGG':0}
         else:
-            mean_mod = {'CHH': 0, 'CHG': 0, 'CpG': 0, 'Unknown': 0, 'CAG': 0, 'CCG': 0, 'CTG': 0, 'CTT': 0, 'CCT': 0, 'CAT': 0, 'CTA': 0, 'CTC': 0, 'CAC': 0, 'CAA': 0, 'CCA': 0, 'CCC': 0, 'CGA':0, 'CGT':0, 'CGC':0, 'CGG':0}
-            mean_unmod = {'CHH': 0, 'CHG': 0, 'CpG': 0, 'Unknown': 0, 'CAG': 0, 'CCG': 0, 'CTG': 0, 'CTT': 0, 'CCT': 0, 'CAT': 0, 'CTA': 0, 'CTC': 0, 'CAC': 0, 'CAA': 0, 'CCA': 0, 'CCC': 0, 'CGA':0, 'CGT':0, 'CGC':0, 'CGG':0}
-        inbam = bam_file_opener(input_file, None, N_threads)
-        keys, fastas = fasta_splitting_by_sequence(fasta_file, per_chromosome)
+            mean_mod = {'CHH': 0, 'CHG': 0, 'CpG': 0, 'Unknown': 0, 'CAG': 0, 'CCG': 0, 'CTG': 0, 'CTT': 0, 'CCT': 0,
+                        'CAT': 0, 'CTA': 0, 'CTC': 0, 'CAC': 0, 'CAA': 0, 'CCA': 0, 'CCC': 0, 'CGA':0, 'CGT':0, 'CGC':0, 'CGG':0}
+            mean_unmod = {'CHH': 0, 'CHG': 0, 'CpG': 0, 'Unknown': 0, 'CAG': 0, 'CCG': 0, 'CTG': 0, 'CTT': 0, 'CCT': 0,
+                          'CAT': 0, 'CTA': 0, 'CTC': 0, 'CAC': 0, 'CAA': 0, 'CCA': 0, 'CCC': 0, 'CGA':0, 'CGT':0, 'CGC':0, 'CGG':0}
+        try:
+            inbam = bam_file_opener(input_file, None, N_threads)
+        except Exception:
+            sys.exit(1)
+        try:
+            keys, fastas = fasta_splitting_by_sequence(fasta_file, per_chromosome)
+        except Exception:
+            sys.exit(1)
         contexts, all_keys = sequence_context_set_creation(context, user_defined_context)
         cycles = 0
         context_total_counts, context_sample_counts = defaultdict(int), defaultdict(int)

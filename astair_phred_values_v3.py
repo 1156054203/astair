@@ -1,22 +1,14 @@
-#!/usr/bin/env python2
-
-
-from __future__ import division
-from __future__ import with_statement
+#!/usr/bin/env python
 
 import re
 import csv
 import sys
-import pdb
 import gzip
 import pysam
 import click
-import string
 import random
 import logging
-import itertools
 from os import path
-from Queue import Queue
 from threading import Thread
 from datetime import datetime
 try:
@@ -27,7 +19,16 @@ try:
     pyp.style.use('seaborn-whitegrid')
     pyp.ioff()
 except ImportError:
-    pass
+    raise Exception("Matplotlib was not found, visualisation output will not be supported.")
+
+if sys.version[0] == '3':
+    from queue import Queue as Queue
+    from itertools import zip_longest
+elif sys.version[0] == '2':
+    from Queue import Queue as Queue
+    from itertools import izip_longest as zip_longest
+else:
+    raise Exception("This is not the python we're looking for (version {})".format(sys.version[0]))
 
 from safe_division import non_zero_division_NA
 from statistics_summary import general_statistics_summary
@@ -62,13 +63,11 @@ def clean_open_file(input_file):
     try:
         fastq_file = gzip.open(input_file, "rt")
         return fastq_file
-    except (SystemExit, KeyboardInterrupt, IOError):
+    except Exception:
         logs.error('The input file does not exist.', exc_info=True)
         sys.exit(1)
 
-
-
-def Phred_score_statistics_calculation(input_file, sample_size, calculation_mode):
+def Phred_score_main_body(file_to_load, calculation_mode, sample_size):
     """Calculates the mean or the absolute numeric Phred scores per each base using a desired sample size for random sampling from the fastq file."""
     if sample_size == None:
         cutoff = 10000000
@@ -77,14 +76,14 @@ def Phred_score_statistics_calculation(input_file, sample_size, calculation_mode
     cycle_count = 0
     read_values = []
     Phred_T_sum, Phred_T_len, Phred_C_sum, Phred_C_len, Phred_A_sum, Phred_A_len, Phred_G_sum, Phred_G_len = [0] * 8
-    for line in clean_open_file(input_file):
+    for line in file_to_load:
         if cycle_count == 1 or cycle_count % 4 == 1:
             read_sequence = re.findall(r"(?<!@)(?!@).*[^+|^\n].*(?!@\n)", line)[0]
         elif cycle_count == 3 or cycle_count % 4 == 3:
             read_base_qualities = re.findall(r"(?<!@)(?!@).*[^+|^\n].*(?!@\n)", line)
             read_base_qualities = numeric_Phred_score(read_base_qualities[0])
             results = [(i, j) for i, j in
-                       itertools.izip_longest(read_base_qualities, read_sequence, fillvalue='BLANK')]
+                       zip_longest(read_base_qualities, read_sequence, fillvalue='BLANK')]
             thymines = [x[0] for x in results if 'T' in x[:]]
             cytosines = [x[0] for x in results if 'C' in x[:]]
             adenines = [x[0] for x in results if 'A' in x[:]]
@@ -122,6 +121,11 @@ def Phred_score_statistics_calculation(input_file, sample_size, calculation_mode
         cycle_count += 1
     return read_values
 
+def Phred_score_statistics_calculation(input_file, sample_size, calculation_mode):
+    """ Wraps the Phred_score_main_body function."""
+    read_values = Phred_score_main_body(clean_open_file(input_file), calculation_mode, sample_size)
+    return read_values
+
 
 def Phred_score_value_return(fastq_input, sample_size, calculation_mode, fq1, fq2):
     """Returns the numeric Phred scores per base for the forward and reverse reads in pair-end sequencing."""
@@ -151,29 +155,32 @@ def main_Phred_score_calculation_output(fq1, fq2, sample_size, directory, name, 
 
 def summary_statistics_output(directory, name, statistics_data, read_orientation):
     """Outputs the Phred score calculation statistics as a text file that can be visualised independently from the plotting module."""
-    with open(directory + name + '_total_Phred.txt', 'a') as new_file:
-        data_line = csv.writer(new_file, delimiter='\t', lineterminator='\n')
-        if read_orientation == 'F':
-            read_orientation_string = 'First in pair_'
-        else:
-            read_orientation_string = 'Second in pair'
-        data_line.writerow(["____________________________________{}____________________________________".format(read_orientation_string)])
-        data_line.writerow(["______________________________________________________________________________________"])
-        data_line.writerow(["mean ", "adenines: " + str(statistics_data[0][0]), "cytosines: " + str(statistics_data[1][0]),
-                            "thymines: " + str(statistics_data[2][0]), "guanines: " + str(statistics_data[3][0])])
-        data_line.writerow(["median ", "adenines: " + str(statistics_data[0][1]), "cytosines: " + str(statistics_data[1][1]),
-                            "thymines: " + str(statistics_data[2][1]), "guanines: " + str(statistics_data[3][1])])
-        data_line.writerow(["q25 ", "adenines: " + str(statistics_data[0][3]), "cytosines: " + str(statistics_data[1][3]),
-                            "thymines: " + str(statistics_data[2][3]), "guanines: " + str(statistics_data[3][3])])
-        data_line.writerow(["q75 ", "adenines: " + str(statistics_data[0][4]), "cytosines: " + str(statistics_data[1][4]),
-                            "thymines: " + str(statistics_data[2][4]), "guanines: " + str(statistics_data[3][4])])
-        data_line.writerow(["sd ", "adenines: " + str(statistics_data[0][2]), "cytosines: " + str(statistics_data[1][2]),
-                            "thymines: " + str(statistics_data[2][2]), "guanines: " + str(statistics_data[3][2])])
-        data_line.writerow(["min ", "adenines: " + str(statistics_data[0][5]), "cytosines: " + str(statistics_data[1][5]),
-                            "thymines: " + str(statistics_data[2][5]), "guanines: " + str(statistics_data[3][5])])
-        data_line.writerow(["max ", "adenines: " + str(statistics_data[0][6]), "cytosines: " + str(statistics_data[1][6]),
-                            "thymines: " + str(statistics_data[2][6]), "guanines: " + str(statistics_data[3][6])])
-        data_line.writerow(["______________________________________________________________________________________"])
+    try:
+        with open(directory + name + '_total_Phred.txt', 'a') as new_file:
+            data_line = csv.writer(new_file, delimiter='\t', lineterminator='\n')
+            if read_orientation == 'F':
+                read_orientation_string = 'First in pair_'
+            else:
+                read_orientation_string = 'Second in pair'
+            data_line.writerow(["____________________________________{}____________________________________".format(read_orientation_string)])
+            data_line.writerow(["______________________________________________________________________________________"])
+            data_line.writerow(["mean ", "adenines: " + str(statistics_data[0][0]), "cytosines: " + str(statistics_data[1][0]),
+                                "thymines: " + str(statistics_data[2][0]), "guanines: " + str(statistics_data[3][0])])
+            data_line.writerow(["median ", "adenines: " + str(statistics_data[0][1]), "cytosines: " + str(statistics_data[1][1]),
+                                "thymines: " + str(statistics_data[2][1]), "guanines: " + str(statistics_data[3][1])])
+            data_line.writerow(["q25 ", "adenines: " + str(statistics_data[0][3]), "cytosines: " + str(statistics_data[1][3]),
+                                "thymines: " + str(statistics_data[2][3]), "guanines: " + str(statistics_data[3][3])])
+            data_line.writerow(["q75 ", "adenines: " + str(statistics_data[0][4]), "cytosines: " + str(statistics_data[1][4]),
+                                "thymines: " + str(statistics_data[2][4]), "guanines: " + str(statistics_data[3][4])])
+            data_line.writerow(["sd ", "adenines: " + str(statistics_data[0][2]), "cytosines: " + str(statistics_data[1][2]),
+                                "thymines: " + str(statistics_data[2][2]), "guanines: " + str(statistics_data[3][2])])
+            data_line.writerow(["min ", "adenines: " + str(statistics_data[0][5]), "cytosines: " + str(statistics_data[1][5]),
+                                "thymines: " + str(statistics_data[2][5]), "guanines: " + str(statistics_data[3][5])])
+            data_line.writerow(["max ", "adenines: " + str(statistics_data[0][6]), "cytosines: " + str(statistics_data[1][6]),
+                                "thymines: " + str(statistics_data[2][6]), "guanines: " + str(statistics_data[3][6])])
+            data_line.writerow(["______________________________________________________________________________________"])
+    except IOError:
+        logs.error('asTair cannot write to Phred scores summary file.', exc_info=True)
 
 
 def Phred_values_return(input_values, read_orientation, directory, name, calculation_mode):
@@ -219,7 +226,7 @@ def Phred_scores_plotting(fq1, fq2, calculation_mode, directory, sample_size, mi
     try:
         open(fq1, 'r')
         open(fq2, 'r')
-    except (SystemExit, KeyboardInterrupt, IOError, FileNotFoundError):
+    except Exception:
         logs.error('The input fastq files do not exist.', exc_info=True)
         sys.exit(1)
     name = path.splitext(path.basename(fq1))[0]
@@ -232,27 +239,30 @@ def Phred_scores_plotting(fq1, fq2, calculation_mode, directory, sample_size, mi
     read_values_fq1, read_values_fq2 = main_Phred_score_calculation_output(fq1, fq2, sample_size, directory, name, calculation_mode)
     data_fq1, maxy1 = Phred_values_return(read_values_fq1, 'F', directory, name, calculation_mode)
     data_fq2, maxy2 = Phred_values_return(read_values_fq2, 'R', directory, name, calculation_mode)
-    if plot:
-        pyp.figure()
-        fig, fq = pyp.subplots(1, 2)
-        fig.suptitle('Sequencing base quality', fontsize=14)
-        pyp.subplots_adjust(wspace=0.4)
-        maxy = [max(maxy1, maxy2) + 1 if max(maxy1, maxy2) + 1 > 35 else 35][0]
-        box1 = fq[0].boxplot(data_fq1, labels=['A', 'C', 'G', 'T'], patch_artist=True)
-        fq[0].set_ylabel('Phred score', fontsize=12)
-        fq[0].set_xlabel('First in pair', fontsize=12)
-        fq[0].axis([0, 5, minimum_score, maxy])
-        fq[0].yaxis.set_major_locator(ticker.MultipleLocator(5))
-        fq[0].grid(color='lightgray', linestyle='solid', linewidth=1)
-        box2 = fq[1].boxplot(data_fq2, labels=['A', 'C', 'G', 'T'], patch_artist=True)
-        fq[1].set_xlabel('Second in pair', fontsize=12)
-        fq[1].axis([0, 5, minimum_score, maxy])
-        fq[1].yaxis.set_major_locator(ticker.MultipleLocator(5))
-        fq[1].grid(color='lightgray', linestyle='solid', linewidth=1)
-        Phred_scores_color_change([box1, box2], colors)
-        pyp.vlines(-1, minimum_score, maxy, alpha=0.3, linewidth=1, linestyle='--', color='gray', clip_on=False)
-        pyp.savefig(directory + name + '_phred_scores_plot.pdf', figsize=(14, 8), dpi=330, bbox_inches='tight')
-        pyp.close()
+    try:
+        if plot:
+            pyp.figure()
+            fig, fq = pyp.subplots(1, 2)
+            fig.suptitle('Sequencing base quality', fontsize=14)
+            pyp.subplots_adjust(wspace=0.4)
+            maxy = [max(maxy1, maxy2) + 1 if max(maxy1, maxy2) + 1 > 35 else 35][0]
+            box1 = fq[0].boxplot(data_fq1, labels=['A', 'C', 'G', 'T'], patch_artist=True)
+            fq[0].set_ylabel('Phred score', fontsize=12)
+            fq[0].set_xlabel('First in pair', fontsize=12)
+            fq[0].axis([0, 5, minimum_score, maxy])
+            fq[0].yaxis.set_major_locator(ticker.MultipleLocator(5))
+            fq[0].grid(color='lightgray', linestyle='solid', linewidth=1)
+            box2 = fq[1].boxplot(data_fq2, labels=['A', 'C', 'G', 'T'], patch_artist=True)
+            fq[1].set_xlabel('Second in pair', fontsize=12)
+            fq[1].axis([0, 5, minimum_score, maxy])
+            fq[1].yaxis.set_major_locator(ticker.MultipleLocator(5))
+            fq[1].grid(color='lightgray', linestyle='solid', linewidth=1)
+            Phred_scores_color_change([box1, box2], colors)
+            pyp.vlines(-1, minimum_score, maxy, alpha=0.3, linewidth=1, linestyle='--', color='gray', clip_on=False)
+            pyp.savefig(directory + name + '_phred_scores_plot.pdf', figsize=(14, 8), dpi=330, bbox_inches='tight')
+            pyp.close()
+    except Exception:
+        logs.error('asTair cannot output the Phred scores plot.', exc_info=True)
     else:
         pass
     time_m = datetime.now()

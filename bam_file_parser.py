@@ -1,8 +1,5 @@
-
-from __future__ import with_statement
-
-import pysam
 import sys
+import pysam
 import logging
 
 logging.basicConfig(level=logging.DEBUG)
@@ -21,6 +18,6 @@ def bam_file_opener(input_file, fetch, threads):
             return bam_fetch
         else:
             return inbam
-    except (SystemExit, KeyboardInterrupt, IOError):
+    except Exception:
         logs.error('The input bam file does not exist.', exc_info=True)
-        sys.exit(1)
+        raise

@@ -37,7 +37,7 @@ def fasta_splitting_by_sequence(fasta_file, per_chromosome):
     fastas = {}
     keys, sequences = list(), list()
     try:
-        with open(fasta_file, 'r', newline='') as fasta_handle:
+        with open(fasta_file, 'r') as fasta_handle:
             fasta_sequence = fasta_handle.read()
             if re.match(r".*(?=\r\n)", fasta_sequence):
                 keys, sequences = fasta_operator("\r\n", fasta_sequence, per_chromosome)
@@ -53,6 +53,6 @@ def fasta_splitting_by_sequence(fasta_file, per_chromosome):
         else:
             fastas[keys] = sequences
         return keys, fastas
-    except (SystemExit, KeyboardInterrupt, IOError, FileNotFoundError):
+    except Exception:
         logs.error('The genome reference fasta file does not exist.', exc_info=True)
-        sys.exit(1)
+        raise

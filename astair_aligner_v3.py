@@ -1,7 +1,4 @@
-#!/usr/bin/env python2
-
-from __future__ import division
-from __future__ import with_statement
+#!/usr/bin/env python
 
 import os
 import re
@@ -131,14 +128,18 @@ def run_alignment(fq1, fq2, fasta_file, bwa_path, samtools_path, directory, meth
         alignment_command = 'python2 {} -t {} --reference {} {} {} | {} view {} -T {} -q {} {} | {} sort -@ {} > {}'.\
             format(use_bwa, N_threads, fasta_file, fq1, fq2, use_samtools, format, fasta_file, minimum_mapping_quality,
                    aligned_string, use_samtools, N_threads, os.path.join(directory + name + "." + output_format))
-    align = subprocess.Popen(alignment_command, shell=True)
-    exit_code = align.wait()
-    if exit_code == 0:
-        indexing_command = '{} index {}'.format(use_samtools, os.path.join(directory + name + "." + output_format))
-        index = subprocess.Popen(indexing_command, shell=True)
-        index.wait()
-    time_e = datetime.now()
-    logs.info("asTair genome aligner finished running. {} seconds".format((time_e - time_b).total_seconds()))
+    try:
+        align = subprocess.Popen(alignment_command, shell=True)
+        exit_code = align.wait()
+        if exit_code == 0:
+            indexing_command = '{} index {}'.format(use_samtools, os.path.join(directory + name + "." + output_format))
+            index = subprocess.Popen(indexing_command, shell=True)
+            index.wait()
+        time_e = datetime.now()
+        logs.info("asTair genome aligner finished running. {} seconds".format((time_e - time_b).total_seconds()))
+    except IOError:
+        logs.error('asTair cannot write to alignment file and its index.', exc_info=True)
+
 
 if __name__ == '__main__':
     aligner_exec()

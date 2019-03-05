@@ -1,4 +1,4 @@
-#!/usr/bin/env python3
+#!/usr/bin/env python
 
 import re
 import os
@@ -80,12 +80,12 @@ def cytosine_modification_lookup(fasta_file, context, user_defined_context, modi
     else:
         tupler = list()
         try:
-            with open(modified_positions, newline='') as csvfile:
+            with open(modified_positions) as csvfile:
                 position_reader = csv.reader(csvfile, delimiter='\t', lineterminator='\n')
                 for row in position_reader:
                     tupler.append(tuple((str(row[0]), int(row[1]), int(row[2]))))
             return tupler
-        except (SystemExit, KeyboardInterrupt, IOError, FileNotFoundError):
+        except Exception:
             logs.error('The cytosine positions file does not exist.', exc_info=True)
             sys.exit(1)
 
@@ -120,10 +120,10 @@ def random_position_modification(modification_information, modification_level, m
         modification_level = 'custom'
     if seed is not None and modified_positions == None:
         random.seed(seed)
-        random_sample = set(random.sample(modification_list_by_context, required))
+        random_sample = set(random.sample(modification_list_by_context, int(required)))
     else:
         if modified_positions == None:
-            random_sample = set(random.sample(modification_list_by_context, required))
+            random_sample = set(random.sample(modification_list_by_context, int(required)))
     return modification_level, random_sample
 
 
@@ -133,16 +133,18 @@ def general_read_information_output(name, directory, read, modification_level, h
         orientation = '/1'
     else:
         orientation = '/2'
-    with open(path.join(directory, name + '_' + method + '_' + str(modification_level) + '_' + context + '_read_information.txt'), 'a') as reads_info_output:
-        line = csv.writer(reads_info_output, delimiter='\t', lineterminator='\n')
-        if header == True:
-            line.writerow(['Read ID', 'reference', 'start', 'end'])
-            line.writerow([read.qname + orientation, read.reference_name, read.reference_start,
-                                read.reference_start + read.query_length])
-        else:
-            line.writerow([read.qname + orientation, read.reference_name, read.reference_start,
-                                read.reference_start + read.query_length])
-
+    try:
+        with open(path.join(directory, name + '_' + method + '_' + str(modification_level) + '_' + context + '_read_information.txt'), 'a') as reads_info_output:
+            line = csv.writer(reads_info_output, delimiter='\t', lineterminator='\n')
+            if header == True:
+                line.writerow(['Read ID', 'reference', 'start', 'end'])
+                line.writerow([read.qname + orientation, read.reference_name, read.reference_start,
+                                    read.reference_start + read.query_length])
+            else:
+                line.writerow([read.qname + orientation, read.reference_name, read.reference_start,
+                                    read.reference_start + read.query_length])
+    except IOError:
+        logs.error('asTair cannot write to read information file.', exc_info=True)
 
 def modification_by_strand(read, library):
     """Outputs read positions that may be modified."""
@@ -169,15 +171,17 @@ def absolute_modification_information(modified_positions_data, modification_info
         else:
             context_list_length = len(set(keys for keys, vals in modification_information.items() if vals[1] == context))
         mod_level = round((len(modified_positions_data) / context_list_length) * 100, 3)
-        with open(path.join(directory, name + '_' + method + '_' + str(modification_level) + '_' + context + '_modified_positions_information.txt'), 'w',
-                  newline='') as reads_info_output:
-            line = csv.writer(reads_info_output, delimiter='\t', lineterminator='\n')
-            line.writerow(['__________________________________________________________________________________________________'])
-            line.writerow(['Absolute modified positions: ' + str(len(modified_positions_data)) + '   |   ' +
-                           'Percentage to all positions of the desired context: ' + str(mod_level) + ' %'])
-            line.writerow(['__________________________________________________________________________________________________'])
-            for row in modified_positions_data:
-                line.writerow(row)
+        try:
+            with open(path.join(directory, name + '_' + method + '_' + str(modification_level) + '_' + context + '_modified_positions_information.txt'), 'w') as reads_info_output:
+                line = csv.writer(reads_info_output, delimiter='\t', lineterminator='\n')
+                line.writerow(['__________________________________________________________________________________________________'])
+                line.writerow(['Absolute modified positions: ' + str(len(modified_positions_data)) + '   |   ' +
+                               'Percentage to all positions of the desired context: ' + str(mod_level) + ' %'])
+                line.writerow(['__________________________________________________________________________________________________'])
+                for row in modified_positions_data:
+                    line.writerow(row)
+        except IOError:
+            logs.error('asTair cannot write to modified positions summary file.', exc_info=True)
     else:
         pass
 
