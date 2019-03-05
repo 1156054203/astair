@@ -42,7 +42,7 @@ from DNA_sequences_operations import complementary
 @click.option('method', '--method', '-m',  required=False, default='mCtoT', type=click.Choice(['CtoT', 'mCtoT']), help='Specify sequencing method, possible options are CtoT (unmodified cytosines are converted to thymines, bisulfite sequencing-like) and mCtoT (modified cytosines are converted to thymines, TAPS-like).')
 @click.option('plot', '--plot', '-p', required=False, is_flag=True, help='Phred scores will be visualised and output as a pdf file. Requires installed matplotlib.')
 @click.option('colors', '--colors', '-c', default=['teal', 'gray', 'maroon'], type=list, required=False, help="List of color values used for visualistion of CpG, CHG and CHH modification levels per read, which are given as color1,color2,color3. Accepts valid matplotlib color names, RGB and RGBA hex strings and  single letters denoting color {'b', 'g', 'r', 'c', 'm', 'y', 'k', 'w'}. (Default 'teal','gray','maroon')")
-@click.option('N_threads', '--N_threads', '-t', default=10, required=True, help='The number of threads to spawn (the default value is 10).')
+@click.option('N_threads', '--N_threads', '-t', default=1, required=True, help='The number of threads to spawn (the default value is 1).')
 def Mbias_exec(input_file, directory, read_length, method, plot, colors, N_threads):
     Mbias_plotting(input_file, directory, read_length, method, plot, colors, N_threads)
 

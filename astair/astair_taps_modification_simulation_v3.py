@@ -21,7 +21,7 @@ from reference_context_search_triad import sequence_context_set_creation
 
 
 @click.command()
-@click.option('fasta_file', '--fasta_file', '-f', required=True, help='DNA sequence in fasta format used for aligning the sequencing reads and mpileup.')
+@click.option('reference', '--reference', '-f', required=True, help='Reference DNA sequence in FASTA format used for generation and modification the sequencing reads at desired contexts.')
 @click.option('read_length', '--read_length', '-l', type=int, required=True, help='Desired length of pair-end sequencing reads.')
 @click.option('input_file', '--input_file', '-i', required=True, help='Sequencing reads as a Bam file or fasta sequence to generate reads.')
 @click.option('simulation_input', '--simulation_input', '-si', type=click.Choice(['bam']), default='bam', required=False, help='Input file format according to the desired outcome. Bam files can be generated with other WGS simulators allowing for sequencing errors and read distributions or can be real-life sequencing data.')
@@ -38,14 +38,14 @@ from reference_context_search_triad import sequence_context_set_creation
 #@click.option('per_chromosome', '--per_chromosome', '-chr', default=None, type=str, help='When used, it modifies the chromosome given only. (Default None')
 @click.option('GC_bias', '--GC_bias', '-gc', default=0.3, required=True, type=float, help='The value of total GC levels in the read above which lower coverage will be observed in Ns and fasta modes. (Default 0.5)')
 @click.option('sequence_bias', '--sequence_bias', '-sb', default=0.1, required=True, type=float, help='The proportion of lower-case letters in the read string for the Ns and fasta modes that will decrease the chance of the read being output. (Default 0.1)')
-@click.option('N_threads', '--N_threads', '-t', default=10, type=int, required=True, help='The number of threads to spawn for the bam mode (the default value is 10).')
+@click.option('N_threads', '--N_threads', '-t', default=1, type=int, required=True, help='The number of threads to spawn for the bam mode (the default value is 1).')
 @click.option('directory', '--directory', '-d', required=True, type=str, help='Output directory to save files.')
 @click.option('seed', '--seed', '-s', type=int, required=False, help='An integer number to be used as a seed for the random generators to ensure replication.')
 
 
-def simulator_exec(fasta_file, read_length, input_file, method, library, simulation_input, modification_level,
+def simulator_exec(reference, read_length, input_file, method, library, simulation_input, modification_level,
                    modified_positions, coverage, context, region, directory, seed, user_defined_context, N_threads, GC_bias, sequence_bias, overwrite):
-    modification_simulator(fasta_file, read_length, input_file, method, library, simulation_input, modification_level,
+    modification_simulator(reference, read_length, input_file, method, library, simulation_input, modification_level,
               modified_positions, coverage, context, region, directory, seed, user_defined_context, N_threads, GC_bias, sequence_bias, overwrite)
 
 
@@ -59,10 +59,10 @@ logs = logging.getLogger(__name__)
 time_b = datetime.now()
 
 
-def cytosine_modification_lookup(fasta_file, context, user_defined_context, modified_positions, region):
+def cytosine_modification_lookup(reference, context, user_defined_context, modified_positions, region):
     """Finds all required cytosine contexts or takes positions from a tab-delimited file containing
      the list of positions to be modified."""
-    keys, fastas = fasta_splitting_by_sequence(fasta_file, None)
+    keys, fastas = fasta_splitting_by_sequence(reference, None)
     context_total_counts = defaultdict(int)
     if modified_positions is None:
         contexts, all_keys = sequence_context_set_creation(context, user_defined_context)
@@ -186,13 +186,13 @@ def absolute_modification_information(modified_positions_data, modification_info
         pass
 
 
-def bam_input_simulation(directory, name, modification_level, context, input_file, fasta_file, user_defined_context,
+def bam_input_simulation(directory, name, modification_level, context, input_file, reference, user_defined_context,
     modified_positions, library, seed, region, modified_positions_data, method, N_threads, header, overwrite):
     """Inserts modification information acording to method and context to a bam file."""
     if not os.path.isfile(path.join(directory, name + '_' + method + '_' + str(modification_level) + '_' + context + '.bam')) or overwrite is True:
         outbam = pysam.AlignmentFile(path.join(directory, name + '_' + method + '_' + str(modification_level) + '_' + context + ".bam"),
                                      "wb", template=bam_file_opener(input_file, None, N_threads), header=header)
-        modification_information = cytosine_modification_lookup(fasta_file, 'all', user_defined_context, modified_positions, region)
+        modification_information = cytosine_modification_lookup(reference, 'all', user_defined_context, modified_positions, region)
         modification_level, random_sample = random_position_modification(modification_information, modification_level,
                                                                          modified_positions, library, seed, context)
 
@@ -229,7 +229,7 @@ def bam_input_simulation(directory, name, modification_level, context, input_fil
         return modification_information
 
 
-def modification_simulator(fasta_file, read_length, input_file, method, library, simulation_input, modification_level,
+def modification_simulator(reference, read_length, input_file, method, library, simulation_input, modification_level,
                            modified_positions, coverage, context, region, directory, seed, user_defined_context, N_threads, GC_bias, sequence_bias, overwrite):
     "Assembles the whole modification simulator and runs per mode, method, library and context."
     header = True
@@ -243,7 +243,7 @@ def modification_simulator(fasta_file, read_length, input_file, method, library,
     if simulation_input == 'bam':
         try:
             modification_information = bam_input_simulation(directory, name, modification_level, context, input_file,
-            fasta_file, user_defined_context, modified_positions, library, seed, region, modified_positions_data, method, N_threads, header, overwrite)
+            reference, user_defined_context, modified_positions, library, seed, region, modified_positions_data, method, N_threads, header, overwrite)
             absolute_modification_information(modified_positions_data, modification_information, modified_positions,name,directory, modification_level, context, method)
             pysam.index(path.join(directory, name + '_' + method + '_' + str(modification_level) + '_' + context + ".bam"))
         except AttributeError:

@@ -63,19 +63,19 @@ shift
 
 case "$COMMAND" in
     align)
-        $PYTHON $SCRIPTPATH/astair_aligner_v3.py $@
+        $PYTHON $SCRIPTPATH/astair/astair_aligner_v3.py $@
         ;;
     call)
-        $PYTHON $SCRIPTPATH/astair_mod_caller_v3.py $@
+        $PYTHON $SCRIPTPATH/astair/astair_mod_caller_v3.py $@
         ;;
     simulate)
-        $PYTHON $SCRIPTPATH/astair_taps_modification_simulation_v3.py $@
+        $PYTHON $SCRIPTPATH/astair/astair_taps_modification_simulation_v3.py $@
         ;;
     mbias)
-        $PYTHON $SCRIPTPATH/astair_mbias_v3.py $@
+        $PYTHON $SCRIPTPATH/astair/astair_mbias_v3.py $@
         ;;
     phred)
-        $PYTHON $SCRIPTPATH/astair_phred_values_v3.py $@
+        $PYTHON $SCRIPTPATH/astair/astair_phred_values_v3.py $@
         ;;
     *)
         echo "ERROR: unknown command: $COMMAND" 1>&2
