@@ -1,13 +1,7 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <project version="4">
   <component name="ChangeListManager">
-    <list default="true" id="6a797b1f-38df-438b-b2e4-3690757c2ce0" name="Default Changelist" comment="">
-      <change beforePath="$PROJECT_DIR$/astair/astair_aligner_v3.py" beforeDir="false" afterPath="$PROJECT_DIR$/astair/astair_aligner_v3.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/astair/astair_mbias_v3.py" beforeDir="false" afterPath="$PROJECT_DIR$/astair/astair_mbias_v3.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/astair/astair_mod_caller_v3.py" beforeDir="false" afterPath="$PROJECT_DIR$/astair/astair_mod_caller_v3.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/astair/astair_taps_modification_simulation_v3.py" beforeDir="false" afterPath="$PROJECT_DIR$/astair/astair_taps_modification_simulation_v3.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/astair_" beforeDir="false" afterPath="$PROJECT_DIR$/astair_" afterDir="false" />
-    </list>
+    <list default="true" id="6a797b1f-38df-438b-b2e4-3690757c2ce0" name="Default Changelist" comment="" />
     <option name="EXCLUDED_CONVERTED_TO_IGNORED" value="true" />
     <option name="SHOW_DIALOG" value="false" />
     <option name="HIGHLIGHT_CONFLICTS" value="true" />
@@ -143,7 +137,7 @@
       </list>
     </option>
   </component>
-  <component name="ProjectFrameBounds" extendedState="7">
+  <component name="ProjectFrameBounds" extendedState="6">
     <option name="x" value="435" />
     <option name="y" value="8" />
     <option name="width" value="820" />
@@ -202,7 +196,7 @@
     <servers />
   </component>
   <component name="ToolWindowManager">
-    <frame x="0" y="0" width="1366" height="732" extended-state="6" />
+    <frame x="0" y="0" width="1366" height="732" extended-state="7" />
     <editor active="true" />
     <layout>
       <window_info content_ui="combo" id="Project" order="0" weight="0.24422933" />
