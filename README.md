@@ -132,27 +132,106 @@ astair_taps_modification_simulation_v3.py -i lambda.phage_test_sample.bam  -f la
 
 ```bash
 Usage: astair_aligner_v3.py [OPTIONS]
+
 Options:
-  -1, --fq1 TEXT                  First in pair (R1) sequencing reads file in
-                                  fastq.gz format  [required]
-  -2, --fq2 TEXT                  Second in pair (R2) sequencing reads file in
-                                  fastq.gz format  [required]
-  -f, --fasta_file TEXT           DNA sequence in fasta format used for
-                                  aligning the sequencing reads.  [required]
-  -bp, --bwa_path TEXT            The path to BWA.
+  -1, --fq1 TEXT                  First in pair (R1) sequencing
+                                  reads file in fastq.gz format
+                                  [required]
+  -2, --fq2 TEXT                  Second in pair (R2) sequencing
+                                  reads file in fastq.gz format
+                                  [required]
+  -f, --fasta_file TEXT           DNA sequence in fasta format used
+                                  for aligning the sequencing reads.
+                                  [required]
+  -bp, --bwa_path TEXT            The path to BWA for TAPS-like data
+                                  and to bwameth.py for bisulfite
+                                  sequencing.
   -sp, --samtools_path TEXT       The path to Samtools.
-  -d, --directory TEXT            Output directory to save files.  [required]
-  -m, --method [CtoT|CmtoT]       Specify sequencing method, possible options
-                                  are CtoT (unmodified cytosines are converted
-                                  to thymines, bisulfite sequencing-like) and
-                                  CmtoT (modified cytosines are converted to
-                                  thymines, TAPS-like).
+  -d, --directory TEXT            Output directory to save files.
+                                  [required]
+  -m, --method [CtoT|mCtoT]       Specify sequencing method,
+                                  possible options are CtoT
+                                  (unmodified cytosines are
+                                  converted to thymines, bisulfite
+                                  sequencing-like) and mCtoT
+                                  (modified cytosines are converted
+                                  to thymines, TAPS-like).
+  -o, --output [cram|bam]         Specify output format, possible
+                                  options are cram and bam. The
+                                  default is cram.
   -mq, --minimum_mapping_quality INTEGER
-                                  Set the minimum mapping quality for a read
-                                  to be output to file (Default >=1).
-  -u, --keep_unmapped             Outputs the unmapped reads (Default false).
-  -t, --N_threads INTEGER         The number of threads to spawn (the default
-                                  value is 10).  [required]
+                                  Set the minimum mapping quality
+                                  for a read to be output to file
+                                  (Default >=1).
+  -u, --keep_unmapped             Outputs the unmapped reads
+                                  (Default false).
+  -t, --N_threads INTEGER         The number of threads to spawn
+                                  (the default value is 10).
+                                  [required]
+  -k, --minimum_seed_length INTEGER
+                                  The minimum seed length used for
+                                  alignment, see BWA manual (the
+                                  default value is 19).
+  -w, --band_width INTEGER        The band width for banded
+                                  alignment, see BWA manual (the
+                                  default value is 100).
+  -D, --dropoff INTEGER           The off-diagonal X-dropoff, see
+                                  BWA manual (the default value is
+                                  100).
+  -r, --internal_seeds FLOAT      Looks for internal seeds inside a
+                                  seed longer than
+                                  minimum_seed_length *
+                                  internal_seeds, see BWA manual
+                                  (the default value is 1.5).
+  -y, --reseeding_occurence INTEGER
+                                  The seed occurrence for the 3rd
+                                  round seeding, see BWA manual (the
+                                  default value is 20).
+  -c, --N_skip_seeds INTEGER      Skips seeds with more than the
+                                  given seed occurrences, see BWA
+                                  manual (the default value is 500).
+  -dc, --drop_chains FLOAT        Drops chains shorter than the
+                                  specified fraction of the longest
+                                  overlapping chain, see BWA manual
+                                  (the default value is 0.5).
+  -W, --discard_chains INTEGER    Discards a chain if seeded bases
+                                  shorter than the specified value,
+                                  see BWA manual (the default value
+                                  is 0).
+  -mr, --N_mate_rescues INTEGER   Performs at most the specified
+                                  rounds of mate rescues for each
+                                  read, see BWA manual (the default
+                                  value is 50).
+  -s, --skip_mate_rescue          Skips mate rescue, see BWA manual.
+  -P, --skip_pairing              Skips read pairing, but does
+                                  rescue mates unless mate_skipping
+                                  is also performed, see BWA manual.
+  -A, --match_score INTEGER       The score for a sequence match,
+                                  which scales the remaing scoring
+                                  options, see BWA manual(the
+                                  default value is 1).
+  -B, --mismatch_penalty INTEGER  The penalty for a mismatch, see
+                                  BWA manual (the default value is
+                                  4).
+  -O, --gap_open_penalty TEXT     The gap open penalties for
+                                  deletions and insertions, see BWA
+                                  manual (the default value is 6,6).
+  -E, --gap_extension_penalty TEXT
+                                  The gap extension penalty with a
+                                  cost size calculated as {-O} +
+                                  {-E}*k, see BWA manual (the
+                                  default value is 1,1).
+  -L, --end_clipping_penalty TEXT
+                                  The penalty for 5-prime- and 3
+                                  -prime-end clipping, see BWA
+                                  manual (the default value is 5,5).
+  -U, --unpaired_penalty INTEGER  The penalty for an unpaired read
+                                  pair, see BWA manual (the default
+                                  value is 17).
+  -x, --read_type [null|pacbio|ont2d|intractg]
+                                  Changes multiple parameters unless
+                                  overridden, see BWA manual (the
+                                  default value is None).
   --help                          Show this message and exit.
 ```
 
@@ -161,38 +240,84 @@ Options:
 Usage: astair_mod_caller_v3.py [OPTIONS]
 
 Options:
-  -i, --input_file TEXT           BAM format file containing sequencing reads.
-                                  [required]
-  -f, --fasta_file TEXT           DNA sequence in fasta format used for
-                                  aligning the sequencing reads and mpileup.
-                                  [required]
-  -z, --zero_coverage             When set to True, outputs positions not
-                                  covered in the bam file. Uncovering zero
-                                  coverage positions takes longer time than
+  -i, --input_file TEXT           BAM format file containing
+                                  sequencing reads.  [required]
+  -f, --fasta_file TEXT           DNA sequence in fasta format used
+                                  for aligning the sequencing reads
+                                  and mpileup.  [required]
+  -z, --zero_coverage             When set to True, outputs
+                                  positions not covered in the bam
+                                  file. Uncovering zero coverage
+                                  positions takes longer time than
                                   using the default option.
   -co, --context [all|CpG|CHG|CHH]
-                                  Explains which cytosine sequence contexts
-                                  are to be expected in the output file.
-                                  Default behaviour is all, which includes
-                                  CpG, CHG, CHH contexts and their sub-
-                                  contexts for downstream filtering and
+                                  Explains which cytosine sequence
+                                  contexts are to be expected in the
+                                  output file. Default behaviour is
+                                  all, which includes CpG, CHG, CHH
+                                  contexts and their sub-contexts
+                                  for downstream filtering and
                                   analysis.
   -uc, --user_defined_context TEXT
-                                  At least two-letter contexts other than CG,
-                                  CHH and CHG to be evaluated, will return the
-                                  genomic coordinates for the first cytosine
+                                  At least two-letter contexts other
+                                  than CG, CHH and CHG to be
+                                  evaluated, will return the genomic
+                                  coordinates for the first cytosine
                                   in the string.
-  -sc, --skip_clip_overlap        Skipping the random removal of overlapping
-                                  bases between paired-end reads. Not
-                                  recommended for paired-end libraries, unless
-                                  the overlaps are removed prior to calling.
+  -m, --method [CtoT|mCtoT]       Specify sequencing method,
+                                  possible options are CtoT
+                                  (unmodified cytosines are
+                                  converted to thymines, bisulfite
+                                  sequencing-like) and mCtoT
+                                  (modified cytosines are converted
+                                  to thymines, TAPS-like).
+  -sc, --skip_clip_overlap BOOLEAN
+                                  Skipping the random removal of
+                                  overlapping bases between paired-
+                                  end reads. Not recommended for
+                                  paired-end libraries, unless the
+                                  overlaps are removed prior to
+                                  calling. (Default False)
   -bq, --minimum_base_quality INTEGER
-                                  Set the minimum base quality for a read base
-                                  to be used in the pileup (Default 20).
-  -chr, --per_chromosome TEXT     When used, it calculates the modification
-                                  rates only per the chromosome given.
-                                  (Default None
-  -d, --directory TEXT            Output directory to save files.  [required]
+                                  Set the minimum base quality for a
+                                  read base to be used in the pileup
+                                  (Default 20).
+  -mq, --minimum_mapping_quality INTEGER
+                                  Set the minimum mapping quality
+                                  for a read to be used in the
+                                  pileup (Default 0).
+  -amq, --adjust_capq_threshold INTEGER
+                                  Used to adjust the mapping quality
+                                  with default 0 for no adjustment
+                                  and a recommended value for
+                                  adjustment 50. (Default 0).
+  -mm, --mark_matches BOOLEAN     Output bases matching the
+                                  reference per strand (Default
+                                  True).
+  -me, --mark_ends BOOLEAN        Marks head and tail bases in the
+                                  read (Default True).
+  -ai, --add_indels BOOLEAN       Adds inserted bases and Ns for
+                                  base skipped from the reference
+                                  (Default True).
+  -rbq, --redo_baq BOOLEAN        Re-calculates per-Base Alignment
+                                  Qualities ignoring existing base
+                                  qualities (Default False).
+  -cbq, --compute_baq BOOLEAN     Performs re-alignment computing of
+                                  per-Base Alignment Qualities
+                                  (Default True).
+  -io, --ignore_orphans BOOLEAN   Ignore reads not in proper pairs
+                                  (Default True).
+  -md, --max_depth INTEGER        Set the maximum read depth for the
+                                  pileup, maximum value 8000
+                                  (Default 250).
+  -chr, --per_chromosome TEXT     When used, it calculates the
+                                  modification rates only per the
+                                  chromosome given. (Default None
+  -t, --N_threads INTEGER         The number of threads to spawn
+                                  (the default value is 10).
+                                  [required]
+  -d, --directory TEXT            Output directory to save files.
+                                  [required]
   --help                          Show this message and exit.
 ```
 
@@ -200,30 +325,36 @@ Options:
 Usage: astair_phred_values_v3.py [OPTIONS]
 
 Options:
-  -1, --fq1 TEXT                  First in pair (R1) sequencing reads file in
-                                  fastq.gz format  [required]
-  -2, --fq2 TEXT                  Second in pair (R2) sequencing reads file in
-                                  fastq.gz format  [required]
+  -1, --fq1 TEXT                  First in pair (R1) sequencing
+                                  reads file in fastq.gz format
+                                  [required]
+  -2, --fq2 TEXT                  Second in pair (R2) sequencing
+                                  reads file in fastq.gz format
+                                  [required]
   -cm, --calculation_mode [means|absolute]
-                                  Gives the mode of computation used for the
-                                  Phred scores summary, where means runs
-                                  faster. (Default is means)
-  -d, --directory TEXT            Output directory to save files.  [required]
-  -s, --sample_size INTEGER       The number of reads to sample for the
-                                  analysis. (Default 10 000 000)
-  -p, --plot                      Phred scores will be visualised and output
-                                  as a pdf file. Requires installed
-                                  matplotlib.
-  -q, --minimum_score INTEGER     Minimum Phred score used for visualisation
-                                  only. (Default 15)
-  -c, --colors LIST               List of color values used for visualistion
-                                  of A, C, G, T, they are given as
-                                  color1,color2,color3,color4. Accepts valid
-                                  matplotlib color names, RGB and RGBA hex
-                                  strings and  single letters denoting color
-                                  {'b', 'g', 'r', 'c', 'm', 'y', 'k', 'w'}.
-                                  (Default
-                                  skyblue,mediumaquamarine,khaki,lightcoral)
+                                  Gives the mode of computation used
+                                  for the Phred scores summary,
+                                  where means runs faster. (Default
+                                  is means)
+  -d, --directory TEXT            Output directory to save files.
+                                  [required]
+  -s, --sample_size INTEGER       The number of reads to sample for
+                                  the analysis. (Default 10 000 000)
+  -p, --plot                      Phred scores will be visualised
+                                  and output as a pdf file. Requires
+                                  installed matplotlib.
+  -q, --minimum_score INTEGER     Minimum Phred score used for
+                                  visualisation only. (Default 15)
+  -c, --colors LIST               List of color values used for
+                                  visualistion of A, C, G, T, they
+                                  are given as
+                                  color1,color2,color3,color4.
+                                  Accepts valid matplotlib color
+                                  names, RGB and RGBA hex strings
+                                  and  single letters denoting color
+                                  {'b', 'g', 'r', 'c', 'm', 'y',
+                                  'k', 'w'}. (Default skyblue,medium
+                                  aquamarine,khaki,lightcoral)
   --help                          Show this message and exit.
 ```
 
@@ -231,87 +362,124 @@ Options:
 Usage: astair_mbias_v3.py [OPTIONS]
 
 Options:
-  -i, --input_file TEXT      BAM format file containing sequencing reads.
+  -i, --input_file TEXT      BAM format file containing sequencing
+                             reads.  [required]
+  -d, --directory TEXT       Output directory to save files.
                              [required]
-  -d, --directory TEXT       Output directory to save files.  [required]
-  -l, --read_length INTEGER  The read length is needed to calculate the
-                             M-bias.  [required]
-  -m, --method [CtoT|CmtoT]  Specify sequencing method, possible options are
-                             CtoT (unmodified cytosines are converted to
-                             thymines, bisulfite sequencing-like) and CmtoT
-                             (modified cytosines are converted to thymines,
+  -l, --read_length INTEGER  The read length is needed to calculate
+                             the M-bias.  [required]
+  -m, --method [CtoT|mCtoT]  Specify sequencing method, possible
+                             options are CtoT (unmodified cytosines
+                             are converted to thymines, bisulfite
+                             sequencing-like) and mCtoT (modified
+                             cytosines are converted to thymines,
                              TAPS-like).
-  -p, --plot                 Phred scores will be visualised and output as a
-                             pdf file. Requires installed matplotlib.
-  -c, --colors LIST          List of color values used for visualistion of
-                             CpG, CHG and CHH modification levels per read,
-                             which are given as color1,color2,color3. Accepts
-                             valid matplotlib color names, RGB and RGBA hex
-                             strings and  single letters denoting color {'b',
-                             'g', 'r', 'c', 'm', 'y', 'k', 'w'}. (Default
+  -p, --plot                 Phred scores will be visualised and
+                             output as a pdf file. Requires
+                             installed matplotlib.
+  -c, --colors LIST          List of color values used for
+                             visualistion of CpG, CHG and CHH
+                             modification levels per read, which are
+                             given as color1,color2,color3. Accepts
+                             valid matplotlib color names, RGB and
+                             RGBA hex strings and  single letters
+                             denoting color {'b', 'g', 'r', 'c',
+                             'm', 'y', 'k', 'w'}. (Default
                              'teal','gray','maroon')
+  -t, --N_threads INTEGER    The number of threads to spawn (the
+                             default value is 10).  [required]
   --help                     Show this message and exit.
-
 ```
 
 ```bash
-Usage: astair_taps_modification_simulation_v3.py [OPTIONS]
+Usage: astair_taps_modification_simulation_v3.py 
+           [OPTIONS]
 
 Options:
-  -f, --fasta_file TEXT           DNA sequence in fasta format used for
-                                  aligning the sequencing reads and mpileup.
+  -f, --fasta_file TEXT           DNA sequence in fasta format used
+                                  for aligning the sequencing reads
+                                  and mpileup.  [required]
+  -l, --read_length INTEGER       Desired length of pair-end
+                                  sequencing reads.  [required]
+  -i, --input_file TEXT           Sequencing reads as a Bam file or
+                                  fasta sequence to generate reads.
                                   [required]
-  -l, --read_length INTEGER       Desired length of pair-end sequencing reads.
-                                  [required]
-  -i, --input_file TEXT           Sequencing reads as a Bam file or fasta
-                                  sequence to generate reads.  [required]
-  -si, --simulation_input [bam|fasta|Ns]
-                                  Input file format according to the desired
-                                  outcome. Bam files can be generated with
-                                  other WGS simulators allowing for sequencing
-                                  errors and read distributions or can be
-                                  real-life sequencing data; fasta can be used
-                                  to generate simple simulated data where only
-                                  read positions and modification positions
-                                  are known; Ns is of use to generate
-                                  statistically possible sequences with
-                                  changes in N nucleotides at certain
-                                  positions.
-  -m, --method [CtoT|CmtoT]       Specify sequencing method, possible options
-                                  are CtoT (unmodified cytosines are converted
-                                  to thymines, bisulfite sequencing-like) and
-                                  CmtoT (modified cytosines are converted to
-                                  thymines, TAPS-like).
+  -si, --simulation_input [bam]   Input file format according to the
+                                  desired outcome. Bam files can be
+                                  generated with other WGS
+                                  simulators allowing for sequencing
+                                  errors and read distributions or
+                                  can be real-life sequencing data.
+  -m, --method [CtoT|mCtoT]       Specify sequencing method,
+                                  possible options are CtoT
+                                  (unmodified cytosines are
+                                  converted to thymines, bisulfite
+                                  sequencing-like) and mCtoT
+                                  (modified cytosines are converted
+                                  to thymines, TAPS-like). (Default
+                                  mCtoT)
   -ml, --modification_level INTEGER
-                                  Desired modification level; can take any
-                                  value between 0 and 100.
-  -lb, --library [directional|ptat]
-                                  Provide the correct library construction
-                                  method.
-  -mp, --modified_positions TEXT  Provide a tab-delimited list of positions to
-                                  be modified. By default the simulator
-                                  randomly modifies certain positions. Please
-                                  use seed for replication if no list is
-                                  given.
+                                  Desired modification level; can
+                                  take any value between 0 and 100.
+  -lb, --library [directional]    Provide the correct library
+                                  construction method. NB: Non-
+                                  directional methods under
+                                  development.
+  -mp, --modified_positions TEXT  Provide a tab-delimited list of
+                                  positions to be modified. By
+                                  default the simulator randomly
+                                  modifies certain positions. Please
+                                  use seed for replication if no
+                                  list is given.
   -co, --context [all|CpG|CHG|CHH]
-                                  Explains which cytosine sequence contexts
-                                  are to be modified in the output file.
-                                  Default behaviour is all, which modifies
-                                  positions in CpG, CHG, CHH contexts.
+                                  Explains which cytosine sequence
+                                  contexts are to be modified in the
+                                  output file. Default behaviour is
+                                  all, which modifies positions in
+                                  CpG, CHG, CHH contexts. (Default
+                                  all)
   -uc, --user_defined_context TEXT
-                                  At least two-letter contexts other than CG,
-                                  CHH and CHG to be evaluated, will return the
-                                  genomic coordinates for the first cytosine
+                                  At least two-letter contexts other
+                                  than CG, CHH and CHG to be
+                                  evaluated, will return the genomic
+                                  coordinates for the first cytosine
                                   in the string.
-  -cv, --coverage TEXT            Desired depth of sequencing coverage.
+  -cv, --coverage INTEGER         Desired depth of sequencing
+                                  coverage.
   -r, --region <TEXT INTEGER INTEGER>...
-                                  The one-based genomic coordinates of the
-                                  specific region of interest given in the
-                                  form chromosome, start position, end
-                                  position, e.g. chr1 100 2000.
-  -d, --directory TEXT            Output directory to save files.  [required]
-  -s, --seed INTEGER              An integer number to be used as a seed for
-                                  the random generators to ensure replication.
+                                  The one-based genomic coordinates
+                                  of the specific region of interest
+                                  given in the form chromosome,
+                                  start position, end position, e.g.
+                                  chr1 100 2000.
+  -uc, --user_defined_context TEXT
+                                  At least two-letter contexts other
+                                  than CG, CHH and CHG to be
+                                  evaluated, will return the genomic
+                                  coordinates for the first cytosine
+                                  in the string.
+  -ov, --overwrite BOOLEAN        Indicates whether existing output
+                                  files with matching names will be
+                                  overwritten. (Default False)
+  -gc, --GC_bias FLOAT            The value of total GC levels in
+                                  the read above which lower
+                                  coverage will be observed in Ns
+                                  and fasta modes. (Default 0.5)
+                                  [required]
+  -sb, --sequence_bias FLOAT      The proportion of lower-case
+                                  letters in the read string for the
+                                  Ns and fasta modes that will
+                                  decrease the chance of the read
+                                  being output. (Default 0.1)
+                                  [required]
+  -t, --N_threads INTEGER         The number of threads to spawn for
+                                  the bam mode (the default value is
+                                  10).  [required]
+  -d, --directory TEXT            Output directory to save files.
+                                  [required]
+  -s, --seed INTEGER              An integer number to be used as a
+                                  seed for the random generators to
+                                  ensure replication.
   --help                          Show this message and exit.
 ```
 
