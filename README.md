@@ -55,7 +55,7 @@ python setup.py install --user
 ```
 For python 3 (>=3.5):
 ```bash
-python setup.py install --user
+python3 setup.py install --user
 ```
 #### Using asTair without installation
 
@@ -100,7 +100,7 @@ export PATH=$PATH:/dir/to/asTair
 
 ### Downloading the test data
 
-All files needed to starting testing asTair can be downloaded from Zenodo through our bash wrapper download_test_data.sh. 
+All files needed to starting testing asTair can be downloaded from Zenodo through our bash wrapper `download_test_data.sh`. 
 
 Another classic option is:
 
