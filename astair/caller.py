@@ -329,7 +329,7 @@ def cytosine_modification_finder(input_file, reference, context, zero_coverage, 
         time_e = datetime.now()
         logs.info("asTair modification finder finished running. {} seconds".format((time_e - time_b).total_seconds()))
     else:
-        logs.error('Mods file with this name exists. Please rename before rerunning.', exc_info=True)
+        logs.error('Mods file with this name exists. Please rename before rerunning.')
         sys.exit(1)
 
 

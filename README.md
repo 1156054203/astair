@@ -113,19 +113,38 @@ wget -nc -np -nd -A bam,bam.bai,fa,fa.fai,fq.gz  -P path/to/test_data -r https:/
 _Let us have an example paired-end sequencing data from step 1 called `lambda.phage_test_sample_R1.fastq.gz` and `lambda.phage_test_sample_R2.fastq.gz` to guide us through the process._
 
 1 - Get your data hot from the sequencing center.  
-2 - Choose genomic aligner of preference. Ours was  `bwa mem`, which we wrapped in `aligner.py`, for which we currently require samtools.
+2 - Choose genomic aligner of preference. Ours was  `__bwa mem__`, which we wrapped in `aligner.py`, for which we currently require `__samtools__`.
 
 ```bash
 aligner.py -bp /dir/to/bwa -sp /dir/to/samtools -f lambda.phage.fa -1 lambda.phage_test_sample_R1.fastq.gz -2 lambda.phage_test_sample_R2.fastq.gz -d /output/directory/
 ```
-3 - Sort and index your cram/bam files.
+3 - Sort and index your cram/bam files (done on step two if the aligner.py is used).
 
-4 - Summon `caller.py` for the modifcation calling. The current version does not require splitting by chromosomes, and can give both at least 1x covered positions only (default mode), or 0x covered and above (`--zero coverage` option). Splitting by cytosine context and/or chromosome prior to the modification calling might be desirable for larger files.  
+4 - Summon `caller.py` `--method mCtoT` (default) for the modifcation calling. The current version does not require splitting by chromosomes, and can give both at least 1x covered positions only (default mode), or 0x covered and above (`--zero coverage` option). Splitting by cytosine context and/or chromosome prior to the modification calling might be desirable for larger files.  
 
 ```bash
-caller.py -i lambda.phage_test_sample.bam (cram) -f lambda_phage.fa -co CpG -sc -bq 13 -d /output/directory/
+caller.py -i lambda.phage_test_sample.bam (cram) -f lambda_phage.fa -co CpG -sc False -bq 13 -d /output/directory/
 ```
   
+## Analysis of WGBS  or other unmodified cytosine to thymine conversion methods (CtoT) data 
+
+_The analysis pipeline for bisulfie sequencing data does follows the same steps as TAPS data analysis, but requires different options._
+
+1 - Get your data hot from the sequencing center.  
+2 - Choose genomic aligner of preference. Ours was  `__bwa-meth.py__`, which we wrapped in `aligner.py`, for which we currently require `__samtools__` and setting `--method CtoT`.
+
+```bash
+aligner.py -bp /dir/to/bwa-meth.py -sp /dir/to/samtools -f lambda.phage.fa -1 lambda.phage_test_sample_R1.fastq.gz -2 lambda.phage_test_sample_R2.fastq.gz --method CtoT -d /output/directory/
+```
+3 - Sort and index your cram/bam files (done on step two if the aligner.py is used).
+
+4 - Summon `caller.py` `--method CtoT` for the modifcation calling. The current version does not require splitting by chromosomes, and can give both at least 1x covered positions only (default mode), or 0x covered and above (`--zero coverage` option). Splitting by cytosine context and/or chromosome prior to the modification calling might be desirable for larger files.  
+
+```bash
+caller.py -i lambda.phage_test_sample.bam (cram) -f lambda_phage.fa --method CtoT -co CpG -sc False -bq 13 -d /output/directory/
+```
+  
+
 
 ## Recommendations and extras
 
@@ -139,7 +158,7 @@ caller.py -i lambda.phage_test_sample.bam (cram) -f lambda_phage.fa -co CpG -sc 
 clipOverlap --in lambda.phage_test_sample.bam --out lambda.phage_test_sample_clipped.bam
 ```
 
-4 - Some more scripts can give your fuller information about the sequencing calling. Currently, in this category are `phred.py` that outputs the average quality per read (if available) for each of the four bases T, C, A, G, and `mbias.py` that gives modification bias along the reads in tabular format and as an image. Another script that might be helpful is `simulator.py` that enables modified data simulation.  
+4 - Some more scripts can give your fuller information about the sequencing calling. Currently, in this category are `phred.py` that outputs the average quality per read (if available) for each of the four bases T, C, A, G, and `mbias.py` that gives modification bias along the reads in tabular format and as an image. Another script that might be helpful is `simulator.py` that enables modified data simulation. For visual output from mbias.py and phred.py, installation of __matplotlib__ i required.  
 
 4.1
 

@@ -2,10 +2,15 @@
 #-*- coding: utf-8 -*-
 
 from __future__ import print_function
+import click
 
+@click.command()
+@click.version_option(3.0)
 def astair():
     print(
-    """Program: asTair (tools for processing cytosine modification sequencing data)
+    """
+    asTair (tools for processing cytosine modification sequencing data)
+   
     Version: 3.0
 
     Usage: Command [command specific options/arguments]
@@ -28,6 +33,6 @@ def astair():
     asTair was written by Gergana V. Velikova and Benjamin Schuster-Boeckler.
     This code is made available under the GNU General Public License, see 
     LICENSE.txt for more details.""")
-    
+
 if __name__ == "__main__":
-   astair()
+    astair()

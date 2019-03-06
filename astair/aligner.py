@@ -3,6 +3,7 @@
 
 import os
 import re
+import sys
 import pdb
 import click
 import logging
@@ -126,18 +127,23 @@ def run_alignment(fq1, fq2, reference, bwa_path, samtools_path, directory, metho
                  internal_seeds, reseeding_occurence, N_skip_seeds, drop_chains, discard_chains, N_mate_rescues, skip_mate_rescue, skip_pairing, match_score, mismatch_penalty,
                  gap_open_penalty, gap_extension_penalty, end_clipping_penalty, unpaired_penalty, read_type,
                    reference, fq1, fq2, use_samtools, output_f, reference, minimum_mapping_quality,
-                   aligned_string, output_format, use_samtools, N_threads, output_format, os.path.join(directory + name + "." + output_format.lower()))
+                   aligned_string, output_format, use_samtools, N_threads, output_format, os.path.join(directory + name + '_' + method + "." + output_format.lower()))
     else:
         alignment_command = 'python2 {} -t {} --reference {} {} {} | {} view {} -T {} -q {} {} -O {} | {} sort -@ {} -O {} > {}'.\
             format(use_bwa, N_threads, reference, fq1, fq2, use_samtools, output_f, reference, minimum_mapping_quality,
-                   aligned_string, output_format, use_samtools, N_threads, output_format, os.path.join(directory + name + "." + output_format.lower()))
+                   aligned_string, output_format, use_samtools, N_threads, output_format, os.path.join(directory + name + '_' + method + "." + output_format.lower()))
     try:
-        align = subprocess.Popen(alignment_command, shell=True)
-        exit_code = align.wait()
-        if exit_code == 0:
-            indexing_command = '{} index {}'.format(use_samtools, os.path.join(directory + name + "." + output_format.lower()))
-            index = subprocess.Popen(indexing_command, shell=True)
-            index.wait()
+        if os.path.isfile(os.path.join(directory + name + '_' + method + "." + output_format.lower())):
+            logs.error('The output files will not be overwritten. Please rename the input or the existing output files before rerunning if the input is different.',
+                exc_info=True)
+            sys.exit(1)
+        else:
+            align = subprocess.Popen(alignment_command, shell=True)
+            exit_code = align.wait()
+            if exit_code == 0:
+                indexing_command = '{} index {}'.format(use_samtools, os.path.join(directory + name + "." + output_format.lower()))
+                index = subprocess.Popen(indexing_command, shell=True)
+                index.wait()
         time_e = datetime.now()
         logs.info("asTair genome aligner finished running. {} seconds".format((time_e - time_b).total_seconds()))
     except IOError:

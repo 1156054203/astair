@@ -15,12 +15,13 @@ setup(
     extras_require={'plot':  ["matplotlib"],},
     test_suite='tests',
     scripts=['./astair/safe_division.py', './astair/bam_file_parser.py', './astair/simple_fasta_parser.py', './astair/DNA_sequences_operations.py', './astair/context_search.py', './astair/context_search.py', './astair/statistics_summary.py'],
-    python_requires='>2.7, >=3.5',
+    python_requires='>=2.7.*, >=3.5.*',
     author="Gergana V. Velikova and Benjamin Schuster-Boeckler",
     author_email="gergana_velikova@yahoo.com",
     description="A tool for the analysis of bisulfite-free and base-resolution sequencing data generated with TET Assisted Pyridine borane Sequencing (TAPS), or other modified cytosine to thymine conversion methods (mCtoT). It also has some features for bisulfite sequencing data (unmodified cytosine to thymine conversion methods, CtoT).",            long_description=long_description,
     long_description_content_type='text/markdown',
     license="GPLv3",
+    package_data={'download_test_data.sh': ['*.sh']},
     entry_points={
         'console_scripts':
         ['astair_call=astair.caller:modification_finder_exec',

@@ -14,8 +14,6 @@ import pkg_resources
 from threading import Thread
 from datetime import datetime
 
-
-
 try:
     try:
         packages = ["%s" % pac.key for pac in pkg_resources.working_set]
@@ -43,6 +41,7 @@ try:
 except Exception:
     raise Exception("Matplotlib was not found, visualisation output will not be supported.")
     pass
+
 
 if sys.version[0] == '3':
     from queue import Queue as Queue

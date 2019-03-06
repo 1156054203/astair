@@ -46,7 +46,7 @@ def fasta_splitting_by_sequence(fasta_file, per_chromosome):
             elif re.match(r".*(?=\n)", fasta_sequence):
                 keys, sequences = fasta_operator("\n", fasta_sequence, per_chromosome)
             else:
-                logs.error('The new line symbols in the presented fasta file do not match expected use cases. Please, change them to \n.', exc_info=True)
+                logs.error('The new line symbols in the presented fasta file do not match expected use cases. Please, change them to \n.')
         if per_chromosome == None:
             for i in range(0, len(keys)):
                 fastas[keys[i]] = sequences[i]
