@@ -1,4 +1,5 @@
 #!/usr/bin/env python
+#-*- coding: utf-8 -*-
 
 from __future__ import print_function
 
@@ -52,10 +53,8 @@ from reference_context_search_triad import context_sequence_search
 @click.option('per_chromosome', '--per_chromosome', '-chr', default=None, type=str, help='When used, it calculates the modification rates only per the chromosome given. (Default None')
 @click.option('N_threads', '--N_threads', '-t', default=1, required=True, help='The number of threads to spawn (the default value is 1).')
 @click.option('directory', '--directory', '-d', required=True, type=str, help='Output directory to save files.')
-def modification_finder_exec(input_file, reference, context, zero_coverage, skip_clip_overlap, minimum_base_quality, user_defined_context, method, minimum_mapping_quality, adjust_acapq_threshold,
-                             mark_matches, mark_ends, add_indels, redo_baq, compute_baq, ignore_orphans, max_depth,per_chromosome, N_threads, directory):
-        cytosine_modification_finder(input_file, reference, context, zero_coverage, skip_clip_overlap, minimum_base_quality, user_defined_context, method, minimum_mapping_quality, adjust_acapq_threshold,
-                                     mark_matches, mark_ends, add_indels, redo_baq, compute_baq, ignore_orphans, max_depth, per_chromosome, N_threads, directory)
+def modification_finder_exec(input_file, reference, context, zero_coverage, skip_clip_overlap, minimum_base_quality, user_defined_context, method, minimum_mapping_quality, adjust_acapq_threshold,mark_matches, mark_ends, add_indels, redo_baq, compute_baq, ignore_orphans, max_depth,per_chromosome, N_threads, directory):
+        cytosine_modification_finder(input_file, reference, context, zero_coverage, skip_clip_overlap, minimum_base_quality, user_defined_context, method, minimum_mapping_quality, adjust_acapq_threshold,mark_matches, mark_ends, add_indels, redo_baq, compute_baq, ignore_orphans, max_depth, per_chromosome, N_threads, directory)
 
 
 warnings.simplefilter(action='ignore', category=FutureWarning)

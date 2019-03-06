@@ -1,4 +1,5 @@
 #!/usr/bin/env python
+#-*- coding: utf-8 -*-
 
 import re
 import sys
@@ -9,6 +10,7 @@ import click
 import logging
 import warnings
 from os import path
+import pkg_resources
 from math import ceil
 from datetime import datetime
 
@@ -19,16 +21,34 @@ elif sys.version[0] == '2':
 else:
     raise Exception("This is not the python we're looking for (version {})".format(sys.version[0]))
 
-try:
-    import matplotlib as mplot
-    mplot.use('Agg')
-    import matplotlib.pyplot as pyp
-    import matplotlib.ticker as ticker
-    pyp.style.use('seaborn-whitegrid')
-    pyp.ioff()
-except ImportError:
-    raise Exception("Matplotlib was not found, visualisation output will not be supported.")
 
+try:
+    try:
+        packages = ["%s" % pac.key for pac in pkg_resources.working_set]
+        if 'matplotlib' in packages or 'Matplotlib' in packages:
+            import matplotlib as mplot
+            mplot.use('Agg')
+            import matplotlib.pyplot as pyp
+            import matplotlib.ticker as ticker
+            pyp.style.use('seaborn-whitegrid')
+            pyp.ioff()
+        else:
+            pass
+    except Exception:
+        raise Exception("Pkg_resources could not help, still looking for Matplotlib.")
+        try:
+            import matplotlib as mplot
+            mplot.use('Agg')
+            import matplotlib.pyplot as pyp
+            import matplotlib.ticker as ticker
+            pyp.style.use('seaborn-whitegrid')
+            pyp.ioff()
+        except Exception:
+            raise Exception("Matplotlib was not found when trying to import it directly.")
+            pass
+except Exception:
+    raise Exception("Matplotlib was not found, visualisation output will not be supported.")
+    pass
 
 from safe_division import non_zero_division
 from bam_file_parser import bam_file_opener

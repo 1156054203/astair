@@ -5,7 +5,24 @@ Contents:
 
 [TOC]
 
-### Creating a python virtual environment 
+## Installation
+
+### asTair installation through pip
+
+NOT uploaded to PyPI yet
+
+
+### asTair installation through direct download of the repository
+
+```bash
+wget -O astair.zip https://bitbucket.org/bsblabludwig/astair/get/4918e890cd56.zip
+```
+
+```bash
+curl -o astair.zip https://bitbucket.org/bsblabludwig/astair/get/4918e890cd56.zip
+```
+
+#### Creating a python virtual environment 
 
 Using python virtualenv and creating an environment folder for your project:
 
@@ -30,7 +47,7 @@ To use the python environment you can add it to the path or use it directly:
 export PATH=$PATH:/path/to/environment/your_project_name/bin/python(2 or 3)
 ```
 
-### Installation of dependencies with _pip_
+#### Installation of dependencies with _pip_
 For python 2.7:
 ```bash
 pip install -r requirements.txt
@@ -41,7 +58,7 @@ For python 3 (>=3.5):
 pip3 install -r requirements.txt
 ```
 
-### Creating a conda virtual environment and installing requirements
+#### Creating a conda virtual environment and installing requirements
 
 For python 2.7:
 ```bash
@@ -63,8 +80,7 @@ Finally, add the the directory of the conda virual environment to the path:
 export PATH=$PATH:/path/to/conda/environment/your_project_name/bin/
 ```
 
-
-### Add asTair to the path and begin the analysis
+#### Add asTair to the path and begin the analysis
 
 ```bash
 export PATH=$PATH:/dir/to/asTair
@@ -72,13 +88,16 @@ export PATH=$PATH:/dir/to/asTair
 
 ### Downloading the test data
 
-All files needed to starting testing asTair can be downloaded from Zenodo:
+All files needed to starting testing asTair can be downloaded from Zenodo through our bash wrapper download_test_data.sh. 
+
+Another classic option is:
 
 ```bash
 wget -nc -np -nd -A bam,bam.bai,fa,fa.fai,fq.gz  -P path/to/test_data -r https://zenodo.org/record/2582855/
 ```
 
-### Analysis of TAPS  or other modified cytosine to thymine conversion methods (mCtoT) data 
+## Analysis of TAPS  or other modified cytosine to thymine conversion methods (mCtoT) data 
+
 _Let us have an example paired-end sequencing data from step 1 called `lambda.phage_test_sample_R1.fastq.gz` and `lambda.phage_test_sample_R2.fastq.gz` to guide us through the process._
 
 1 - Get your data hot from the sequencing center.  
@@ -96,7 +115,7 @@ astair_mod_caller_v3.py -i lambda.phage_test_sample.bam (cram) -f lambda_phage.f
 ```
   
 
-### Recommendations and extras
+## Recommendations and extras
 
 1 - Do QC check of the sequencing reads and do quality trimming before mapping and dispose of very short reads. 
 
@@ -128,10 +147,42 @@ astair_mbias_v3.py -i lambda.phage_test_sample.bam -l 75 -d /output/directory/ -
 astair_taps_modification_simulation_v3.py -i lambda.phage_test_sample.bam  -f lambda.phage.fa -l 75 -si bam -ml 40 -co CHG -s 10 -d /output/directory/
 ```
 
+## asTair general usage
+
+After pip installation:
+
+```bash
+Program: asTair (tools for processing cytosine modification sequencing data)
+    Version: 3.0
+
+    Usage: Command [command specific options/arguments]
+
+    Commands:
+  
+    astair_align         Align reads
+    
+    astair_call          Call methylation
+    
+    astair_simulate      Simulate TAPS or WGBS data
+    
+    astair_mbias         Visualise modification bias
+    
+    astair_phred         Visualise Phred scores
+    
+
+    __________________________________About__________________________________
+    
+    asTair was written by Gergana V. Velikova and Benjamin  Schuster-Boeckler. 
+    This code is made available under the GNU General Public License, see 
+    LICENSE.txt for more details.
+```
+
+After download of the repository scripts need to be added to the path and called directly.
+
 ### Help with asTair
 
 ```bash
-Usage: astair_aligner_v3.py [OPTIONS]
+Usage: astair_aligner_v3.py [OPTIONS] | astair_align [OPTIONS] 
 
 Options:
   -1, --fq1 TEXT                  First in pair (R1) sequencing reads file in
@@ -228,7 +279,7 @@ Options:
 
 
 ```bash
-Usage: astair_mod_caller_v3.py [OPTIONS]
+Usage: astair_mod_caller_v3.py [OPTIONS] | astair_call [OPTIONS]
 
 Options:
   -i, --input_file TEXT           BAM|CRAM format file containing sequencing reads.
@@ -300,68 +351,7 @@ Options:
 ```
 
 ```bash
-Usage: astair_phred_values_v3.py [OPTIONS]
-
-Options:
-  -1, --fq1 TEXT                  First in pair (R1) sequencing reads file in
-                                  fastq.gz format  [required]
-  -2, --fq2 TEXT                  Second in pair (R2) sequencing reads file in
-                                  fastq.gz format  [required]
-  -cm, --calculation_mode [means|absolute]
-                                  Gives the mode of computation used for the
-                                  Phred scores summary, where means runs
-                                  faster. (Default is means)
-  -d, --directory TEXT            Output directory to save files.  [required]
-  -s, --sample_size INTEGER       The number of reads to sample for the
-                                  analysis. (Default 10 000 000)
-  -p, --plot                      Phred scores will be visualised and output
-                                  as a pdf file. Requires installed
-                                  matplotlib.
-  -q, --minimum_score INTEGER     Minimum Phred score used for visualisation
-                                  only. (Default 15)
-  -c, --colors LIST               List of color values used for visualistion
-                                  of A, C, G, T, they are given as
-                                  color1,color2,color3,color4. Accepts valid
-                                  matplotlib color names, RGB and RGBA hex
-                                  strings and  single letters denoting color
-                                  {'b', 'g', 'r', 'c', 'm', 'y', 'k', 'w'}.
-                                  (Default
-                                  skyblue,mediumaquamarine,khaki,lightcoral)
-  --help                          Show this message and exit.
-
-```
-
-```bash
-Usage: astair_mbias_v3.py [OPTIONS]
-
-Options:
-  -i, --input_file TEXT      BAM|CRAM format file containing sequencing reads.
-                             [required]
-  -d, --directory TEXT       Output directory to save files.  [required]
-  -l, --read_length INTEGER  The read length is needed to calculate the
-                             M-bias.  [required]
-  -m, --method [CtoT|mCtoT]  Specify sequencing method, possible options are
-                             CtoT (unmodified cytosines are converted to
-                             thymines, bisulfite sequencing-like) and mCtoT
-                             (modified cytosines are converted to thymines,
-                             TAPS-like).
-  -p, --plot                 Phred scores will be visualised and output as a
-                             pdf file. Requires installed matplotlib.
-  -c, --colors LIST          List of color values used for visualistion of
-                             CpG, CHG and CHH modification levels per read,
-                             which are given as color1,color2,color3. Accepts
-                             valid matplotlib color names, RGB and RGBA hex
-                             strings and  single letters denoting color {'b',
-                             'g', 'r', 'c', 'm', 'y', 'k', 'w'}. (Default
-                             'teal','gray','maroon')
-  -t, --N_threads INTEGER    The number of threads to spawn (the default value
-                             is 1).  [required]
-  --help                     Show this message and exit.
-  
-```
-
-```bash
-Usage: astair_taps_modification_simulation_v3.py [OPTIONS]
+Usage: astair_taps_modification_simulation_v3.py [OPTIONS] | astair_simulate [OPTIONS] 
 
 Options:
   -f, --reference TEXT            Reference DNA sequence in FASTA format used
@@ -431,6 +421,67 @@ Options:
   -d, --directory TEXT            Output directory to save files.  [required]
   -s, --seed INTEGER              An integer number to be used as a seed for
                                   the random generators to ensure replication.
+  --help                          Show this message and exit.
+
+```
+
+```bash
+Usage: astair_mbias_v3.py [OPTIONS] | astair_mbias [OPTIONS]
+
+Options:
+  -i, --input_file TEXT      BAM|CRAM format file containing sequencing reads.
+                             [required]
+  -d, --directory TEXT       Output directory to save files.  [required]
+  -l, --read_length INTEGER  The read length is needed to calculate the
+                             M-bias.  [required]
+  -m, --method [CtoT|mCtoT]  Specify sequencing method, possible options are
+                             CtoT (unmodified cytosines are converted to
+                             thymines, bisulfite sequencing-like) and mCtoT
+                             (modified cytosines are converted to thymines,
+                             TAPS-like).
+  -p, --plot                 Phred scores will be visualised and output as a
+                             pdf file. Requires installed matplotlib.
+  -c, --colors LIST          List of color values used for visualistion of
+                             CpG, CHG and CHH modification levels per read,
+                             which are given as color1,color2,color3. Accepts
+                             valid matplotlib color names, RGB and RGBA hex
+                             strings and  single letters denoting color {'b',
+                             'g', 'r', 'c', 'm', 'y', 'k', 'w'}. (Default
+                             'teal','gray','maroon')
+  -t, --N_threads INTEGER    The number of threads to spawn (the default value
+                             is 1).  [required]
+  --help                     Show this message and exit.
+  
+```
+
+```bash
+Usage: astair_phred_values_v3.py [OPTIONS] | astair_phred [OPTIONS]
+
+Options:
+  -1, --fq1 TEXT                  First in pair (R1) sequencing reads file in
+                                  fastq.gz format  [required]
+  -2, --fq2 TEXT                  Second in pair (R2) sequencing reads file in
+                                  fastq.gz format  [required]
+  -cm, --calculation_mode [means|absolute]
+                                  Gives the mode of computation used for the
+                                  Phred scores summary, where means runs
+                                  faster. (Default is means)
+  -d, --directory TEXT            Output directory to save files.  [required]
+  -s, --sample_size INTEGER       The number of reads to sample for the
+                                  analysis. (Default 10 000 000)
+  -p, --plot                      Phred scores will be visualised and output
+                                  as a pdf file. Requires installed
+                                  matplotlib.
+  -q, --minimum_score INTEGER     Minimum Phred score used for visualisation
+                                  only. (Default 15)
+  -c, --colors LIST               List of color values used for visualistion
+                                  of A, C, G, T, they are given as
+                                  color1,color2,color3,color4. Accepts valid
+                                  matplotlib color names, RGB and RGBA hex
+                                  strings and  single letters denoting color
+                                  {'b', 'g', 'r', 'c', 'm', 'y', 'k', 'w'}.
+                                  (Default
+                                  skyblue,mediumaquamarine,khaki,lightcoral)
   --help                          Show this message and exit.
 
 ```
