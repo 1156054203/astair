@@ -47,7 +47,19 @@ To use the python environment you can add it to the path or use it directly:
 export PATH=$PATH:/path/to/environment/your_project_name/bin/python(2 or 3)
 ```
 
-#### Installation of dependencies with _pip_
+#### Installation with python install
+
+For python 2.7:
+```bash
+python setup.py install --user
+```
+For python 3 (>=3.5):
+```bash
+python setup.py install --user
+```
+#### Using asTair without installation
+
+##### Installation of dependencies with _pip_
 For python 2.7:
 ```bash
 pip install -r requirements.txt
@@ -58,7 +70,7 @@ For python 3 (>=3.5):
 pip3 install -r requirements.txt
 ```
 
-#### Creating a conda virtual environment and installing requirements
+##### Creating a conda virtual environment and installing requirements
 
 For python 2.7:
 ```bash
@@ -80,7 +92,7 @@ Finally, add the the directory of the conda virual environment to the path:
 export PATH=$PATH:/path/to/conda/environment/your_project_name/bin/
 ```
 
-#### Add asTair to the path and begin the analysis
+##### Add asTair to the path and begin the analysis
 
 ```bash
 export PATH=$PATH:/dir/to/asTair
