@@ -1,6 +1,6 @@
 import unittest
 
-from statistics_summary import general_statistics_summary
+from astair import statistics_summary
 
 
 class StatisticsSummaryOutputTest(unittest.TestCase):
@@ -10,7 +10,7 @@ class StatisticsSummaryOutputTest(unittest.TestCase):
     def test_statistics_summary(self):
         """Tests whether a correct statistics summary will be returned for a given numerical input."""
         numeric_data = list((1,2,3,40,215,100,5,4,12,16,76,81,9))
-        statistics_output = list(general_statistics_summary(numeric_data))
+        statistics_output = list(statistics_summary.general_statistics_summary(numeric_data))
         self.assertEqual(statistics_output, [43.385, 12.0, 62.068, 4.0, 76.0, 1, 215])
 
 if __name__ == '__main__':
