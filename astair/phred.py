@@ -53,8 +53,8 @@ elif sys.version[0] == '2':
 else:
     raise Exception("This is not the python we're looking for (version {})".format(sys.version[0]))
 
-from safe_division import non_zero_division_NA
-from statistics_summary import general_statistics_summary
+from astair.safe_division import non_zero_division_NA
+from astair.statistics_summary import general_statistics_summary
 
 
 @click.command()

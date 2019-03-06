@@ -1,6 +1,6 @@
 import unittest
 
-from astair import safe_division
+from astair import safe_division as safe_division
 
 
 class SafeDivisionFunctionsOutputTest(unittest.TestCase):

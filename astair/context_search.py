@@ -6,7 +6,7 @@ import logging
 import itertools
 import ahocorasick
 
-from DNA_sequences_operations import complementary
+from astair.DNA_sequences_operations import complementary
 
 logging.basicConfig(level=logging.DEBUG)
 logs = logging.getLogger(__name__)

@@ -50,9 +50,9 @@ except Exception:
     raise Exception("Matplotlib was not found, visualisation output will not be supported.")
     pass
 
-from safe_division import non_zero_division
-from bam_file_parser import bam_file_opener
-from DNA_sequences_operations import complementary
+from astair.safe_division import non_zero_division
+from astair.bam_file_parser import bam_file_opener
+from astair.DNA_sequences_operations import complementary
 
 
 @click.command()
