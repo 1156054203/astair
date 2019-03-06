@@ -22,7 +22,7 @@ setup(
     install_requires=['click', 'pysam >= 0.15.0', 'pyahocorasick', 'numpy'],
     extras_require={'plot':  ["matplotlib"],},
     #test_suite='setup.discover_tests',
-    scripts=['./astair/safe_division.py', './astair/bam_file_parser.py', './astair/simple_fasta_parser.py', './astair/DNA_sequences_operations.py', './astair/reference_context_search_triad.py', './astair/reference_context_search_triad.py', './astair/statistics_summary.py'],
+    scripts=['./astair/safe_division.py', './astair/bam_file_parser.py', './astair/simple_fasta_parser.py', './astair/DNA_sequences_operations.py', './astair/context_search.py', './astair/context_search.py', './astair/statistics_summary.py'],
     #python_requires='>=2.7, >=3.5',
     author="Gergana V. Velikova and Benjamin Schuster-Boeckler",
     author_email="gergana_velikova@yahoo.com",
@@ -31,9 +31,9 @@ setup(
     license="GPLv3",
     entry_points={
         'console_scripts':
-        ['astair_call=astair.astair_mod_caller_v3:modification_finder_exec',
-        'astair_align=astair.astair_aligner_v3:aligner_exec', 'astair_simulate=astair.astair_taps_modification_simulation_v3:simulator_exec', 'astair_phred=astair.astair_phred_values_v3:Phred_score_calculation_visualisation_exec', 'astair_mbias=astair.astair_mbias_v3:Mbias_exec',
-        'astair=astair.astair_help_v3:astair']
+        ['astair_call=astair.caller:modification_finder_exec',
+        'astair_align=astair.aligner:aligner_exec', 'astair_simulate=astair.simulator:simulator_exec', 'astair_phred=astair.phred:Phred_score_calculation_visualisation_exec', 'astair_mbias=astair.mbias:Mbias_exec',
+        'astair=astair.help:astair']
     }, keywords="TAPS taps cytosine caller methylation modification WGBS RRBS bisulfite epigenetics", url="https://bitbucket.org/bsblabludwig/astair/", classifiers=['Programming Language :: Python :: 2.7', 'Programming Language :: Python :: 3.5', 'Programming Language :: Python :: 3.6', 'Programming Language :: Python :: 3.7', 'Intended Audience :: Science/Research', 'Topic :: Scientific/Engineering :: Bio-Informatics']
         )
 

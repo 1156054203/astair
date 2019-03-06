@@ -2,7 +2,7 @@ import sys
 import unittest
 
 from tests.version_testing import version_testing_builtin
-from astair import astair_phred_values_v3 as phred_values
+from astair import phred as phred_values
 
 class PhredScoreStatisticsTest(unittest.TestCase):
     """Tests whether the resulting DNA sequences match the expected reverse, complementary and reverse complementary output."""

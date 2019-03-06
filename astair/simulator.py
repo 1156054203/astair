@@ -17,8 +17,8 @@ from collections import defaultdict
 
 from bam_file_parser import bam_file_opener
 from simple_fasta_parser import fasta_splitting_by_sequence
-from reference_context_search_triad import context_sequence_search
-from reference_context_search_triad import sequence_context_set_creation
+from context_search import context_sequence_search
+from context_search import sequence_context_set_creation
 
 
 @click.command()
