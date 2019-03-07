@@ -71,7 +71,7 @@ def mbias(input_file, directory, read_length, method, plot, colors, N_threads):
 warnings.simplefilter(action='ignore', category=FutureWarning)
 warnings.simplefilter(action='ignore', category=UserWarning)
 
-logging.basicConfig(level=logging.DEBUG)
+logging.basicConfig(level=logging.WARNING)
 logs = logging.getLogger(__name__)
 
 time_b = datetime.now()

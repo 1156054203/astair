@@ -70,7 +70,7 @@ def phred(fq1, fq2, calculation_mode, directory, sample_size, minimum_score, col
     Phred_scores_plotting(fq1, fq2, calculation_mode, directory, sample_size, minimum_score, colors, plot)
 
 
-logging.basicConfig(level=logging.DEBUG)
+logging.basicConfig(level=logging.WARNING)
 logs = logging.getLogger(__name__)
 
 time_b = datetime.now()
