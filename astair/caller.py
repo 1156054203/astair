@@ -61,7 +61,7 @@ def call(input_file, reference, context, zero_coverage, skip_clip_overlap, minim
 warnings.simplefilter(action='ignore', category=FutureWarning)
 warnings.simplefilter(action='ignore', category=UserWarning)
 
-logging.basicConfig(level=logging.DEBUG)
+#logging.basicConfig(level=logging.DEBUG)
 logs = logging.getLogger(__name__)
 
 time_b = datetime.now()

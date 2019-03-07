@@ -4,12 +4,15 @@
 import click
 import logging
 
-import phred
-import mbias
-import caller 
-import aligner
-import simulator
+import astair.phred as phred
+import astair.mbias as mbias
+import astair.caller as caller
+import astair.aligner as aligner
+import astair.simulator as simulator
 
+# TODO make this config properly configurable using command line options
+# For example, we could use a global option -v to change the log level to
+# DEBUG and produce verbose output for all commands
 logging.basicConfig(level=logging.WARNING)
 logs = logging.getLogger(__name__)
 

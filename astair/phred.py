@@ -27,7 +27,7 @@ try:
         else:
             pass
     except Exception:
-        raise Exception("Pkg_resources could not help, still looking for Matplotlib.")
+        #raise Exception("Pkg_resources could not help, still looking for Matplotlib.")
         try:
             import matplotlib as mplot
             mplot.use('Agg')
@@ -37,11 +37,8 @@ try:
             pyp.ioff()
         except Exception:
             raise Exception("Matplotlib was not found when trying to import it directly.")
-            pass
 except Exception:
     raise Exception("Matplotlib was not found, visualisation output will not be supported.")
-    pass
-
 
 if sys.version[0] == '3':
     from queue import Queue as Queue
@@ -70,7 +67,7 @@ def phred(fq1, fq2, calculation_mode, directory, sample_size, minimum_score, col
     Phred_scores_plotting(fq1, fq2, calculation_mode, directory, sample_size, minimum_score, colors, plot)
 
 
-logging.basicConfig(level=logging.WARNING)
+#logging.basicConfig(level=logging.WARNING)
 logs = logging.getLogger(__name__)
 
 time_b = datetime.now()

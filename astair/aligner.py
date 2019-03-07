@@ -55,7 +55,7 @@ def align(fq1, fq2, reference, bwa_path, samtools_path, directory, method, outpu
 warnings.simplefilter(action='ignore', category=FutureWarning)
 warnings.simplefilter(action='ignore', category=UserWarning)
 
-logging.basicConfig(level=logging.DEBUG)
+#logging.basicConfig(level=logging.DEBUG)
 logs = logging.getLogger(__name__)
 
 time_b = datetime.now()

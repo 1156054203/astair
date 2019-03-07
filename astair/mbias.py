@@ -35,7 +35,6 @@ try:
         else:
             pass
     except Exception:
-        raise Exception("Pkg_resources could not help, still looking for Matplotlib.")
         try:
             import matplotlib as mplot
             mplot.use('Agg')
@@ -45,10 +44,8 @@ try:
             pyp.ioff()
         except Exception:
             raise Exception("Matplotlib was not found when trying to import it directly.")
-            pass
 except Exception:
     raise Exception("Matplotlib was not found, visualisation output will not be supported.")
-    pass
 
 from astair.safe_division import non_zero_division
 from astair.bam_file_parser import bam_file_opener
@@ -71,7 +68,7 @@ def mbias(input_file, directory, read_length, method, plot, colors, N_threads):
 warnings.simplefilter(action='ignore', category=FutureWarning)
 warnings.simplefilter(action='ignore', category=UserWarning)
 
-logging.basicConfig(level=logging.WARNING)
+#logging.basicConfig(level=logging.WARNING)
 logs = logging.getLogger(__name__)
 
 time_b = datetime.now()
