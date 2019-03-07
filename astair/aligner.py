@@ -43,9 +43,10 @@ from distutils.spawn import find_executable
 @click.option('end_clipping_penalty', '--end_clipping_penalty', '-L', default='5,5', type=str, required=False, help='The penalty for 5-prime- and 3-prime-end clipping, see BWA manual (the default value is 5,5).')
 @click.option('unpaired_penalty', '--unpaired_penalty', '-U', default=17, type=int, required=False, help='The penalty for an unpaired read pair, see BWA manual (the default value is 17).')
 @click.option('read_type', '--read_type', '-x', default='null', type=click.Choice(['null', 'pacbio', 'ont2d', 'intractg']), required=False, help='Changes multiple parameters unless overridden, see BWA manual (the default value is None).')
-def aligner_exec(fq1, fq2, reference, bwa_path, samtools_path, directory, method, output_format, minimum_mapping_quality, keep_unmapped, N_threads, minimum_seed_length, band_width, dropoff,
+def align(fq1, fq2, reference, bwa_path, samtools_path, directory, method, output_format, minimum_mapping_quality, keep_unmapped, N_threads, minimum_seed_length, band_width, dropoff,
                  internal_seeds, reseeding_occurence, N_skip_seeds, drop_chains, discard_chains, N_mate_rescues, skip_mate_rescue, skip_pairing, match_score, mismatch_penalty,
                  gap_open_penalty, gap_extension_penalty, end_clipping_penalty, unpaired_penalty, read_type):
+    """Aligns sequencing reads."""
     run_alignment(fq1, fq2, reference, bwa_path, samtools_path, directory, method, output_format, minimum_mapping_quality, keep_unmapped, N_threads, minimum_seed_length, band_width, dropoff,
                  internal_seeds, reseeding_occurence, N_skip_seeds, drop_chains, discard_chains, N_mate_rescues, skip_mate_rescue, skip_pairing, match_score, mismatch_penalty,
                  gap_open_penalty, gap_extension_penalty, end_clipping_penalty, unpaired_penalty, read_type)
@@ -151,4 +152,4 @@ def run_alignment(fq1, fq2, reference, bwa_path, samtools_path, directory, metho
 
 
 if __name__ == '__main__':
-    aligner_exec()
+    align()

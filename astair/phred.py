@@ -65,7 +65,8 @@ from astair.statistics_summary import general_statistics_summary
 @click.option('plot', '--plot', '-p', required=False, is_flag=True, help='Phred scores will be visualised and output as a pdf file. Requires installed matplotlib.')
 @click.option('minimum_score', '--minimum_score', '-q', required=False, default=15, type=int, help='Minimum Phred score used for visualisation only. (Default 15)')
 @click.option('colors', '--colors', '-c', default=['skyblue', 'mediumaquamarine', 'khaki', 'lightcoral'], type=list, required=False, help="List of color values used for visualistion of A, C, G, T, they are given as color1,color2,color3,color4. Accepts valid matplotlib color names, RGB and RGBA hex strings and  single letters denoting color {'b', 'g', 'r', 'c', 'm', 'y', 'k', 'w'}. (Default skyblue,mediumaquamarine,khaki,lightcoral)")
-def Phred_score_calculation_visualisation_exec(fq1, fq2, calculation_mode, directory, sample_size, minimum_score, colors, plot):
+def phred(fq1, fq2, calculation_mode, directory, sample_size, minimum_score, colors, plot):
+    """Gives per base (A, C, T, G) Phred scores for each strand."""
     Phred_scores_plotting(fq1, fq2, calculation_mode, directory, sample_size, minimum_score, colors, plot)
 
 
@@ -293,4 +294,4 @@ def Phred_scores_plotting(fq1, fq2, calculation_mode, directory, sample_size, mi
 
 
 if __name__ == '__main__':
-    Phred_score_calculation_visualisation_exec()
+    phred()

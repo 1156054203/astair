@@ -1,10 +1,13 @@
+import sys
 import unittest
 from os import path
 from setuptools import setup, find_packages
 
+#sys.path.append(path.dirname(path.dirname(path.dirname(__file__))))
+
 current = path.abspath(path.dirname(__file__))
 
-with open(path.join(current, 'README.md')) as readme:
+with open(path.join(current, 'README.md'), 'r') as readme:
     long_description = readme.read()
 
 setup(
@@ -24,9 +27,7 @@ setup(
     package_data={'download_test_data.sh': ['*.sh']},
     entry_points={
         'console_scripts':
-        ['astair_call=astair.caller:modification_finder_exec',
-        'astair_align=astair.aligner:aligner_exec', 'astair_simulate=astair.simulator:simulator_exec', 'astair_phred=astair.phred:Phred_score_calculation_visualisation_exec', 'astair_mbias=astair.mbias:Mbias_exec',
-        'astair=astair.help:astair']
+        ['astair=astair.astair_run:cli']
     }, keywords="TAPS taps cytosine caller methylation modification WGBS RRBS bisulfite epigenetics", url="https://bitbucket.org/bsblabludwig/astair/", classifiers=['Programming Language :: Python :: 2.7', 'Programming Language :: Python :: 3.5', 'Programming Language :: Python :: 3.6', 'Programming Language :: Python :: 3.7', 'Intended Audience :: Science/Research', 'Topic :: Scientific/Engineering :: Bio-Informatics']
         )
 

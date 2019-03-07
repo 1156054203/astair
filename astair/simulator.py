@@ -44,8 +44,9 @@ from astair.context_search import sequence_context_set_creation
 @click.option('seed', '--seed', '-s', type=int, required=False, help='An integer number to be used as a seed for the random generators to ensure replication.')
 
 
-def simulator_exec(reference, read_length, input_file, method, library, simulation_input, modification_level,
+def simulate(reference, read_length, input_file, method, library, simulation_input, modification_level,
                    modified_positions, coverage, context, region, directory, seed, user_defined_context, N_threads, GC_bias, sequence_bias, overwrite):
+    """Simulates modification on TAPS or WGBS sequencing data."""
     modification_simulator(reference, read_length, input_file, method, library, simulation_input, modification_level,
               modified_positions, coverage, context, region, directory, seed, user_defined_context, N_threads, GC_bias, sequence_bias, overwrite)
 
@@ -267,4 +268,4 @@ def modification_simulator(reference, read_length, input_file, method, library, 
 
 
 if __name__ == '__main__':
-    simulator_exec()
+    simulate()
