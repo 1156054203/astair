@@ -1,5 +1,5 @@
 
-_These scripts transform aligned reads to bed-like file containing cytosine positions and their modification level._
+_`asTair` is a toolchain to process DNA modification sequencing data. `asTair` was designed primarily for handling [TET-Assisted Pyridine Borane (TAPS) sequencing](https://www.nature.com/articles/s41587-019-0041-2) output, but also contains functions that are useful for Bisulfite Sequencing (BS) data._
 
 Contents:
 
@@ -9,17 +9,18 @@ Contents:
 
 ### asTair installation through pip
 
-NOT uploaded to PyPI yet
+```bash
+pip install astair
+```
 
 
 ### asTair installation through direct download of the repository
 
 ```bash
-wget -O astair.zip https://bitbucket.org/bsblabludwig/astair/get/4918e890cd56.zip
-```
-
-```bash
-curl -o astair.zip https://bitbucket.org/bsblabludwig/astair/get/4918e890cd56.zip
+wget https://bitbucket.org/bsblabludwig/astair/get/v3.0.0.tar.gz
+# or if you don't have wget, try
+# curl -O https://bitbucket.org/bsblabludwig/astair/get/v3.0.0.tar.gz
+tar -xzf v3.0.0.tar.gz
 ```
 
 #### Creating a python virtual environment 
