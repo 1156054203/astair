@@ -2,6 +2,17 @@
 #-*- coding: utf-8 -*-
 
 import click
+import logging
+
+import phred
+import mbias
+import caller 
+import aligner
+import simulator
+
+logging.basicConfig(level=logging.WARNING)
+logs = logging.getLogger(__name__)
+
 
 @click.group()
 def cli():
@@ -15,13 +26,6 @@ def cli():
     This code is made available under the GNU General Public License, see 
     LICENSE.txt for more details."""
 pass
-
-import aligner
-import caller 
-import phred
-import simulator
-import mbias
-
 
 cli.add_command(aligner.align)
 cli.add_command(caller.call)
