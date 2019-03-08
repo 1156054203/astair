@@ -24,7 +24,6 @@ setup(
     description="A tool for the analysis of bisulfite-free and base-resolution sequencing data generated with TET Assisted Pyridine borane Sequencing (TAPS), or other modified cytosine to thymine conversion methods (mCtoT). It also has some features for bisulfite sequencing data (unmodified cytosine to thymine conversion methods, CtoT).",            long_description=long_description,
     long_description_content_type='text/markdown',
     license="GPLv3",
-    package_data={'download_test_data.sh': ['*.sh']},
     entry_points={
         'console_scripts':
         ['astair=scripts.run:cli']
