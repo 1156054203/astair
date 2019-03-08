@@ -17,7 +17,7 @@ class MbiasOutputTest(unittest.TestCase):
     def test_mbias_default_taps(self):
         """Tests whether the cytosine positions modified at CpG context will be used to correctly
         calculate the CpG modification rate per read length in a real TAPS sample."""
-        Mbias_plotting(current + '/test_data/small_real_taps_lambda_mCtoT.cram', current + '/test_data/', 80, 'mCtoT', False, ['teal', 'gray', 'maroon'], 1)
+        Mbias_plotting(current + '/test_data/small_real_taps_lambda_mCtoT.bam', current + '/test_data/', 80, 'mCtoT', False, ['teal', 'gray', 'maroon'], 1)
         data_generated = list()
         with open(current + '/test_data/small_real_taps_lambda_mCtoT_Mbias.txt','r') as call_file:
             mod_reader = csv.reader(call_file, delimiter='\t', lineterminator='\n')
@@ -30,7 +30,7 @@ class MbiasOutputTest(unittest.TestCase):
     def test_mbias_default_wgbs(self):
         """Tests whether the cytosine positions modified at CpG context will be used to correctly
         calculate the CpG modification rate per read length in a real WGBS sample."""
-        Mbias_plotting(current + '/test_data/small_real_wgbs_lambda_CtoT.cram', current + '/test_data/', 80, 'CtoT', False, 
+        Mbias_plotting(current + '/test_data/small_real_wgbs_lambda_CtoT.bam', current + '/test_data/', 80, 'CtoT', False, 
                        ['teal', 'gray', 'maroon'], 1)
         data_generated = list()
         with open(current + '/test_data/small_real_wgbs_lambda_CtoT_Mbias.txt','r') as call_file:
