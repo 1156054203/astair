@@ -61,7 +61,7 @@ from astair.DNA_sequences_operations import complementary
 @click.option('method', '--method', '-m',  required=False, default='mCtoT', type=click.Choice(['CtoT', 'mCtoT']), help='Specify sequencing method, possible options are CtoT (unmodified cytosines are converted to thymines, bisulfite sequencing-like) and mCtoT (modified cytosines are converted to thymines, TAPS-like).')
 @click.option('plot', '--plot', '-p', required=False, is_flag=True, help='Phred scores will be visualised and output as a pdf file. Requires installed matplotlib.')
 @click.option('colors', '--colors', '-c', default=['teal', 'gray', 'maroon'], type=list, required=False, help="List of color values used for visualistion of CpG, CHG and CHH modification levels per read, which are given as color1,color2,color3. Accepts valid matplotlib color names, RGB and RGBA hex strings and  single letters denoting color {'b', 'g', 'r', 'c', 'm', 'y', 'k', 'w'}. (Default 'teal','gray','maroon')")
-@click.option('N_threads', '--N_threads', '-t', default=1, required=True, help='The number of threads to spawn (the default value is 1).')
+@click.option('N_threads', '--N_threads', '-t', default=1, required=True, help='The number of threads to spawn (Default 1).')
 def mbias(input_file, directory, read_length, method, plot, colors, N_threads):
     """Gives modification per read length information (Mbias)."""
     Mbias_plotting(input_file, directory, read_length, method, plot, colors, N_threads)
@@ -202,7 +202,7 @@ def mbias_statistics_calculator(input_file, name, directory, read_length, method
                    all_values[i][9][1], all_values[i][10][1], all_values[i][11][1], all_values[i][12][1], all_values[i][13][1],
                    all_values[i][14][1], all_values[i][15][1], all_values[i][16][1], all_values[i][17][1]) for i in range(0, len(all_values))]
     try:
-        with open(directory + name + ".Mbias.txt", 'w') as stats_file:
+        with open(directory + name + "_Mbias.txt", 'w') as stats_file:
             line = csv.writer(stats_file, delimiter='\t', lineterminator='\n')
             line.writerow(['POSITION_(bp)', 'MOD_LVL_CpG_READ_1', 'UNMOD_COUNT_CpG_READ_1', 'MOD_COUNT_CpG_READ_1',
                            'MOD_LVL_CpG_READ_2', 'UNMOD_COUNT_CpG_READ_2', 'MOD_COUNT_CpG_READ_2',

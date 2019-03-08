@@ -41,7 +41,7 @@ from astair.context_search import sequence_context_set_creation
 #@click.option('per_chromosome', '--per_chromosome', '-chr', default=None, type=str, help='When used, it modifies the chromosome given only. (Default None')
 @click.option('GC_bias', '--GC_bias', '-gc', default=0.3, required=True, type=float, help='The value of total GC levels in the read above which lower coverage will be observed in Ns and fasta modes. (Default 0.5)')
 @click.option('sequence_bias', '--sequence_bias', '-sb', default=0.1, required=True, type=float, help='The proportion of lower-case letters in the read string for the Ns and fasta modes that will decrease the chance of the read being output. (Default 0.1)')
-@click.option('N_threads', '--N_threads', '-t', default=1, type=int, required=True, help='The number of threads to spawn for the bam mode (the default value is 1).')
+@click.option('N_threads', '--N_threads', '-t', default=1, required=True, help='The number of threads to spawn (Default 1).')
 @click.option('directory', '--directory', '-d', required=True, type=str, help='Output directory to save files.')
 @click.option('seed', '--seed', '-s', type=int, required=False, help='An integer number to be used as a seed for the random generators to ensure replication.')
 

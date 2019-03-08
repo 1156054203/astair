@@ -24,7 +24,7 @@ from distutils.spawn import find_executable
 @click.option('output_format', '--output_format', '-O', required=False, default='CRAM', type=click.Choice(['CRAM', 'BAM']), help='Specify output format, possible options are BAM and CRAM. The default is CRAM.')
 @click.option('minimum_mapping_quality', '--minimum_mapping_quality', '-mq', required=False, type=int, default=1, help='Set the minimum mapping quality for a read to be output to file (Default >=1).')
 @click.option('keep_unmapped', '--keep_unmapped', '-u', default=False, is_flag=True, help='Outputs the unmapped reads (Default false).')
-@click.option('N_threads', '--N_threads', '-t', default=1, required=True, type=int, help='The number of threads to spawn (the default value is 1).')
+@click.option('N_threads', '--N_threads', '-t', default=1, required=True, help='The number of threads to spawn (Default 1).')
 @click.option('minimum_seed_length', '--minimum_seed_length', '-k', default=19, type=int, required=False, help='The minimum seed length used for alignment, see BWA manual (the default value is 19).')
 @click.option('band_width', '--band_width', '-w', default=100, type=int, required=False, help='The band width for banded alignment, see BWA manual (the default value is 100).')
 @click.option('dropoff', '--dropoff', '-D', default=100, type=int, required=False, help='The off-diagonal X-dropoff, see BWA manual (the default value is 100).')
@@ -135,14 +135,13 @@ def run_alignment(fq1, fq2, reference, bwa_path, samtools_path, directory, metho
                    aligned_string, output_format, use_samtools, N_threads, output_format, os.path.join(directory + name + '_' + method + "." + output_format.lower()))
     try:
         if os.path.isfile(os.path.join(directory + name + '_' + method + "." + output_format.lower())):
-            logs.error('The output files will not be overwritten. Please rename the input or the existing output files before rerunning if the input is different.',
-                exc_info=True)
+            logs.error('The output files will not be overwritten. Please rename the input or the existing output files before rerunning if the input is different.')
             sys.exit(1)
         else:
             align = subprocess.Popen(alignment_command, shell=True)
             exit_code = align.wait()
             if exit_code == 0:
-                indexing_command = '{} index {}'.format(use_samtools, os.path.join(directory + name + "." + output_format.lower()))
+                indexing_command = '{} index {}'.format(use_samtools, os.path.join(directory + name + '_' + method + "." + output_format.lower()))
                 index = subprocess.Popen(indexing_command, shell=True)
                 index.wait()
         time_e = datetime.now()
