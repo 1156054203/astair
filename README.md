@@ -32,7 +32,7 @@ Options:
 
 Commands:
   align     Aligns sequencing reads.
-  call      Calls cytosine modification.
+  call      Calls modified cytosines.
   mbias     Gives modification per read length information (Mbias).
   phred     Gives per base (A, C, T, G) Phred scores for each strand.
   simulate  Simulates modification on TAPS or WGBS sequencing data.
