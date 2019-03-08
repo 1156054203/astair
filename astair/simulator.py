@@ -1,6 +1,8 @@
 #!/usr/bin/env python
 #-*- coding: utf-8 -*-
 
+from __future__ import division
+
 import re
 import os
 import sys
@@ -137,7 +139,7 @@ def general_read_information_output(name, directory, read, modification_level, h
         orientation = '/2'
     try:
         if not isinstance(modification_level, str):
-            modification_level = modification_level*100
+            modification_level = int(modification_level*100)
         with open(path.join(directory, name + '_' + method + '_' + str(modification_level) + '_' + context + '_read_information.txt'), 'a') as reads_info_output:
             line = csv.writer(reads_info_output, delimiter='\t', lineterminator='\n')
             if header == True:
