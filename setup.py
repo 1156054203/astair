@@ -3,7 +3,6 @@ import unittest
 from os import path
 from setuptools import setup, find_packages
 
-#sys.path.append(path.dirname(path.dirname(path.dirname(__file__))))
 
 current = path.abspath(path.dirname(__file__))
 
