@@ -184,29 +184,26 @@ simulator.py -i lambda.phage_test_sample.bam  -f lambda.phage.fa -l 75 -si bam -
 After pip installation:
 
 ```bash
-Program: asTair (tools for processing cytosine modification sequencing data)
-    Version: 3.0
+Usage: astair [OPTIONS] COMMAND [ARGS]...
 
-    Usage: Command [command specific options/arguments]
+  asTair (tools for processing cytosine modification sequencing data)
 
-    Commands:
-  
-    astair_align         Align reads
-    
-    astair_call          Call methylation
-    
-    astair_simulate      Simulate TAPS or WGBS data
-    
-    astair_mbias         Visualise modification bias
-    
-    astair_phred         Visualise Phred scores
-    
+  Version: 3.0
+  __________________________________About__________________________________
 
-    __________________________________About__________________________________
-    
-    asTair was written by Gergana V. Velikova and Benjamin  Schuster-Boeckler. 
-    This code is made available under the GNU General Public License, see 
-    LICENSE.txt for more details.
+  asTair was written by Gergana V. Velikova and Benjamin Schuster-Boeckler.
+  This code is made available under the GNU General Public License, see
+  LICENSE.txt for more details.
+
+Options:
+  --help  Show this message and exit.
+
+Commands:
+  align     Aligns sequencing reads.
+  call      Calls cytosine modification.
+  mbias     Gives modification per read length information (Mbias).
+  phred     Gives per base (A, C, T, G) Phred scores for each strand.
+  simulate  Simulates modification on TAPS or WGBS sequencing data.
 ```
 
 After download of the repository scripts need to be added to the path and called directly.
@@ -214,7 +211,7 @@ After download of the repository scripts need to be added to the path and called
 ### Help with asTair
 
 ```bash
-Usage: aligner.py [OPTIONS] | astair_align [OPTIONS] 
+Usage: aligner.py [OPTIONS] | astair align [OPTIONS] 
 
 Options:
   -1, --fq1 TEXT                  First in pair (R1) sequencing reads file in
@@ -311,7 +308,7 @@ Options:
 
 
 ```bash
-Usage: caller.py [OPTIONS] | astair_call [OPTIONS]
+Usage: caller.py [OPTIONS] | astair call [OPTIONS]
 
 Options:
   -i, --input_file TEXT           BAM|CRAM format file containing sequencing reads.
@@ -383,7 +380,7 @@ Options:
 ```
 
 ```bash
-Usage: simulator.py [OPTIONS] | astair_simulate [OPTIONS] 
+Usage: simulator.py [OPTIONS] | astair simulate [OPTIONS] 
 
 Options:
   -f, --reference TEXT            Reference DNA sequence in FASTA format used
@@ -458,7 +455,7 @@ Options:
 ```
 
 ```bash
-Usage: mbias.py [OPTIONS] | astair_mbias [OPTIONS]
+Usage: mbias.py [OPTIONS] | astair mbias [OPTIONS]
 
 Options:
   -i, --input_file TEXT      BAM|CRAM format file containing sequencing reads.
@@ -487,7 +484,7 @@ Options:
 ```
 
 ```bash
-Usage: phred.py [OPTIONS] | astair_phred [OPTIONS]
+Usage: phred.py [OPTIONS] | astair phred [OPTIONS]
 
 Options:
   -1, --fq1 TEXT                  First in pair (R1) sequencing reads file in
