@@ -52,7 +52,7 @@ wget https://zenodo.org/record/2582855/files/lambda.phage_test_sample_1.fq.gz
 wget https://zenodo.org/record/2582855/files/lambda.phage_test_sample_2.fq.gz
 ```
 
-The raw reads need to be aligned. asTair contains a command to help with this. It assumes that [`bwa`](https://github.com/lh3/bwa) and [`samtools`](http://www.htslib.org/) are available on your system. (If you prefer to use a different aligner, [skip to step 2](#markdown-header-2-calling-methylation).)
+The raw reads need to be aligned. asTair contains a command to help with this. It assumes that [`bwa`](https://github.com/lh3/bwa) and [`samtools`](http://www.htslib.org/) are available on your system. (If you prefer to use a different aligner, [skip to step 2](#markdown-header-2-call-methylation).)
 
 You will also need an indexed reference genome to align to. For this example we are using the lambda phage genome, which you can download with
 
@@ -153,7 +153,7 @@ The analysis pipeline for bisulfie sequencing data does follows the same steps a
 
 ```bash
 mkdir -p output_dir
-aligner.py -f lambda_phage.fa -1 lambda.phage_test_sample_BS_1.fastq.gz -2 lambda.phage_test_sample_BS_2.fastq.gz --method CtoT -d output_dir/
+astair align -f lambda_phage.fa -1 lambda.phage_test_sample_BS_1.fastq.gz -2 lambda.phage_test_sample_BS_2.fastq.gz --method CtoT -d output_dir/
 ```
 
 You can now use `astair call` with `--method CtoT` for the modifcation calling:
