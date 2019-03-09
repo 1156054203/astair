@@ -9,9 +9,11 @@ current = path.abspath(path.dirname(__file__))
 with open(path.join(current, 'README.md'), 'r') as readme:
     long_description = readme.read()
 
+exec(open('astair/version.py').read())
+
 setup(
     name="asTair",
-    version="3.0",
+    version=__version__,
     packages=find_packages(),
     install_requires=['Click >=7, < 8', 'pysam >= 0.15.0', 'pyahocorasick >= 1, < 2', 'numpy >= 1, < 2'],
     extras_require={'plot':  ["matplotlib"],},

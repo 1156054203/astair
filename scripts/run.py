@@ -4,6 +4,7 @@
 import click
 import logging
 
+import astair
 import astair.phred as phred
 import astair.mbias as mbias
 import astair.caller as caller
@@ -16,19 +17,20 @@ import astair.simulator as simulator
 logging.basicConfig(level=logging.WARNING)
 logs = logging.getLogger(__name__)
 
-
 @click.group()
 def cli():
     """
     asTair (tools for processing cytosine modification sequencing data)
    
-    Version: 3.0
+    Version: __version__
     __________________________________About__________________________________
     
     asTair was written by Gergana V. Velikova and Benjamin Schuster-Boeckler.
     This code is made available under the GNU General Public License, see 
     LICENSE.txt for more details."""
-pass
+    pass
+
+cli.help = cli.help.replace('__version__', astair.__version__)
 
 cli.add_command(aligner.align)
 cli.add_command(caller.call)
@@ -37,4 +39,4 @@ cli.add_command(phred.phred)
 cli.add_command(mbias.mbias)
 
 if __name__ == '__main__':
-	cli()
+    cli()

@@ -48,7 +48,7 @@ from astair.context_search import sequence_context_set_creation
 
 def simulate(reference, read_length, input_file, method, library, simulation_input, modification_level,
                    modified_positions, coverage, context, region, directory, seed, user_defined_context, N_threads, GC_bias, sequence_bias, overwrite):
-    """Simulates modification on TAPS or WGBS sequencing data."""
+    """Simulate TAPS/BS conversion on top of an existing bam/cram file."""
     modification_simulator(reference, read_length, input_file, method, library, simulation_input, modification_level,
               modified_positions, coverage, context, region, directory, seed, user_defined_context, N_threads, GC_bias, sequence_bias, overwrite)
 

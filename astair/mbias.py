@@ -63,7 +63,7 @@ from astair.DNA_sequences_operations import complementary
 @click.option('colors', '--colors', '-c', default=['teal', 'gray', 'maroon'], type=list, required=False, help="List of color values used for visualistion of CpG, CHG and CHH modification levels per read, which are given as color1,color2,color3. Accepts valid matplotlib color names, RGB and RGBA hex strings and  single letters denoting color {'b', 'g', 'r', 'c', 'm', 'y', 'k', 'w'}. (Default 'teal','gray','maroon')")
 @click.option('N_threads', '--N_threads', '-t', default=1, required=True, help='The number of threads to spawn (Default 1).')
 def mbias(input_file, directory, read_length, method, plot, colors, N_threads):
-    """Gives modification per read length information (Mbias)."""
+    """Generate modification per read length information (Mbias). This is a quality-control measure."""
     Mbias_plotting(input_file, directory, read_length, method, plot, colors, N_threads)
 
 
