@@ -7,4 +7,4 @@ numpy == 1.9.*
 
 ####### Graphics Requirements #######
 
-matplotlib == 3.0.*
+matplotlib >= 2, < 4
