@@ -20,7 +20,7 @@ Usage: astair [OPTIONS] COMMAND [ARGS]...
 
   asTair (tools for processing cytosine modification sequencing data)
 
-  Version: 3.0
+  Version: 3.0.0
   __________________________________About__________________________________
 
   asTair was written by Gergana V. Velikova and Benjamin Schuster-Böckler.
