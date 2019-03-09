@@ -1,10 +1,10 @@
 ####### General Requirements #######
 
-click 
-pysam # >= 0.15.0
-pyahocorasick
-numpy
+Click == 7.*
+pysam == 0.15.*
+pyahocorasick == 1.3.*
+numpy == 1.9.*
 
 ####### Graphics Requirements #######
 
-matplotlib
+matplotlib == 3.0.*

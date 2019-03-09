@@ -1,5 +1,5 @@
 
-_`asTair` is a toolchain to process DNA modification sequencing data. `asTair` was designed primarily for handling [TET-Assisted Pyridine Borane (TAPS) sequencing](https://www.nature.com/articles/s41587-019-0041-2) output, but also contains functions that are useful for Bisulfite Sequencing (BS) data._
+`asTair` is a toolchain to process DNA modification sequencing data. `asTair` was designed primarily for handling [TET-Assisted Pyridine Borane (TAPS) sequencing](https://www.nature.com/articles/s41587-019-0041-2) output, but also contains functions that are useful for Bisulfite Sequencing (BS) data._
 
 # Basic usage
 ## 0. Installation
@@ -23,7 +23,7 @@ Usage: astair [OPTIONS] COMMAND [ARGS]...
   Version: 3.0
   __________________________________About__________________________________
 
-  asTair was written by Gergana V. Velikova and Benjamin Schuster-Boeckler.
+  asTair was written by Gergana V. Velikova and Benjamin Schuster-Böckler.
   This code is made available under the GNU General Public License, see
   LICENSE.txt for more details.
 
@@ -129,7 +129,7 @@ We would recommend using a virtual environment to avoid issues with globally ins
 ```bash
 virtualenv venv
 
-#Activate the environment
+# Activate the environment
 source venv/bin/activate
 ```
 
@@ -144,6 +144,7 @@ python setup.py install
 Now, you can perform all analysis and processing steps described [above](#markdown-header-basic-usage).
 
 If you were using a virtual environment, you can deactivate the environment after you're finished using astair by calling:
+
 ```bash
 deactivate
 ```
@@ -161,7 +162,7 @@ You can now use `astair call` with `--method CtoT` for the modifcation calling:
 astair call -i output_dir/lambda.phage_test_sample_BS_CtoT.cram -f lambda_phage.fa --method CtoT --context CpG --minimum_base_quality 13 -d output_dir/
 ```
 
-#License
+# License
 
 This software is made available under the terms of the [GNU General Public License v3](http://www.gnu.org/licenses/gpl-3.0.html).
 

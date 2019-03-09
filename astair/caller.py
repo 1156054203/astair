@@ -54,7 +54,7 @@ from astair.context_search import context_sequence_search
 @click.option('max_depth', '--max_depth', '-md', required=False, type=int, default=250, help='Set the maximum read depth for the pileup, maximum value 8000 (Default 250).')
 @click.option('per_chromosome', '--per_chromosome', '-chr', default=None, type=str, help='When used, it calculates the modification rates only per the chromosome given. (Default None')
 @click.option('N_threads', '--N_threads', '-t', default=1, required=True, help='The number of threads to spawn (Default 1).')
-@click.option('compress', '--gz', '-z', default=False, required=True, help='Indicates whether the mods file output will be compressed with gzip (Default False).')
+@click.option('compress', '--gz', '-z', default=False, type=bool, required=True, help='Indicates whether the mods file output will be compressed with gzip (Default False).')
 @click.option('directory', '--directory', '-d', required=True, type=str, help='Output directory to save files.')
 def call(input_file, reference, context, zero_coverage, skip_clip_overlap, minimum_base_quality, user_defined_context, method, minimum_mapping_quality, adjust_acapq_threshold,mark_matches, mark_ends, add_indels, redo_baq, compute_baq, ignore_orphans, max_depth,per_chromosome, N_threads, directory, compress):
         """Calls modified cytosines."""
@@ -130,7 +130,6 @@ def context_output(mean_mod, mean_unmod, user_defined_context, file_name, contex
                 wr.writerow([user_defined_context, "", round(non_zero_division(mean_mod['user defined context'], mean_mod['user defined context'] +
                         mean_unmod['user defined context']) * 100, 3), context_total_counts['user defined context'], context_sample_counts['user defined context']])
             
-
 
 def final_statistics_output(mean_mod, mean_unmod, user_defined_context, file_name, context_sample_counts, context_total_counts, context):
     """Writes the summary statistics of the cytosine modificaton levels.
