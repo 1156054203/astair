@@ -11,6 +11,7 @@ import pysam
 import click
 import random
 import logging
+import warnings
 from os import path
 import pkg_resources
 from threading import Thread
@@ -40,7 +41,7 @@ try:
         except Exception:
             raise Exception("Matplotlib was not found when trying to import it directly.")
 except Exception:
-    raise Exception("Matplotlib was not found, visualisation output will not be supported.")
+    warnings.warn("Matplotlib was not found, visualisation output will not be supported.", ImportWarning)
 
 if sys.version[0] == '3':
     from queue import Queue as Queue

@@ -47,7 +47,7 @@ try:
         except Exception:
             raise Exception("Matplotlib was not found when trying to import it directly.")
 except Exception:
-    raise Exception("Matplotlib was not found, visualisation output will not be supported.")
+    warnings.warn("Matplotlib was not found, visualisation output will not be supported.", ImportWarning)
 
 from astair.safe_division import non_zero_division
 from astair.bam_file_parser import bam_file_opener
