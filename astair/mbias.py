@@ -23,29 +23,13 @@ elif sys.version[0] == '2':
 else:
     raise Exception("This is not the python we're looking for (version {})".format(sys.version[0]))
 
-
 try:
-    try:
-        packages = ["%s" % pac.key for pac in pkg_resources.working_set]
-        if 'matplotlib' in packages or 'Matplotlib' in packages:
-            import matplotlib as mplot
-            mplot.use('Agg')
-            import matplotlib.pyplot as pyp
-            import matplotlib.ticker as ticker
-            pyp.style.use('seaborn-whitegrid')
-            pyp.ioff()
-        else:
-            pass
-    except Exception:
-        try:
-            import matplotlib as mplot
-            mplot.use('Agg')
-            import matplotlib.pyplot as pyp
-            import matplotlib.ticker as ticker
-            pyp.style.use('seaborn-whitegrid')
-            pyp.ioff()
-        except Exception:
-            raise Exception("Matplotlib was not found when trying to import it directly.")
+    import matplotlib as mplot
+    mplot.use('Agg')
+    import matplotlib.pyplot as pyp
+    import matplotlib.ticker as ticker
+    pyp.style.use('seaborn-whitegrid')
+    pyp.ioff()
 except Exception:
     warnings.warn("Matplotlib was not found, visualisation output will not be supported.", ImportWarning)
 
