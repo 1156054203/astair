@@ -21,16 +21,18 @@ logs = logging.getLogger(__name__)
 def cli():
     """
     asTair (tools for processing cytosine modification sequencing data)
-   
-    Version: __version__
-    __________________________________About__________________________________
-    
-    asTair was written by Gergana V. Velikova and Benjamin Schuster-Boeckler.
-    This code is made available under the GNU General Public License, see 
-    LICENSE.txt for more details."""
+    """
     pass
 
-cli.help = cli.help.replace('__version__', astair.__version__)
+cli.epilog = """
+__________________________________About__________________________________
+asTair was written by Gergana V. Velikova and Benjamin Schuster-Boeckler.
+This code is made available under the GNU General Public License, see 
+LICENSE.txt for more details.
+
+                                                         Version: __version__
+"""
+cli.epilog = cli.epilog.replace('__version__', astair.__version__)
 
 cli.add_command(aligner.align)
 cli.add_command(caller.call)
