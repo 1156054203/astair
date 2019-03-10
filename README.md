@@ -20,22 +20,21 @@ Usage: astair [OPTIONS] COMMAND [ARGS]...
 
   asTair (tools for processing cytosine modification sequencing data)
 
-  Version: 3.0.0
-  __________________________________About__________________________________
-
-  asTair was written by Gergana V. Velikova and Benjamin Schuster-Böckler.
-  This code is made available under the GNU General Public License, see
-  LICENSE.txt for more details.
-
 Options:
   --help  Show this message and exit.
 
 Commands:
-  align     Aligns sequencing reads.
-  call      Calls modified cytosines.
-  mbias     Gives modification per read length information (Mbias).
-  phred     Gives per base (A, C, T, G) Phred scores for each strand.
-  simulate  Simulates modification on TAPS or WGBS sequencing data.
+  align     Align raw reads in fastq format to a reference genome.
+  call      Call modified cytosines from a bam or cram file.
+  mbias     Generate modification per read length information (Mbias).
+  phred     Calculate per base (A, C, T, G) Phred scores for each strand.
+  simulate  Simulate TAPS/BS conversion on top of an existing bam/cram file.
+
+  __________________________________About__________________________________
+  asTair was written by Gergana V. Velikova and Benjamin Schuster-Böckler.
+  This code is made available under the GNU General Public License, see
+  LICENSE.txt for more details.
+                                                           Version: 3.0.0
 ```
 
 In general, you can use `--help` on all `astair` sub-commands to get detailed instructions on the available options.
