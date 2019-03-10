@@ -26,7 +26,7 @@ def cli():
 
 cli.epilog = """
 __________________________________About__________________________________
-asTair was written by Gergana V. Velikova and Benjamin Schuster-Boeckler.
+asTair was written by Gergana V. Velikova and Benjamin Schuster-Böckler.
 This code is made available under the GNU General Public License, see 
 LICENSE.txt for more details.
 
