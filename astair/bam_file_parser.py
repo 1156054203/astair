@@ -10,7 +10,8 @@ def bam_file_opener(input_file, fetch, threads):
     """Opens neatly and separately the bam file as an iterator."""
     try:
         open(input_file, 'rb')
-        if not os.path.isfile(os.path.join(str(input_file)+'.bai')) or not os.path.isfile(os.path.join(str(input_file)+'.crai')):
+        if (input_file[-4:] == '.bam' and not os.path.isfile(os.path.join(str(input_file)+'.bai'))) \
+                or (input_file[-5:] == '.cram' and not os.path.isfile(os.path.join(str(input_file)+'.crai'))):
             try:
                 pysam.index(input_file)
                 logs.info('Building index for the input file.')
