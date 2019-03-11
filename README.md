@@ -1,6 +1,8 @@
 
 _`asTair` is a toolchain to process DNA modification sequencing data. `asTair` was designed primarily for handling [TET-Assisted Pyridine Borane (TAPS) sequencing](https://www.nature.com/articles/s41587-019-0041-2) output, but also contains functions that are useful for Bisulfite Sequencing (BS) data._
 
+https://img.shields.io/bitbucket/pipelines/bsblabludwig/astair.svg
+
 # Basic usage
 ## 0. Installation 
 
