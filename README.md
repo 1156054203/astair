@@ -119,11 +119,13 @@ The header should be mostly self-explanatory. `MOD` and `UNMOD` refer to the num
 If pip is not available for some reason, you can simply download the package directly and install it manually:
 
 ```bash
-wget https://bitbucket.org/bsblabludwig/astair/get/v3.0.0.tar.gz
+wget https://bitbucket.org/bsblabludwig/astair/get/v3.0.1.tar.gz
 # or if you don't have wget, try
-# curl -O https://bitbucket.org/bsblabludwig/astair/get/v3.0.0.tar.gz
-tar -xzf v3.0.0.tar.gz
-cd v3.0.0
+# curl -O https://bitbucket.org/bsblabludwig/astair/get/v3.0.1.tar.gz
+
+tar -xzf v3.0.1.tar.gz -C astair_3.0.1 --strip-components=1
+
+cd astair_3.0.1
 ```
 
 We would recommend using a virtual environment to avoid issues with globally installed packages, or if you are on a shared system and need to install locally:
@@ -150,6 +152,7 @@ If you were using a virtual environment, you can deactivate the environment afte
 ```bash
 deactivate
 ```
+
 ## Analysis of WGBS data (or other unmodified cytosine to thymine conversion methods)
 
 The analysis pipeline for bisulfie sequencing data does follows the same steps as TAPS data analysis, but requires different options. We again start from fastq files. To avoid Bismark-style double-alignments, we prefer to use `bwa meth`, which can be used directly through `astair align` when you choose the `--method CtoT` option.
