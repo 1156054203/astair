@@ -119,13 +119,13 @@ The header should be mostly self-explanatory. `MOD` and `UNMOD` refer to the num
 If pip is not available for some reason, you can simply download the package directly and install it manually:
 
 ```bash
-wget https://bitbucket.org/bsblabludwig/astair/get/v3.0.1.tar.gz
+wget https://bitbucket.org/bsblabludwig/astair/get/v3.0.2.tar.gz
 # or if you don't have wget, try
-# curl -O https://bitbucket.org/bsblabludwig/astair/get/v3.0.1.tar.gz
+# curl -O https://bitbucket.org/bsblabludwig/astair/get/v3.0.2.tar.gz
 
-tar -xzf v3.0.1.tar.gz -C astair_3.0.1 --strip-components=1
+tar -xzf v3.0.2.tar.gz -C astair_3.0.2 --strip-components=1
 
-cd astair_3.0.1
+cd astair_3.0.2
 ```
 
 We would recommend using a virtual environment to avoid issues with globally installed packages, or if you are on a shared system and need to install locally:

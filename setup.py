@@ -16,7 +16,7 @@ exec(open('astair/version.py').read())
 setup(
     name="asTair",
     version=__version__,
-    packages=find_packages(),
+    packages=find_packages(exclude=['tests']),
     install_requires=['Click >=7, < 8', 'pysam >= 0.15.0', 'pyahocorasick >= 1, < 2', 'numpy >= 1, < 2'],
     extras_require={'plot':  ["matplotlib"],},
     test_suite='tests',
