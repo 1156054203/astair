@@ -112,7 +112,8 @@ The header should be mostly self-explanatory. `MOD` and `UNMOD` refer to the num
 2. In most cases, it will be best to remove PCR duplicates before running the modification caller, unless your reads are non-randomly fragmented (e.g. enzymatically digested).
 3. Check the fragment (insert) size distribution and decide on an overlap removal method for paired-end reads. The simplest option is the default removal of overlaps handled by `astair call`, which will randomly select one of two overlapping reads. This behaviour can be disabled by the `-sc` option, in case you are using a more sophisticated overlap-clipping tool.
 
-##Installing asTair without `pip`
+## Installing asTair without `pip`
+
 If pip is not available for some reason, you can simply download the package directly and install it manually:
 
 ```bash
