@@ -49,16 +49,16 @@ pipelines:
   
   tags:
     'v*':
-      - parallel:
-        - step: *build-test-py2
-        - step: *build-test-py3
-      - step:
-        name: Deploy to pypi
-        image: python:3.5.6
-        deployment: production
-        script:
-          - pip3 --cache-dir ~/.cache/pip3 install -r requirements.txt
-          - pip3 --cache-dir ~/.cache/pip3 install twine
-          - python3 setup.py sdist
-          - python3 setup.py bdist_wheel --universal
-          - twine upload dist/*
+        - parallel:
+          - step: *build-test-py2
+          - step: *build-test-py3
+        - step:
+            name: Deploy to pypi
+            image: python:3.5.6
+            deployment: production
+            script:
+              - pip3 --cache-dir ~/.cache/pip3 install -r requirements.txt
+              - pip3 --cache-dir ~/.cache/pip3 install twine
+              - python3 setup.py sdist
+              - python3 setup.py bdist_wheel --universal
+              - twine upload dist/*
