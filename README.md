@@ -33,7 +33,7 @@ Commands:
   simulate  Simulate TAPS/BS conversion on top of an existing bam/cram file.
 
   __________________________________About__________________________________
-  asTair was written by Gergana V. Velikova and Benjamin Schuster-Böckler.
+  asTair was written by Gergana V. Velikova and Benjamin Schuster-Boeckler.
   This code is made available under the GNU General Public License, see
   LICENSE.txt for more details.
                                                            Version: 3.0.0
