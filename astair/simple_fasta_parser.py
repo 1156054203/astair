@@ -1,57 +1,47 @@
 import re
 import sys
+import pdb
 import logging
 
 logging.basicConfig(level=logging.DEBUG)
 logs = logging.getLogger(__name__)
 
-def fasta_operator(parser, fasta_sequence, per_chromosome):
-    """Parses fasta files with multiple genomes."""
-    to_look_for_key = re.compile(r"(?<=>).*(?={})".format(parser))
-    to_look_for_string = re.compile(r"(?<={})(?!>).*(?={})".format(parser, parser))
-    keys = re.findall(to_look_for_key, fasta_sequence)
-    sequences = re.findall(to_look_for_string, fasta_sequence)
-    keys_indices = list()
-    keys_indices.insert(0,0)
-    for index in re.finditer(to_look_for_key, fasta_sequence):
-        keys_indices.append(index.end())
-    if len(keys) < len(sequences):
-        sequences = list()
-        for i in range(0,len(keys_indices)-1):
-            new_strings = re.findall(to_look_for_string, fasta_sequence[keys_indices[i]:keys_indices[i+1]])
-            joined_sequence = "".join(new_strings)
-            sequences.append(joined_sequence)
-        new_strings = re.findall(to_look_for_string, 
-                                    fasta_sequence[keys_indices[-1]:])
-        joined_sequence = "".join(new_strings)
-        sequences.append(joined_sequence)
-        sequences.remove('')
-    if per_chromosome != None:
-        keys_index = keys.index(per_chromosome)
-        keys = keys[keys_index]
-        sequences = sequences[keys_index]
-    return keys, sequences
 
 def fasta_splitting_by_sequence(fasta_file, per_chromosome):
-    """Checks line termination and enables parsing of fasta files with multiple genomes."""
+    """Reads the reference line by line, which enables parsing of fasta files with multiple genomes."""
     fastas = {}
-    keys, sequences = list(), list()
+    keys, sequences, sequences_per_chrom = list(), list(), list()
     try:
         with open(fasta_file, 'r') as fasta_handle:
-            fasta_sequence = fasta_handle.read()
-            if re.match(r".*(?=\r\n)", fasta_sequence):
-                keys, sequences = fasta_operator("\r\n", fasta_sequence, per_chromosome)
-            elif re.match(r".*(?=\n\r)", fasta_sequence):
-                keys, sequences = fasta_operator("\n\r", fasta_sequence, per_chromosome)
-            elif re.match(r".*(?=\n)", fasta_sequence):
-                keys, sequences = fasta_operator("\n", fasta_sequence, per_chromosome)
-            else:
-                logs.error('The new line symbols in the presented fasta file do not match expected use cases. Please, change them to \n.')
+            for fasta_sequence in fasta_handle.readlines():
+                if per_chromosome == None:
+                    if re.match(r'^>', fasta_sequence.splitlines()[0]):
+                        keys.append(fasta_sequence.splitlines()[0][1:])
+                        sequences.append("".join(sequences_per_chrom))
+                        sequences_per_chrom = list()
+                    else:
+                        sequences_per_chrom.append(fasta_sequence.splitlines()[0])
+                else:
+                    if re.match(r'^>', fasta_sequence.splitlines()[0]) and fasta_sequence.splitlines()[0][1:] == per_chromosome:
+                        keys = fasta_sequence.splitlines()[0][1:]
+                        chromosome_found = True
+                    elif re.match(r'^>', fasta_sequence.splitlines()[0]) and fasta_sequence.splitlines()[0][1:] != per_chromosome:
+                        chromosome_found = False
+                        pass
+                    else:
+                        if chromosome_found == True:
+                            sequences_per_chrom.append(fasta_sequence.splitlines()[0])
         if per_chromosome == None:
+            sequences.append("".join(sequences_per_chrom))
+            sequences = sequences[1:]
             for i in range(0, len(keys)):
                 fastas[keys[i]] = sequences[i]
         else:
-            fastas[keys] = sequences
+            try:
+                sequences = "".join(sequences_per_chrom)
+                fastas[keys] = sequences
+            except Exception:
+                logs.error('The chromosome does not exist in the genome reference fasta file.', exc_info=True)
         return keys, fastas
     except Exception:
         logs.error('The genome reference fasta file does not exist.', exc_info=True)
