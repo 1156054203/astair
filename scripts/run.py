@@ -5,9 +5,10 @@ import click
 import logging
 
 import astair
-import astair.phred as phred
 import astair.mbias as mbias
+import astair.phred as phred
 import astair.caller as caller
+import astair.finder as finder
 import astair.aligner as aligner
 import astair.simulator as simulator
 
@@ -39,6 +40,7 @@ cli.add_command(caller.call)
 cli.add_command(simulator.simulate)
 cli.add_command(phred.phred)
 cli.add_command(mbias.mbias)
+cli.add_command(finder.find)
 
 if __name__ == '__main__':
     cli()

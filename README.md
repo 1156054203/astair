@@ -28,6 +28,7 @@ Options:
 Commands:
   align     Align raw reads in fastq format to a reference genome.
   call      Call modified cytosines from a bam or cram file.
+  find      Outputs positions of Cs from fasta file per context.
   mbias     Generate modification per read length information (Mbias).
   phred     Calculate per base (A, C, T, G) Phred scores for each strand.
   simulate  Simulate TAPS/BS conversion on top of an existing bam/cram file.
@@ -36,7 +37,7 @@ Commands:
   asTair was written by Gergana V. Velikova and Benjamin Schuster-Boeckler.
   This code is made available under the GNU General Public License, see
   LICENSE.txt for more details.
-                                                           Version: 3.0.0
+                                                           Version: 3.0.2
 ```
 
 In general, you can use `--help` on all `astair` sub-commands to get detailed instructions on the available options.
