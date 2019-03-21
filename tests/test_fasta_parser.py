@@ -27,8 +27,7 @@ class FastaParserTest(unittest.TestCase):
     def test_parsing_fasta_files_multiple(self):
         """Tests whether several short fasta-like strings can be split into DNA sequences and chromosome names."""
         package = version_testing_builtin()
-        with patch("{}.open".format(package), mock_open(read_data=">some_fasta_sequence\nACTGCTCCCTGGaaaTCG\n>yet_another_fasta_sequence\nAAACCTGCcctGttug\n"
-                                                        ">fasta_sequence_again\nAAAAAAACCTGCTAGctaatat\n>and_again_sequence\nCTGATCGTTTAGCAGCA\n")) as mock_file:
+        with patch("{}.open".format(package), mock_open(read_data=">some_fasta_sequence\nACTGCTCCCTGGaaaTCG\n>yet_another_fasta_sequence\nAAACCTGCcctGttug\n>fasta_sequence_again\nAAAAAAACCTGCTAGctaatat\n>and_again_sequence\nCTGATCGTTTAGCAGCA\n")) as mock_file:
             keys, fastas = sfp.fasta_splitting_by_sequence(mock_file, None)
             self.assertEqual(keys, ['some_fasta_sequence', 'yet_another_fasta_sequence', 'fasta_sequence_again', 'and_again_sequence'])
             self.assertEqual([fastas[key] for key in keys], ['ACTGCTCCCTGGaaaTCG', 'AAACCTGCcctGttug', 'AAAAAAACCTGCTAGctaatat', 'CTGATCGTTTAGCAGCA'])
