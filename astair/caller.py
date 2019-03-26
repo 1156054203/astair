@@ -173,7 +173,7 @@ def pillup_summary(modification_information_per_position, position, read_counts,
                                   + read_counts[undesired_tuples[2]] + read_counts[undesired_tuples[3]])) < 0.8:
             snp = 'No'
         else:
-            snp = 'homozyguous'
+            snp = 'homozygous'
         if method == 'mCtoT':
             all_data = list((position[0], position[1], position[1] + 1, round(
             non_zero_division(read_counts[desired_tuples[2]] + read_counts[desired_tuples[3]], (
