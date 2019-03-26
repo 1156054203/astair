@@ -43,6 +43,17 @@ class FastaParserTest(unittest.TestCase):
             self.assertEqual([fastas[key] for key in keys],['GGGCGGCGACCTCGCGGGTTTTCGCTATTTATGAAAATTTTCCGGTTTAAGGCGTTTCCGTTCTTCTTCGGGGCGGCGACCTCGCGGGTTTTCGCTATTTATGAAAATTTTCCGGTTTAAGGCGTTTCCGTTCTTCTTCG',
                                         'AAAAAAACCTGCTAGctaatatGGGCGGCGACCTCGCGGGTTTTCGCTATTTATGAAAATTTTCCGGTTTAAGGCGTTTCCGTTCTTCTTCG',
                                         'CTGATCGTTTAGCAGCGGGCGGCGACCTCGCGGGTTTTCGCTATTTATGAAAATTTTCCGGTTTAAGGCGTTTCCGTTCTTCTTCGA'])
+    def test_parsing_fasta_files_multiple_types_of_line_terminators(self):
+        """Tests whether several short fasta-like strings can be split into DNA sequences and chromosome names when they have different line terminators."""
+        package = version_testing_builtin()
+        with patch("{}.open".format(package), mock_open(read_data=">some_fasta_sequence\r\n\r\n\r\n\r\nGGGCGGCGACCTCGCGGGTTTTCGCTATTTATGAAAATTTTCCGGTTTAAGGCGTTTCCGTTCTTCTTCG\r\nGGGCGGCGACCTCGCGGGTTTTCGCTATTTATGAAAATTTTCCGGTTTAAGGCGTTTCCGTTCTTCTTCG" \
+                    "\r\n>fasta_sequence_again\nAAAAAAACCTGCTAGctaatatGGGCGGCGACCTCGCGGGTTTTCGCTATTTATGAAAATTTTCCGGTTTAAGGCGTTTCCGTTCTTCTTCG\n>and_again_sequence\r\n" \
+                    "CTGATCGTTTAGCAGCGGGCGGCGACCTCGCGGGTTTTCGCTATTTATGAAAATTTTCCGGTTTAAGGCGTTTCCGTTCTTCTTCGA\n")) as mock_file:
+            keys, fastas = sfp.fasta_splitting_by_sequence(mock_file, None)
+            self.assertEqual(keys, ['some_fasta_sequence', 'fasta_sequence_again', 'and_again_sequence'])
+            self.assertEqual([fastas[key] for key in keys],['GGGCGGCGACCTCGCGGGTTTTCGCTATTTATGAAAATTTTCCGGTTTAAGGCGTTTCCGTTCTTCTTCGGGGCGGCGACCTCGCGGGTTTTCGCTATTTATGAAAATTTTCCGGTTTAAGGCGTTTCCGTTCTTCTTCG',
+                                        'AAAAAAACCTGCTAGctaatatGGGCGGCGACCTCGCGGGTTTTCGCTATTTATGAAAATTTTCCGGTTTAAGGCGTTTCCGTTCTTCTTCG',
+                                        'CTGATCGTTTAGCAGCGGGCGGCGACCTCGCGGGTTTTCGCTATTTATGAAAATTTTCCGGTTTAAGGCGTTTCCGTTCTTCTTCGA'])
 
     
 if __name__ == '__main__':
