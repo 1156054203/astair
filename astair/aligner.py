@@ -130,7 +130,7 @@ def run_alignment(fq1, fq2, reference, bwa_path, samtools_path, directory, metho
                    reference, fq1, fq2, use_samtools, output_f, reference, minimum_mapping_quality,
                    aligned_string, output_format, use_samtools, N_threads, output_format, os.path.join(directory + name + '_' + method + "." + output_format.lower()))
     else:
-        alignment_command = 'python2 {} -t {} --reference {} {} {} | {} view {} -T {} -q {} {} -O {} | {} sort -@ {} -O {} > {}'.\
+        alignment_command = 'python {} -t {} --reference {} {} {} | {} view {} -T {} -q {} {} -O {} | {} sort -@ {} -O {} > {}'.\
             format(use_bwa, N_threads, reference, fq1, fq2, use_samtools, output_f, reference, minimum_mapping_quality,
                    aligned_string, output_format, use_samtools, N_threads, output_format, os.path.join(directory + name + '_' + method + "." + output_format.lower()))
     try:
