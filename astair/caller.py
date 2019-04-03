@@ -127,16 +127,16 @@ def final_statistics_output(mean_mod, mean_unmod, user_defined_context, file_nam
     Cytosine modification rate given as the percentage total modified cytosines
     divided by the total number of cytosines covered."""
     try:
-        if context is 'all':
+        if context == 'all':
             context_output(mean_mod, mean_unmod, user_defined_context, file_name, context_sample_counts, context_total_counts, 'CpG', 'CG', list(('CGA','CGC', 'CGG', 'CGT')), True)
             context_output(mean_mod, mean_unmod, user_defined_context, file_name, context_sample_counts, context_total_counts, 'CHG', 'CHG', list(('CAG','CCG', 'CTG')), False)
             context_output(mean_mod, mean_unmod, user_defined_context, file_name, context_sample_counts, context_total_counts, 'CHH', 'CHH', list(('CTT', 'CAT', 'CCT', 'CTA', 'CAA', 'CCA', 'CTC', 'CAC', 'CCC')), False)
             context_output(mean_mod, mean_unmod, user_defined_context, file_name, context_sample_counts, context_total_counts, 'CNN', 'CN', list(), False)
-        elif context is 'CpG':
+        elif context == 'CpG':
             context_output(mean_mod, mean_unmod, user_defined_context, file_name, context_sample_counts, context_total_counts, context, 'CG', list(('CGA','CGC', 'CGG', 'CGT')), True)
-        elif context is 'CHG':
+        elif context == 'CHG':
             context_output(mean_mod, mean_unmod, user_defined_context, file_name, context_sample_counts, context_total_counts, context, 'CHG', list(('CAG','CCG', 'CTG')), True)
-        elif context is 'CHH':
+        elif context == 'CHH':
             context_output(mean_mod, mean_unmod, user_defined_context, file_name, context_sample_counts, context_total_counts, context, 'CHH', list(('CTT', 'CAT', 'CCT', 'CTA', 'CAA', 'CCA', 'CTC', 'CAC', 'CCC')), True)
     except IOError:
         logs.error('asTair cannot write to statistics summary file.', exc_info=True)

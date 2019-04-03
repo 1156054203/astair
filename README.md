@@ -31,6 +31,7 @@ Commands:
   find      Outputs positions of Cs from fasta file per context.
   mbias     Generate modification per read length information (Mbias).
   phred     Calculate per base (A, C, T, G) Phred scores for each strand.
+  separator Separates a bam file based on the context at certain positions.
   simulate  Simulate TAPS/BS conversion on top of an existing bam/cram file.
 
   __________________________________About__________________________________
