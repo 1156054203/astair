@@ -37,7 +37,7 @@ Commands:
   asTair was written by Gergana V. Velikova and Benjamin Schuster-Boeckler.
   This code is made available under the GNU General Public License, see
   LICENSE.txt for more details.
-                                                           Version: 3.0.2
+                                                           Version: 3.1.0
 ```
 
 In general, you can use `--help` on all `astair` sub-commands to get detailed instructions on the available options.
