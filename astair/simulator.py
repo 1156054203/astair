@@ -160,32 +160,43 @@ def general_read_information_output(name, directory, read, modification_level, h
 
 def cigar_aware_positions(read, ref, sequence_to_use):
     """Looks whether there are indels, soft clipping or pads the CIGAR string"""
-    if len([val.start() for val in re.finditer('I', read.cigarstring)]) > 0 or len([val.start() for val in re.finditer('P', read.cigarstring)]) > 0 or len([val.start() for val in re.finditer('D', read.cigarstring)]) > 0 or len([val.start() for val in re.finditer('S', read.cigarstring)]) > 0:
-        sequence_to_use = list(sequence_to_use)
-        changes = [int(s) for s in re.findall(r'\d+', read.cigarstring)]
-        non_overlap = [x + 1 if x == 0 else x for x in changes]
-        names = list(re.findall(r'[^\W\d_]+', read.cigarstring))
-        positions = [x + 1 for x in list(itertools.accumulate(non_overlap))]
-        if sequence_to_use == read.get_reference_sequence():
-            if names.count('D') != 0:
-                del sequence_to_use[positions[names.index('D')]:positions[names.index('D')]+changes[names.index('D')]]
-            elif names.count('S') != 0:
-                del sequence_to_use[positions[names.index('S')]:positions[names.index('D')]+changes[names.index('S')]]
-            elif names.count('I') != 0:
-                sequence_to_use.insert(positions[names.index('I')], list(read.query_sequence[positions[names.index('I')]:positions[names.index('I')]+changes[names.index('I')]]))
+    if len(read.tags) != 0:
+        if len(read.query_sequence)!= len(read.get_reference_sequence()) and (len([val.start() for val in re.finditer('I', read.cigarstring)]) > 0 or len([val.start() for val in re.finditer('P', read.cigarstring)]) > 0 or len([val.start() for val in re.finditer('D', read.cigarstring)]) > 0 or len([val.start() for val in re.finditer('S', read.cigarstring)]) > 0):
+            sequence_to_use = list(sequence_to_use)
+            changes = [int(s) for s in re.findall(r'\d+', read.cigarstring)]
+            non_overlap = [x + 1 if x == 0 else x for x in changes]
+            names = list(re.findall(r'[^\W\d_]+', read.cigarstring))
+            positions = [x + 1 for x in list(itertools.accumulate(non_overlap))]
+            if "".join(sequence_to_use) == read.get_reference_sequence().upper():
+                if names.count('D') != 0:
+                    for index in [x[0] for x in list(enumerate(names)) if x[1]=='D']:
+                        del sequence_to_use[positions[index]:positions[index]+changes[index]]
+                elif names.count('S') != 0:
+                    for index in [x[0] for x in list(enumerate(names)) if x[1] == 'S']:
+                        del sequence_to_use[positions[index]:positions[index] + changes[index]]
+                elif names.count('I') != 0:
+                    for index in [x[0] for x in list(enumerate(names)) if x[1] == 'I']:
+                        sequence_to_use.insert(positions[index], list(read.query_sequence[positions[index]:positions[index] + changes[index]]))
+                elif names.count('P') != 0:
+                    for index in [x[0] for x in list(enumerate(names)) if x[1] == 'P']:
+                        sequence_to_use.insert(positions[index], list(read.query_sequence[positions[index]:positions[index] + changes[index]]))
             else:
-                sequence_to_use.insert(positions[names.index('P')], list(read.query_sequence[positions[names.index('P')]:positions[names.index('P')]+changes[names.index('P')]]))
+                if names.count('D') != 0:
+                    for index in [x[0] for x in list(enumerate(names)) if x[1] == 'D']:
+                        sequence_to_use.insert(positions[index], list(read.query_sequence[positions[index]:positions[index] + changes[index]]))
+                elif names.count('S') != 0:
+                    for index in [x[0] for x in list(enumerate(names)) if x[1] == 'S']:
+                        sequence_to_use.insert(positions[index], list(read.query_sequence[positions[index]:positions[index] + changes[index]]))
+                elif names.count('I') != 0:
+                    for index in [x[0] for x in list(enumerate(names)) if x[1] == 'I']:
+                        del sequence_to_use[positions[index]:positions[index] + changes[index]]
+                elif names.count('P') != 0:
+                    for index in [x[0] for x in list(enumerate(names)) if x[1] == 'P']:
+                        del sequence_to_use[positions[index]:positions[index] + changes[index]]
+            sequence_to_use = "".join(list(itertools.chain.from_iterable(item if isinstance(item,collections.Iterable) and not isinstance(item, str) else [item] for item in sequence_to_use)))
+            posit = [val.start() + read.reference_start for val in re.finditer(ref, sequence_to_use)]
         else:
-            if names.count('D') != 0:
-                sequence_to_use.insert(positions[names.index('D')], list(read.query_sequence[positions[names.index('D')]:positions[names.index('D')]+changes[names.index('D')]]))
-            elif names.count('S') != 0:
-                sequence_to_use.insert(positions[names.index('S')], list(read.query_sequence[positions[names.index('S')]:positions[names.index('S')]+changes[names.index('S')]]))
-            elif names.count('I') != 0:
-                del sequence_to_use[positions[names.index('I')]:positions[names.index('I')]+changes[names.index('I')]]
-            else:
-                del sequence_to_use[positions[names.index('P')]:positions[names.index('P')]+changes[names.index('P')]]
-        sequence_to_use = "".join(list(itertools.chain.from_iterable(item if isinstance(item,collections.Iterable) and not isinstance(item, str) else [item] for item in sequence_to_use)))
-        posit = [val.start() + read.reference_start for val in re.finditer(ref, sequence_to_use)]
+            posit = [val.start() + read.reference_start for val in re.finditer(ref, sequence_to_use)]
     else:
         posit = [val.start() + read.reference_start for val in re.finditer(ref, sequence_to_use)]
     return posit
@@ -281,7 +292,7 @@ def bam_input_simulation(directory, name, modification_level, context, input_fil
         for read in bam_file_opener(input_file, fetch, N_threads):
             general_read_information_output(name, directory, read, modification_level, header, region, method, context)
             quals = read.query_qualities
-            if read.flag in [99, 147, 83, 163]:
+            if read.flag in [99, 147, 83, 163] and read.reference_length != 0:
                 positions, base = modification_by_strand(read, library, reverse_modification)
                 modified_positions_data.extend(list(random_sample.intersection(positions)))
                 if method == 'mCtoT':
@@ -310,6 +321,8 @@ def bam_input_simulation(directory, name, modification_level, context, input_fil
                     read.query_qualities = quals
                     outbam.write(read)
                 header = False
+            elif read.flag in [99, 147, 83, 163]:
+                outbam.write(read)
         return modification_information
 
 
