@@ -44,6 +44,7 @@ from astair.context_search import context_sequence_search
 # @click.option('library', '--library', '-l', required=False, default = 'directional',  type=click.Choice(['directional', 'rr', 'ptat']), help='Provides information for the library preparation protocol (rr is reduced representation and ptat is post-method adapter-tagging).')
 @click.option('method', '--method', '-m', required=False, default = 'mCtoT', type=click.Choice(['CtoT', 'mCtoT']), help='Specify sequencing method, possible options are CtoT (unmodified cytosines are converted to thymines, bisulfite sequencing-like) and mCtoT (modified cytosines are converted to thymines, TAPS-like). (Default mCtoT)')
 @click.option('skip_clip_overlap', '--skip_clip_overlap', '-sc', required=False, default=False, type=bool, help='Skipping the random removal of overlapping bases between paired-end reads. Not recommended for paired-end libraries, unless the overlaps are removed prior to calling. (Default False)')
+@click.option('single_end', '--se', '-s', default=False, is_flag=True, required=False, help='Indicates single-end sequencing reads (Default False).')
 @click.option('minimum_base_quality', '--minimum_base_quality', '-bq', required=False, type=int, default=20, help='Set the minimum base quality for a read base to be used in the pileup (Default 20).')
 @click.option('minimum_mapping_quality', '--minimum_mapping_quality', '-mq', required=False, type=int, default=0, help='Set the minimum mapping quality for a read to be used in the pileup (Default 0).')
 @click.option('adjust_acapq_threshold', '--adjust_capq_threshold', '-amq', required=False, type=int, default=0, help='Used to adjust the mapping quality with default 0 for no adjustment and a recommended value for adjustment 50. (Default 0).')
@@ -58,9 +59,9 @@ from astair.context_search import context_sequence_search
 @click.option('N_threads', '--N_threads', '-t', default=1, required=True, help='The number of threads to spawn (Default 1).')
 @click.option('compress', '--gz', '-z', default=False, is_flag=True, required=False, help='Indicates whether the mods file output will be compressed with gzip (Default False).')
 @click.option('directory', '--directory', '-d', required=True, type=str, help='Output directory to save files.')
-def call(input_file, reference, context, zero_coverage, skip_clip_overlap, minimum_base_quality, user_defined_context, method, minimum_mapping_quality, adjust_acapq_threshold,mark_matches, mark_ends, add_indels, redo_baq, compute_baq, ignore_orphans, max_depth,per_chromosome, N_threads, directory, compress):
+def call(input_file, reference, context, zero_coverage, skip_clip_overlap, minimum_base_quality, user_defined_context, method, minimum_mapping_quality, adjust_acapq_threshold,mark_matches, mark_ends, add_indels, redo_baq, compute_baq, ignore_orphans, max_depth,per_chromosome, N_threads, directory, compress, single_end):
         """Call modified cytosines from a bam or cram file. The output consists of two files, one containing modification counts per nucleotide, the other providing genome-wide statistics per context."""
-        cytosine_modification_finder(input_file, reference, context, zero_coverage, skip_clip_overlap, minimum_base_quality, user_defined_context, method, minimum_mapping_quality, adjust_acapq_threshold,mark_matches, mark_ends, add_indels, redo_baq, compute_baq, ignore_orphans, max_depth, per_chromosome, N_threads, directory, compress)
+        cytosine_modification_finder(input_file, reference, context, zero_coverage, skip_clip_overlap, minimum_base_quality, user_defined_context, method, minimum_mapping_quality, adjust_acapq_threshold,mark_matches, mark_ends, add_indels, redo_baq, compute_baq, ignore_orphans, max_depth, per_chromosome, N_threads, directory, compress, single_end)
 
 
 warnings.simplefilter(action='ignore', category=FutureWarning)
@@ -127,100 +128,125 @@ def final_statistics_output(mean_mod, mean_unmod, user_defined_context, file_nam
     Cytosine modification rate given as the percentage total modified cytosines
     divided by the total number of cytosines covered."""
     try:
-        if context == 'all':
+        if context is 'all':
             context_output(mean_mod, mean_unmod, user_defined_context, file_name, context_sample_counts, context_total_counts, 'CpG', 'CG', list(('CGA','CGC', 'CGG', 'CGT')), True)
             context_output(mean_mod, mean_unmod, user_defined_context, file_name, context_sample_counts, context_total_counts, 'CHG', 'CHG', list(('CAG','CCG', 'CTG')), False)
             context_output(mean_mod, mean_unmod, user_defined_context, file_name, context_sample_counts, context_total_counts, 'CHH', 'CHH', list(('CTT', 'CAT', 'CCT', 'CTA', 'CAA', 'CCA', 'CTC', 'CAC', 'CCC')), False)
             context_output(mean_mod, mean_unmod, user_defined_context, file_name, context_sample_counts, context_total_counts, 'CNN', 'CN', list(), False)
-        elif context == 'CpG':
+        elif context is 'CpG':
             context_output(mean_mod, mean_unmod, user_defined_context, file_name, context_sample_counts, context_total_counts, context, 'CG', list(('CGA','CGC', 'CGG', 'CGT')), True)
-        elif context == 'CHG':
+        elif context is 'CHG':
             context_output(mean_mod, mean_unmod, user_defined_context, file_name, context_sample_counts, context_total_counts, context, 'CHG', list(('CAG','CCG', 'CTG')), True)
-        elif context == 'CHH':
+        elif context is 'CHH':
             context_output(mean_mod, mean_unmod, user_defined_context, file_name, context_sample_counts, context_total_counts, context, 'CHH', list(('CTT', 'CAT', 'CCT', 'CTA', 'CAA', 'CCA', 'CTC', 'CAC', 'CCC')), True)
     except IOError:
         logs.error('asTair cannot write to statistics summary file.', exc_info=True)
 
 
-def flags_expectation(modification_information_per_position, position, ignore_orphans):
+def flags_expectation(modification_information_per_position, position, ignore_orphans, single_end):
     """Gives the expected flag-base couples, the reference and the modified base."""
-    if modification_information_per_position[position][3] == 'C':
-        desired_tuples = [(147, 'C'), (99, 'C'), (147, 'T'), (99, 'T')]
-        undesired_tuples = [(163, 'C'), (83, 'C'), (163, 'T'), (83, 'T')]
-        modification = 'T'
-        reference = 'C'
-        if ignore_orphans == False:
-            desired_tuples.extend([(145, 'C'), (97, 'C'), (145, 'T'), (97, 'T')])
-            undesired_tuples.extend([(161, 'C'), (81, 'C'), (161, 'T'), (81, 'T')])
-    elif modification_information_per_position[position][3] == 'G':
-        desired_tuples = [(163, 'G'), (83, 'G'), (163, 'A'), (83, 'A')]
-        undesired_tuples = [(147, 'G'), (99, 'G'), (147, 'A'), (99, 'A')]
-        modification = 'A'
-        reference = 'G'
-        if ignore_orphans == False:
-            desired_tuples.extend([(161, 'G'), (81, 'G'), (161, 'A'), (81, 'A')])
-            undesired_tuples.extend([(145, 'G'), (97, 'G'), (145, 'A'), (97, 'A')])
+    if single_end == True:
+        if modification_information_per_position[position][3] == 'C':
+            desired_tuples = [(0, 'C'), (0, 'T')]
+            undesired_tuples = [(16, 'C'), (16, 'T')]
+            modification = 'T'
+            reference = 'C'
+        elif modification_information_per_position[position][3] == 'G':
+            desired_tuples = [(16, 'G'), (16, 'A')]
+            undesired_tuples = [(0, 'G'), (0, 'A')]
+            modification = 'A'
+            reference = 'G'
+    else:
+        if modification_information_per_position[position][3] == 'C':
+            desired_tuples = [(147, 'C'), (99, 'C'), (147, 'T'), (99, 'T')]
+            undesired_tuples = [(163, 'C'), (83, 'C'), (163, 'T'), (83, 'T')]
+            modification = 'T'
+            reference = 'C'
+            if ignore_orphans == False:
+                desired_tuples.extend([(145, 'C'), (97, 'C'), (145, 'T'), (97, 'T')])
+                undesired_tuples.extend([(161, 'C'), (81, 'C'), (161, 'T'), (81, 'T')])
+        elif modification_information_per_position[position][3] == 'G':
+            desired_tuples = [(163, 'G'), (83, 'G'), (163, 'A'), (83, 'A')]
+            undesired_tuples = [(147, 'G'), (99, 'G'), (147, 'A'), (99, 'A')]
+            modification = 'A'
+            reference = 'G'
+            if ignore_orphans == False:
+                desired_tuples.extend([(161, 'G'), (81, 'G'), (161, 'A'), (81, 'A')])
+                undesired_tuples.extend([(145, 'G'), (97, 'G'), (145, 'A'), (97, 'A')])
     return desired_tuples, undesired_tuples, modification, reference
 
         
 def pillup_summary(modification_information_per_position, position, read_counts, mean_mod, mean_unmod, user_defined_context,
-                   header, file_name, desired_tuples, undesired_tuples, modification, reference, depth, method, context_sample_counts, ignore_orphans):
+                   header, file_name, desired_tuples, undesired_tuples, modification, reference, depth, method, context_sample_counts, ignore_orphans, single_end):
     """Gives the modication call rows given strand information."""
-    if ignore_orphans:
-        if non_zero_division(read_counts[undesired_tuples[2]] + read_counts[undesired_tuples[3]],
-                             (read_counts[undesired_tuples[0]] + read_counts[undesired_tuples[1]]
-                                  + read_counts[undesired_tuples[2]] + read_counts[undesired_tuples[3]])) < 0.8:
+    if single_end == True:
+        if non_zero_division(read_counts[undesired_tuples[1]], (read_counts[undesired_tuples[0]] + read_counts[undesired_tuples[1]])) < 0.8:
             snp = 'No'
         else:
             snp = 'homozygous'
         if method == 'mCtoT':
-            all_data = list((position[0], position[1], position[1] + 1, round(
-            non_zero_division(read_counts[desired_tuples[2]] + read_counts[desired_tuples[3]], (
-                read_counts[desired_tuples[2]] + read_counts[desired_tuples[3]] + read_counts[desired_tuples[0]] + read_counts[
-                    desired_tuples[1]])), 3), read_counts[desired_tuples[2]] + read_counts[desired_tuples[3]],
-                         read_counts[desired_tuples[0]] + read_counts[desired_tuples[1]], reference, modification,
-                         modification_information_per_position[position][0],
-                         modification_information_per_position[position][1], snp, depth))
-        elif method == 'CtoT':
-            all_data = list((position[0], position[1], position[1] + 1, round(
-                non_zero_division(read_counts[desired_tuples[0]] + read_counts[desired_tuples[1]], (
+            all_data = list((position[0], position[1], position[1] + 1, round(non_zero_division(read_counts[desired_tuples[1]], (read_counts[desired_tuples[0]] + read_counts[desired_tuples[1]])), 3),
+                             read_counts[desired_tuples[1]], read_counts[desired_tuples[0]], reference, modification, modification_information_per_position[position][0],
+                             modification_information_per_position[position][1], snp, depth))
+        elif method =='CtoT':
+            all_data = list((position[0], position[1], position[1] + 1, round(non_zero_division(read_counts[desired_tuples[0]], (read_counts[desired_tuples[0]] + read_counts[desired_tuples[1]])), 3),
+                             read_counts[desired_tuples[0]], read_counts[desired_tuples[1]], reference, modification, modification_information_per_position[position][0], modification_information_per_position[position][1], snp, depth))
+    else:
+        if ignore_orphans:
+            if non_zero_division(read_counts[undesired_tuples[2]] + read_counts[undesired_tuples[3]],
+                                 (read_counts[undesired_tuples[0]] + read_counts[undesired_tuples[1]]
+                                      + read_counts[undesired_tuples[2]] + read_counts[undesired_tuples[3]])) < 0.8:
+                snp = 'No'
+            else:
+                snp = 'homozygous'
+            if method == 'mCtoT':
+                all_data = list((position[0], position[1], position[1] + 1, round(
+                non_zero_division(read_counts[desired_tuples[2]] + read_counts[desired_tuples[3]], (
                     read_counts[desired_tuples[2]] + read_counts[desired_tuples[3]] + read_counts[desired_tuples[0]] + read_counts[
-                        desired_tuples[1]])), 3), read_counts[desired_tuples[0]] + read_counts[desired_tuples[1]],
-                             read_counts[desired_tuples[2]] + read_counts[desired_tuples[3]], reference, modification,
+                        desired_tuples[1]])), 3), read_counts[desired_tuples[2]] + read_counts[desired_tuples[3]],
+                             read_counts[desired_tuples[0]] + read_counts[desired_tuples[1]], reference, modification,
                              modification_information_per_position[position][0],
                              modification_information_per_position[position][1], snp, depth))
-    else:
-        if non_zero_division(read_counts[undesired_tuples[2]] + read_counts[undesired_tuples[3]] + read_counts[undesired_tuples[6]] + read_counts[undesired_tuples[7]],
-                             (read_counts[undesired_tuples[0]] + read_counts[undesired_tuples[1]]
-                                  + read_counts[undesired_tuples[2]] + read_counts[undesired_tuples[3]] + read_counts[undesired_tuples[4]] + read_counts[undesired_tuples[5]]
-                                  + read_counts[undesired_tuples[6]] + read_counts[undesired_tuples[7]])) < 0.8:
-            snp = 'No'
+            elif method == 'CtoT':
+                all_data = list((position[0], position[1], position[1] + 1, round(
+                    non_zero_division(read_counts[desired_tuples[0]] + read_counts[desired_tuples[1]], (
+                        read_counts[desired_tuples[2]] + read_counts[desired_tuples[3]] + read_counts[desired_tuples[0]] + read_counts[
+                            desired_tuples[1]])), 3), read_counts[desired_tuples[0]] + read_counts[desired_tuples[1]],
+                                 read_counts[desired_tuples[2]] + read_counts[desired_tuples[3]], reference, modification,
+                                 modification_information_per_position[position][0],
+                                 modification_information_per_position[position][1], snp, depth))
         else:
-            snp = 'homozyguous'
-        if method == 'mCtoT':
-            all_data = list((position[0], position[1], position[1] + 1, round(
-            non_zero_division(read_counts[desired_tuples[2]] + read_counts[desired_tuples[3]] + read_counts[desired_tuples[6]] + read_counts[desired_tuples[7]], (
-                read_counts[desired_tuples[2]] + read_counts[desired_tuples[3]] + read_counts[desired_tuples[0]] + read_counts[
-                    desired_tuples[1]] + read_counts[desired_tuples[4]] + read_counts[desired_tuples[5]] + read_counts[desired_tuples[6]] + read_counts[desired_tuples[7]])), 3),
-                             read_counts[desired_tuples[2]] + read_counts[desired_tuples[3]] + read_counts[desired_tuples[6]] + read_counts[desired_tuples[7]],
-                         read_counts[desired_tuples[0]] + read_counts[desired_tuples[1]] + read_counts[desired_tuples[4]] + read_counts[desired_tuples[5]], reference, modification,
-                         modification_information_per_position[position][0],
-                         modification_information_per_position[position][1], snp, depth))
-        elif method == 'CtoT':
-            all_data = list((position[0], position[1], position[1] + 1, round(
-                non_zero_division(read_counts[desired_tuples[0]] + read_counts[desired_tuples[1]] + read_counts[desired_tuples[4]] + read_counts[desired_tuples[5]], (
+            if non_zero_division(read_counts[undesired_tuples[2]] + read_counts[undesired_tuples[3]] + read_counts[undesired_tuples[6]] + read_counts[undesired_tuples[7]],
+                                 (read_counts[undesired_tuples[0]] + read_counts[undesired_tuples[1]]
+                                      + read_counts[undesired_tuples[2]] + read_counts[undesired_tuples[3]] + read_counts[undesired_tuples[4]] + read_counts[undesired_tuples[5]]
+                                      + read_counts[undesired_tuples[6]] + read_counts[undesired_tuples[7]])) < 0.8:
+                snp = 'No'
+            else:
+                snp = 'homozyguous'
+            if method == 'mCtoT':
+                all_data = list((position[0], position[1], position[1] + 1, round(
+                non_zero_division(read_counts[desired_tuples[2]] + read_counts[desired_tuples[3]] + read_counts[desired_tuples[6]] + read_counts[desired_tuples[7]], (
                     read_counts[desired_tuples[2]] + read_counts[desired_tuples[3]] + read_counts[desired_tuples[0]] + read_counts[
-                        desired_tuples[1]]) + read_counts[desired_tuples[4]] + read_counts[desired_tuples[5]] + read_counts[desired_tuples[6]] +
-                                  read_counts[desired_tuples[7]]), 3), read_counts[desired_tuples[0]] + read_counts[desired_tuples[1]] + read_counts[desired_tuples[4]]
-                             + read_counts[desired_tuples[5]], read_counts[desired_tuples[2]] + read_counts[desired_tuples[3]] + read_counts[desired_tuples[6]] + read_counts[desired_tuples[7]],
-                             reference, modification, modification_information_per_position[position][0],
+                        desired_tuples[1]] + read_counts[desired_tuples[4]] + read_counts[desired_tuples[5]] + read_counts[desired_tuples[6]] + read_counts[desired_tuples[7]])), 3),
+                                 read_counts[desired_tuples[2]] + read_counts[desired_tuples[3]] + read_counts[desired_tuples[6]] + read_counts[desired_tuples[7]],
+                             read_counts[desired_tuples[0]] + read_counts[desired_tuples[1]] + read_counts[desired_tuples[4]] + read_counts[desired_tuples[5]], reference, modification,
+                             modification_information_per_position[position][0],
                              modification_information_per_position[position][1], snp, depth))
+            elif method == 'CtoT':
+                all_data = list((position[0], position[1], position[1] + 1, round(
+                    non_zero_division(read_counts[desired_tuples[0]] + read_counts[desired_tuples[1]] + read_counts[desired_tuples[4]] + read_counts[desired_tuples[5]], (
+                        read_counts[desired_tuples[2]] + read_counts[desired_tuples[3]] + read_counts[desired_tuples[0]] + read_counts[
+                            desired_tuples[1]]) + read_counts[desired_tuples[4]] + read_counts[desired_tuples[5]] + read_counts[desired_tuples[6]] +
+                                      read_counts[desired_tuples[7]]), 3), read_counts[desired_tuples[0]] + read_counts[desired_tuples[1]] + read_counts[desired_tuples[4]]
+                                 + read_counts[desired_tuples[5]], read_counts[desired_tuples[2]] + read_counts[desired_tuples[3]] + read_counts[desired_tuples[6]] + read_counts[desired_tuples[7]],
+                                 reference, modification, modification_information_per_position[position][0],
+                                 modification_information_per_position[position][1], snp, depth))
     statistics_calculator(mean_mod, mean_unmod, all_data, user_defined_context, context_sample_counts)
     modification_calls_writer(all_data, file_name, header=header)
 
 
 def clean_pileup(pileups, cycles, modification_information_per_position, mean_mod, mean_unmod, user_defined_context, file_name, method,
-                 mark_matches, mark_ends, add_indels, context_sample_counts, ignore_orphans):
+                 mark_matches, mark_ends, add_indels, context_sample_counts, ignore_orphans, single_end):
     """Takes reads from the piled-up region and calculates modification levels."""
     for reads in pileups:
         if cycles == 0:
@@ -229,7 +255,7 @@ def clean_pileup(pileups, cycles, modification_information_per_position, mean_mo
             header = False
         if (reads.reference_name, reads.pos, reads.pos + 1) in modification_information_per_position:
             position = (reads.reference_name, reads.pos, reads.pos + 1)
-            desired_tuples, undesired_tuples, modification, reference = flags_expectation(modification_information_per_position, position, ignore_orphans)
+            desired_tuples, undesired_tuples, modification, reference = flags_expectation(modification_information_per_position, position, ignore_orphans, single_end)
             read_counts = defaultdict(int)
             try:
                 sequences = reads.get_query_sequences(mark_matches=mark_matches, mark_ends=mark_ends, add_indels=add_indels)
@@ -240,13 +266,13 @@ def clean_pileup(pileups, cycles, modification_information_per_position, mean_mo
                 if pileup != 'BLANK':
                     read_counts[(pileup.alignment.flag, seq.upper())] += 1
             pillup_summary(modification_information_per_position, position, read_counts, mean_mod, mean_unmod, user_defined_context, header,
-                           file_name, desired_tuples, undesired_tuples, modification, reference, reads.get_num_aligned(), method, context_sample_counts, ignore_orphans)
+                           file_name, desired_tuples, undesired_tuples, modification, reference, reads.get_num_aligned(), method, context_sample_counts, ignore_orphans, single_end)
             cycles+=1
             modification_information_per_position.pop(position)
 
 def cytosine_modification_finder(input_file, reference, context, zero_coverage, skip_clip_overlap, minimum_base_quality, user_defined_context, method,
                                  minimum_mapping_quality, adjust_acapq_threshold, mark_matches, mark_ends, add_indels, redo_baq, compute_baq, ignore_orphans,
-                                 max_depth, per_chromosome, N_threads, directory, compress):
+                                 max_depth, per_chromosome, N_threads, directory, compress, single_end):
     """Searches for cytosine modification positions in the desired contexts and calculates the modificaton levels."""
     name = path.splitext(path.basename(input_file))[0]
     directory = path.abspath(directory)
@@ -287,7 +313,7 @@ def cytosine_modification_finder(input_file, reference, context, zero_coverage, 
                                        max_depth=max_depth, redo_baq=redo_baq, ignore_orphans=ignore_orphans, compute_baq=compute_baq,
                                        min_mapping_quality=minimum_mapping_quality, adjust_acapq_threshold=adjust_acapq_threshold)
                 clean_pileup(pileups, cycles, modification_information_per_position, mean_mod, mean_unmod, user_defined_context, file_name, method,
-                             mark_matches, mark_ends, add_indels, context_sample_counts, ignore_orphans)
+                             mark_matches, mark_ends, add_indels, context_sample_counts, ignore_orphans, single_end)
         else:
             time_m = datetime.now()
             logs.info("Starting modification calling on {} chromosome (sequence). {} seconds".format(keys, (time_m - time_b).total_seconds()))
@@ -296,7 +322,7 @@ def cytosine_modification_finder(input_file, reference, context, zero_coverage, 
                                    max_depth=max_depth, redo_baq=redo_baq, ignore_orphans=ignore_orphans, compute_baq=compute_baq,
                                    min_mapping_quality=minimum_mapping_quality, adjust_acapq_threshold=adjust_acapq_threshold)
             clean_pileup(pileups, cycles, modification_information_per_position, mean_mod, mean_unmod, user_defined_context, file_name, method,
-                         mark_matches, mark_ends, add_indels, context_sample_counts, ignore_orphans)
+                         mark_matches, mark_ends, add_indels, context_sample_counts, ignore_orphans, single_end)
         if zero_coverage:
             for position in modification_information_per_position.keys():
                 if modification_information_per_position[position][3] == 'C':
@@ -320,7 +346,6 @@ def cytosine_modification_finder(input_file, reference, context, zero_coverage, 
     else:
         logs.error('Mods file with this name exists. Please rename before rerunning.')
         sys.exit(1)
-
 
 if __name__ == '__main__':
     call()
