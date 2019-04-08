@@ -15,7 +15,7 @@ from distutils.spawn import find_executable
 
 @click.command()
 @click.option('fq1', '--fq1', '-1', required=True, help='First in pair (R1) sequencing reads file in fastq.gz format')
-@click.option('fq2', '--fq2', '-2', required=True, help='Second in pair (R2) sequencing reads file in fastq.gz format')
+@click.option('fq2', '--fq2', '-2', required=False, help='Second in pair (R2) sequencing reads file in fastq.gz format')
 @click.option('reference', '--reference', '-f', required=True, help='Reference DNA sequence in FASTA format used for aligning of the sequencing reads.')
 @click.option('bwa_path', '--bwa_path', '-bp', required=False, help='The path to BWA for TAPS-like data and to bwameth.py for bisulfite sequencing.')
 @click.option('samtools_path', '--samtools_path', '-sp', required=False, help='The path to Samtools.')
@@ -24,6 +24,7 @@ from distutils.spawn import find_executable
 @click.option('output_format', '--output_format', '-O', required=False, default='BAM', type=click.Choice(['CRAM', 'BAM']), help='Specify output format, possible options are BAM and CRAM. The default is CRAM.')
 @click.option('minimum_mapping_quality', '--minimum_mapping_quality', '-mq', required=False, type=int, default=1, help='Set the minimum mapping quality for a read to be output to file (Default >=1).')
 @click.option('keep_unmapped', '--keep_unmapped', '-u', default=False, is_flag=True, help='Outputs the unmapped reads (Default false).')
+@click.option('single_end', '--se', '-s', default=False, is_flag=True, required=False, help='Indicates single-end sequencing reads (Default False).')
 @click.option('N_threads', '--N_threads', '-t', default=1, required=True, help='The number of threads to spawn (Default 1).')
 @click.option('minimum_seed_length', '--minimum_seed_length', '-k', default=19, type=int, required=False, help='The minimum seed length used for alignment, see BWA manual (the default value is 19).')
 @click.option('band_width', '--band_width', '-w', default=100, type=int, required=False, help='The band width for banded alignment, see BWA manual (the default value is 100).')
@@ -34,7 +35,7 @@ from distutils.spawn import find_executable
 @click.option('drop_chains', '--drop_chains', '-dc', default=0.5, type=float, required=False, help='Drops chains shorter than the specified fraction of the longest overlapping chain, see BWA manual (the default value is 0.5).')
 @click.option('discard_chains', '--discard_chains', '-W', default=0, type=int, required=False, help='Discards a chain if seeded bases shorter than the specified value, see BWA manual (the default value is 0).')
 @click.option('N_mate_rescues', '--N_mate_rescues', '-mr', default=50, type=int, required=False, help='Performs at most the specified rounds of mate rescues for each read, see BWA manual (the default value is 50).')
-@click.option('skip_mate_rescue', '--skip_mate_rescue', '-s', is_flag=True, required=False, help='NB: Does not recommend unless necessary: skips mate rescue in mCtoT mode, see BWA manual. If set, orphan reads (paired reads that are not in a proper pair) will be generated. Ensure ignore_orphans in the caller is set to False.')
+@click.option('skip_mate_rescue', '--skip_mate_rescue', '-sm', is_flag=True, required=False, help='NB: Does not recommend unless necessary: skips mate rescue in mCtoT mode, see BWA manual. If set, orphan reads (paired reads that are not in a proper pair) will be generated. Ensure ignore_orphans in the caller is set to False.')
 @click.option('skip_pairing', '--skip_pairing', '-P', is_flag=True, required=False, help='NB: Does not recommend unless necessary: skips read pairing in mCtoT mode, but does rescue mates unless mate_skipping is also performed, see BWA manual. If set, orphan reads (paired reads that are not in a proper pair) will be generated. Ensure ignore_orphans in the caller is set to False.')
 @click.option('match_score', '--match_score', '-A', default=1, type=int, required=False, help='The score for a sequence match, which scales the remaing scoring options, see BWA manual(the default value is 1).')
 @click.option('mismatch_penalty', '--mismatch_penalty', '-B', default=4, type=int, required=False, help='The penalty for a mismatch, see BWA manual (the default value is 4).')
@@ -45,11 +46,11 @@ from distutils.spawn import find_executable
 @click.option('read_type', '--read_type', '-x', default='null', type=click.Choice(['null', 'pacbio', 'ont2d', 'intractg']), required=False, help='Changes multiple parameters unless overridden, see BWA manual (the default value is None).')
 def align(fq1, fq2, reference, bwa_path, samtools_path, directory, method, output_format, minimum_mapping_quality, keep_unmapped, N_threads, minimum_seed_length, band_width, dropoff,
                  internal_seeds, reseeding_occurence, N_skip_seeds, drop_chains, discard_chains, N_mate_rescues, skip_mate_rescue, skip_pairing, match_score, mismatch_penalty,
-                 gap_open_penalty, gap_extension_penalty, end_clipping_penalty, unpaired_penalty, read_type):
+                 gap_open_penalty, gap_extension_penalty, end_clipping_penalty, unpaired_penalty, read_type, single_end):
     """Align raw reads in fastq format to a reference genome. bwa is required to align TAPS reads, and bwa-meth fif you plan to process BS-seq data."""
     run_alignment(fq1, fq2, reference, bwa_path, samtools_path, directory, method, output_format, minimum_mapping_quality, keep_unmapped, N_threads, minimum_seed_length, band_width, dropoff,
                  internal_seeds, reseeding_occurence, N_skip_seeds, drop_chains, discard_chains, N_mate_rescues, skip_mate_rescue, skip_pairing, match_score, mismatch_penalty,
-                 gap_open_penalty, gap_extension_penalty, end_clipping_penalty, unpaired_penalty, read_type)
+                 gap_open_penalty, gap_extension_penalty, end_clipping_penalty, unpaired_penalty, read_type, single_end)
 
 
 warnings.simplefilter(action='ignore', category=FutureWarning)
@@ -87,11 +88,14 @@ def check_index(use_bwa, reference, method):
 
 def run_alignment(fq1, fq2, reference, bwa_path, samtools_path, directory, method, output_format, minimum_mapping_quality, keep_unmapped, N_threads, minimum_seed_length, band_width, dropoff,
                  internal_seeds, reseeding_occurence, N_skip_seeds, drop_chains, discard_chains, N_mate_rescues, skip_mate_rescue, skip_pairing, match_score, mismatch_penalty,
-                 gap_open_penalty, gap_extension_penalty, end_clipping_penalty, unpaired_penalty, read_type):
+                 gap_open_penalty, gap_extension_penalty, end_clipping_penalty, unpaired_penalty, read_type, single_end):
     """Aligns the provided pair-end reads to the reference according to the method specified.
     Outputs a sorted and indexed file."""
     name = os.path.splitext(os.path.basename(fq1))[0]
-    name = re.sub('_(R1|1).fq', '', name)
+    if single_end == False:
+        name = re.sub('_(R1|1).fq', '', name)
+    else:
+        name = re.sub('.fq', '', name)
     directory = os.path.abspath(directory)
     if list(directory)[-1] != "/":
         directory = directory + "/"
@@ -121,6 +125,8 @@ def run_alignment(fq1, fq2, reference, bwa_path, samtools_path, directory, metho
         read_type = '-x ont2d'
     elif read_type == 'intractg':
         read_type = '-x intractg'
+    if single_end == True:
+        fq2 = ''
     if method == 'mCtoT':
         alignment_command = '{} {} -t {} -k {} -w {} -d {} -r {} -y {} -c {} -D {} -W {} -m {} {} ' \
                             ' {} -A {} -B {} -O {} -E {} -L {} -U {} {} {} {} {} | {} view {} -T {} -q {} {} -O {} ' \
