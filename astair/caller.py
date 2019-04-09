@@ -116,11 +116,9 @@ def context_output(mean_mod, mean_unmod, user_defined_context, file_name, contex
                         context_total_counts[total_contexts]+context_total_counts[total_contexts + 'b'], context_sample_counts[context]])
             if len(sub_contexts) >= 1:
                 for subcontext in sub_contexts:
-                    write_file.writerow(["", subcontext, round(non_zero_division(mean_mod[subcontext], mean_mod[subcontext] + mean_unmod[subcontext]) * 100, 3),
-                                        context_total_counts[subcontext], context_sample_counts[subcontext]])
+                    write_file.writerow(["", subcontext, round(non_zero_division(mean_mod[subcontext], mean_mod[subcontext] + mean_unmod[subcontext]) * 100, 3), context_total_counts[subcontext], context_sample_counts[subcontext]])
             if user_defined_context:
-                wr.writerow([user_defined_context, "", round(non_zero_division(mean_mod['user defined context'], mean_mod['user defined context'] +
-                        mean_unmod['user defined context']) * 100, 3), context_total_counts['user defined context'], context_sample_counts['user defined context']])
+                wr.writerow([user_defined_context, "", round(non_zero_division(mean_mod['user defined context'], mean_mod['user defined context'] + mean_unmod['user defined context']) * 100, 3), context_total_counts['user defined context'], context_sample_counts['user defined context']])
             
 
 def final_statistics_output(mean_mod, mean_unmod, user_defined_context, file_name, context_sample_counts, context_total_counts, context):
@@ -333,6 +331,7 @@ def cytosine_modification_finder(input_file, reference, context, zero_coverage, 
                     all_data = list((position[0], position[1], position[1] + 1, 'NA', 0, 0, 'G', 'A',
                     modification_information_per_position[position][0], modification_information_per_position[position][1], 'No'))
                     modification_calls_writer(all_data, file_name, header=False)
+        inbam.close()
         if compress == True:  
             logs.info("Compressing output modification calls file.")
             subprocess.Popen('gzip -f -9 {}'.format(file_name), shell=True)

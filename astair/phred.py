@@ -4,6 +4,7 @@
 from __future__ import division
 
 import re
+import pdb
 import csv
 import sys
 import gzip
@@ -231,8 +232,9 @@ def Phred_scores_plotting(fq1, fq2, calculation_mode, directory, sample_size, mi
     """The general function that takes the input file, calculates mean or absolute Phred scores per base, and outputs
     their summary statistics as a text file or as a plot when the plotting module is enabled."""
     try:
-        open(fq1, 'r')
-        open(fq2, 'r')
+        file1 = open(fq1, 'r')
+        file2 = open(fq2, 'r')
+        file1.close(), file2.close()
     except Exception:
         logs.error('The input fastq files do not exist.', exc_info=True)
         sys.exit(1)

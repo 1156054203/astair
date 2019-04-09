@@ -9,7 +9,8 @@ logs = logging.getLogger(__name__)
 def bam_file_opener(input_file, fetch, threads):
     """Opens neatly and separately the bam file as an iterator."""
     try:
-        open(input_file, 'rb')
+        reads_file = open(input_file, 'rb')
+        reads_file.close()
         if (input_file[-4:] == '.bam' and not os.path.isfile(os.path.join(str(input_file)+'.bai'))) \
                 or (input_file[-5:] == '.cram' and not os.path.isfile(os.path.join(str(input_file)+'.crai'))):
             try:

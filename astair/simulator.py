@@ -14,7 +14,6 @@ import random
 import logging
 import warnings
 import itertools
-import collections
 from os import path
 from datetime import datetime
 from collections import defaultdict
@@ -28,7 +27,7 @@ from astair.context_search import sequence_context_set_creation
 @click.command()
 @click.option('reference', '--reference', '-f', required=True, help='Reference DNA sequence in FASTA format used for generation and modification of the sequencing reads at desired contexts.')
 @click.option('read_length', '--read_length', '-l', type=int, required=True, help='Desired length of pair-end sequencing reads.')
-@click.option('input_file', '--input_file', '-i', required=True, help='Sequencing reads as a BAM|CRAM file or fasta sequence to generate reads.')
+@click.option('input_file', '--input_file', '-i', required=True, help='Sequencing reads as a BAM|CRAMfile or fasta sequence to generate reads.')
 @click.option('simulation_input', '--simulation_input', '-si', type=click.Choice(['bam']), default='bam', required=False, help='Input file format according to the desired outcome. BAM|CRAM files can be generated with other WGS simulators allowing for sequencing errors and read distributions or can be real-life sequencing data.')
 @click.option('method', '--method', '-m', required=False, default='mCtoT', type=click.Choice(['CtoT', 'mCtoT']), help='Specify sequencing method, possible options are CtoT (unmodified cytosines are converted to thymines, bisulfite sequencing-like) and mCtoT (modified cytosines are converted to thymines, TAPS-like). (Default mCtoT)')
 @click.option('modification_level', '--modification_level', '-ml',  type=int, required=False, help='Desired modification level; can take any value between 0 and 100.')
@@ -82,7 +81,7 @@ def cytosine_modification_lookup(reference, context, user_defined_context, modif
             if region[0] in keys:
                  modification_information = context_sequence_search(contexts, all_keys, fastas, region[0], user_defined_context, context_total_counts, region)
         try:
-            return modification_information
+            return modification_information, keys, fastas
         except UnboundLocalError:
             logs.error('There is no reference sequence of this name in the provided fasta file.', exc_info=True)
             sys.exit(1)
@@ -158,73 +157,71 @@ def general_read_information_output(name, directory, read, modification_level, h
         logs.error('asTair cannot write to read information file.', exc_info=True)
 
 
-def cigar_aware_positions(read, ref, sequence_to_use):
+def cigar_search(read_data):
     """Looks whether there are indels, soft clipping or pads the CIGAR string"""
-    if len(read.tags) != 0:
-        if len(read.query_sequence)!= len(read.get_reference_sequence()) and (len([val.start() for val in re.finditer('I', read.cigarstring)]) > 0 or len([val.start() for val in re.finditer('P', read.cigarstring)]) > 0 or len([val.start() for val in re.finditer('D', read.cigarstring)]) > 0 or len([val.start() for val in re.finditer('S', read.cigarstring)]) > 0):
-            sequence_to_use = list(sequence_to_use)
-            changes = [int(s) for s in re.findall(r'\d+', read.cigarstring)]
-            non_overlap = [x + 1 if x == 0 else x for x in changes]
-            names = list(re.findall(r'[^\W\d_]+', read.cigarstring))
-            positions = [x + 1 for x in list(itertools.accumulate(non_overlap))]
-            if "".join(sequence_to_use) == read.get_reference_sequence().upper():
-                if names.count('D') != 0:
-                    for index in [x[0] for x in list(enumerate(names)) if x[1]=='D']:
-                        del sequence_to_use[positions[index]:positions[index]+changes[index]]
-                elif names.count('S') != 0:
-                    for index in [x[0] for x in list(enumerate(names)) if x[1] == 'S']:
-                        del sequence_to_use[positions[index]:positions[index] + changes[index]]
-                elif names.count('I') != 0:
-                    for index in [x[0] for x in list(enumerate(names)) if x[1] == 'I']:
-                        sequence_to_use.insert(positions[index], list(read.query_sequence[positions[index]:positions[index] + changes[index]]))
-                elif names.count('P') != 0:
-                    for index in [x[0] for x in list(enumerate(names)) if x[1] == 'P']:
-                        sequence_to_use.insert(positions[index], list(read.query_sequence[positions[index]:positions[index] + changes[index]]))
-            else:
-                if names.count('D') != 0:
-                    for index in [x[0] for x in list(enumerate(names)) if x[1] == 'D']:
-                        sequence_to_use.insert(positions[index], list(read.query_sequence[positions[index]:positions[index] + changes[index]]))
-                elif names.count('S') != 0:
-                    for index in [x[0] for x in list(enumerate(names)) if x[1] == 'S']:
-                        sequence_to_use.insert(positions[index], list(read.query_sequence[positions[index]:positions[index] + changes[index]]))
-                elif names.count('I') != 0:
-                    for index in [x[0] for x in list(enumerate(names)) if x[1] == 'I']:
-                        del sequence_to_use[positions[index]:positions[index] + changes[index]]
-                elif names.count('P') != 0:
-                    for index in [x[0] for x in list(enumerate(names)) if x[1] == 'P']:
-                        del sequence_to_use[positions[index]:positions[index] + changes[index]]
-            sequence_to_use = "".join(list(itertools.chain.from_iterable(item if isinstance(item,collections.Iterable) and not isinstance(item, str) else [item] for item in sequence_to_use)))
-            posit = [val.start() + read.reference_start for val in re.finditer(ref, sequence_to_use)]
-        else:
-            posit = [val.start() + read.reference_start for val in re.finditer(ref, sequence_to_use)]
-    else:
-        posit = [val.start() + read.reference_start for val in re.finditer(ref, sequence_to_use)]
-    return posit
-        
-                            
+    changes = [int(s) for s in re.findall(r'\d+', read_data)]
+    non_overlap = [x + 1 if x == 0 else x for x in changes]
+    names = list(re.findall(r'[^\W\d_]+', read_data))
+    positions = [x for x in list(itertools.accumulate(non_overlap))]
+    return names, positions, changes
 
-def modification_by_strand(read, library, reverse_modification):
+
+def position_correction_cigar(read, method, random_sample, positions):
+    """Uses the CIGAR string information to correct the expected cytosine positions."""
+    names, positions_cigar, changes = cigar_search(read.cigarstring)
+    index = 0
+    for change in names:
+        if change == 'D':
+            subsample = random_sample.intersection(positions)
+            if method == 'mCtoT':
+                corrected_positions = [x[1] - abs(read.qstart - read.reference_start) if (x[1] - abs(read.qstart - read.reference_start)) < positions_cigar[index] else x[1] - abs(read.qstart - read.reference_start) - changes[index] for x in subsample]
+            elif method == 'CtoT':
+                corrected_positions = [x[1] - abs(read.qstart - read.reference_start) if (x[1] - abs(read.qstart - read.reference_start)) < positions_cigar[index] else x[1] - abs(read.qstart - read.reference_start) - changes[index] for x in positions if x not in subsample]
+            index += 1
+            positions = corrected_positions
+        elif change == 'I':
+            subsample = random_sample.intersection(positions)
+            if method == 'mCtoT':
+                corrected_positions = [x[1] - abs(read.qstart-read.reference_start) if (x[1] - abs(read.qstart-read.reference_start)) < positions_cigar[index] else x[1] - abs(read.qstart-read.reference_start) + changes[index] for x in subsample]
+            elif method == 'CtoT':
+                corrected_positions = [x[1] - abs(read.qstart-read.reference_start) if (x[1] - abs(read.qstart-read.reference_start)) < positions_cigar[index] else x[1] - abs(read.qstart-read.reference_start) + changes[index] for x in positions if x not in subsample]
+            index += 1
+            positions = corrected_positions
+        elif change == 'S':
+            subsample = random_sample.intersection(positions)
+            if method == 'mCtoT':
+                corrected_positions = [x[1] - abs(read.qstart-read.reference_start) for x in subsample]
+            elif method == 'CtoT':
+                corrected_positions = [x[1] - abs(read.qstart-read.reference_start) for x in positions if x not in subsample]
+            index += 1
+            positions = corrected_positions
+        else:
+            index += 1
+    return positions
+
+
+def modification_by_strand(read, library, reverse_modification, fastas):
     """Outputs read positions that may be modified."""
-    if read.flag == 99 or read.flag == 147 and library == 'directional':
+    if library == 'directional':
         if reverse_modification == False:
-            positC = cigar_aware_positions(read, 'C', read.query_sequence)
-            positions = set((read.reference_name, pos, pos + 1) for pos in positC)
-            base = 'T'
+            if read.flag in [99,147]:
+                base, ref = 'T', 'C'
+            elif read.flag in [83, 163]:
+                base, ref = 'A', 'G'
+        elif reverse_modification == True:
+            if read.flag in [99,147]:
+                base, ref = 'C', 'C'
+            elif read.flag in [83, 163]:
+                base, ref = 'G', 'G'
+        if len(read.tags) == 0:
+            posit = [val.start() + read.reference_start for val in re.finditer(ref, read.query_sequence)]
+            positions = set((read.reference_name, pos, pos + 1) for pos in posit)
+            return positions, base
         else:
-            positC = cigar_aware_positions(read, 'C', read.get_reference_sequence().upper())
-            positions = set((read.reference_name, pos, pos + 1) for pos in positC)
-            base = 'C'
-        return positions, base
-    elif read.flag == 83 or read.flag == 163 and library == 'directional':
-        if reverse_modification == False:
-            positG = cigar_aware_positions(read, 'G', read.query_sequence)
-            positions = set((read.reference_name, pos, pos + 1) for pos in positG)
-            base = 'A'
-        else:
-            positG = cigar_aware_positions(read, 'G', read.get_reference_sequence().upper())
-            positions = set((read.reference_name, pos, pos + 1) for pos in positG)
-            base = 'G'
-    return positions, base
+            posit = [val.start() + read.reference_start for val in re.finditer(ref, fastas[read.reference_name][read.reference_start:read.reference_start+read.qlen].upper())]
+            positions = set((read.reference_name, pos, pos + 1) for pos in posit)
+            return positions, base
+
 
 
 def absolute_modification_information(modified_positions_data, modification_information, modified_positions, name, directory, modification_level, context, method, per_chromosome):
@@ -280,7 +277,7 @@ def bam_input_simulation(directory, name, modification_level, context, input_fil
             else:
                 outbam = pysam.AlignmentFile(path.join(directory, name + '_' + method + '_' + str(modification_level) + '_' + context  + '_reversed_' + per_chromosome  + extension),
                 file_type, reference_filename=reference, template=bam_file_opener(input_file, None, N_threads), header=header)
-        modification_information = cytosine_modification_lookup(reference, context, user_defined_context, modified_positions, region, per_chromosome)
+        modification_information, keys, fastas = cytosine_modification_lookup(reference, context, user_defined_context, modified_positions, region, per_chromosome)
         modification_level, random_sample = random_position_modification(modification_information, modification_level,
                                                                          modified_positions, library, seed, context)
         if per_chromosome == None and region == None:
@@ -293,33 +290,42 @@ def bam_input_simulation(directory, name, modification_level, context, input_fil
             general_read_information_output(name, directory, read, modification_level, header, region, method, context)
             quals = read.query_qualities
             if read.flag in [99, 147, 83, 163] and read.reference_length != 0:
-                positions, base = modification_by_strand(read, library, reverse_modification)
+                positions, base = modification_by_strand(read, library, reverse_modification, fastas)
                 modified_positions_data.extend(list(random_sample.intersection(positions)))
                 if method == 'mCtoT':
-                    if random_sample.intersection(positions):
+                    if len(read.tags) != 0 and (re.findall('I', read.cigarstring, re.IGNORECASE) or re.findall('D', read.cigarstring, re.IGNORECASE)) or re.findall('S', read.cigarstring, re.IGNORECASE):
+                        indices = position_correction_cigar(read, method, random_sample, positions)
+                    else:
                         indices = [position[1] - read.reference_start for position in random_sample.intersection(positions)]
+                    if len(indices) > 0:
                         strand = list(read.query_sequence)
                         replace = list(base * len(indices))
                         for (index, replacement) in zip(indices, replace):
                             if len(strand) > index:
-                                strand[index] = replacement
+                                if ((strand[index] in ['C', 'T'] and read.flag in [99,147])) or ((strand[index] in ['G', 'A'] and read.flag in [83,163])):
+                                    strand[index] = replacement
                         read.query_sequence = "".join(strand)
                         read.query_qualities = quals
                         outbam.write(read)
                     else:
                         outbam.write(read)
-
                 else:
-                    indices = [position[1] - read.reference_start for position in positions if
-                               position not in random_sample.intersection(positions)]
-                    strand = list(read.query_sequence)
-                    replace = list(base * len(indices))
-                    for (index, replacement) in zip(indices, replace):
-                        if len(strand) > index:
-                            strand[index] = replacement
-                    read.query_sequence = "".join(strand)
-                    read.query_qualities = quals
-                    outbam.write(read)
+                    if len(read.tags) != 0 and (re.findall('I', read.cigarstring, re.IGNORECASE) or re.findall('D', read.cigarstring, re.IGNORECASE)) or re.findall('S', read.cigarstring, re.IGNORECASE):
+                        indices = position_correction_cigar(read, method, random_sample, positions)
+                    else:
+                        indices = [position[1] - read.reference_start for position in positions if position not in random_sample.intersection(positions)]
+                    if len(indices) > 0:
+                        strand = list(read.query_sequence)
+                        replace = list(base * len(indices))
+                        for (index, replacement) in zip(indices, replace):
+                            if len(strand) > index:
+                                if ((strand[index] in ['C', 'T'] and read.flag in [99,147])) or ((strand[index] in ['G', 'A'] and read.flag in [83,163])):
+                                    strand[index] = replacement
+                        read.query_sequence = "".join(strand)
+                        read.query_qualities = quals
+                        outbam.write(read)
+                    else:
+                        outbam.write(read)
                 header = False
             elif read.flag in [99, 147, 83, 163]:
                 outbam.write(read)

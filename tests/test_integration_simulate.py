@@ -72,5 +72,24 @@ class SimulateOutputTest(unittest.TestCase):
         subprocess.Popen(remove, shell=True)
         
 
+
+    def test_reverse_CpG_taps(self):
+        """Tests whether truely modified Cpg positions will be will be reverted in TAPS."""
+        modification_simulator(current + '/test_data/lambda_phage.fa', 80, current + '/test_data/small_real_taps_lambda_mCtoT.bam', 'mCtoT', 'directional', 'bam', 100,
+              None,  1, 'all', (None, None, None),  current + '/test_data/', 0, False, 1, None, 0.3, 0.1, False, False)
+        modification_simulator(current + '/test_data/lambda_phage.fa', 80, current + '/test_data/small_real_taps_lambda_mCtoT_mCtoT_100_all.bam', 'mCtoT', 'directional', 'bam', 100,
+              None,  1, 'CpG', (None, None, None),  current + '/test_data/', 0, False, 1, None, 0.3, 0.1, False, True)
+        data_generated = list()
+        cytosine_modification_finder(current + '/test_data/small_real_taps_lambda_mCtoT_mCtoT_100_all_mCtoT_100_CpG_reversed.bam', current + '/test_data/lambda_phage.fa', 'CpG', False, False, 13, None, 'mCtoT', 0, 0, True, True, True, False, True, True, 250, None, 1, current + '/test_data/', False, False)
+        data_generated = list()
+        with open(current + '/test_data/small_real_taps_lambda_mCtoT_mCtoT_100_all_mCtoT_100_CpG_reversed_mCtoT_CpG.mods','r') as call_file:
+            mod_reader = csv.reader(call_file, delimiter='\t', lineterminator='\n')
+            for row in mod_reader:
+                data_generated.append(tuple((row[0:4])))
+        self.assertEqual(data_generated[0:15],[('CHROM', 'START', 'END', 'MOD_LEVEL'), ('lambda', '3', '4', '0.0'), ('lambda', '4', '5', '0.0'), ('lambda', '6', '7', '0.0'), ('lambda', '7', '8', '0.0'), ('lambda', '12', '13', '0.0'), ('lambda', '13', '14', '0.0'), ('lambda', '14', '15', '0.0'), ('lambda', '15', '16', '0.0'), ('lambda', '22', '23', '0.0'), ('lambda', '23', '24', '0.0'), ('lambda', '42', '43', '0.0'), ('lambda', '43', '44', '0.0'), ('lambda', '52', '53', '0.0'), ('lambda', '53', '54', '0.0')])
+        remove = 'rm {}'.format(current + '/test_data/small_real_taps_lambda_mCtoT_mCtoT_100_all*')
+        subprocess.Popen(remove, shell=True)
+        
+
 if __name__ == '__main__':
     unittest.main()
