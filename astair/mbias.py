@@ -12,7 +12,6 @@ import click
 import logging
 import warnings
 from os import path
-import pkg_resources
 from math import ceil
 from datetime import datetime
 
@@ -44,7 +43,7 @@ from astair.DNA_sequences_operations import complementary
 @click.option('directory', '--directory', '-d', required=True, help='Output directory to save files.')
 @click.option('read_length', '--read_length', '-l', type=int, required=True, help='The read length is needed to calculate the M-bias.')
 @click.option('method', '--method', '-m',  required=False, default='mCtoT', type=click.Choice(['CtoT', 'mCtoT']), help='Specify sequencing method, possible options are CtoT (unmodified cytosines are converted to thymines, bisulfite sequencing-like) and mCtoT (modified cytosines are converted to thymines, TAPS-like). (Default mCtoT)')
-@click.option('single_end', '--se', '-s', default=False, is_flag=True, required=False, help='Indicates single-end sequencing reads (Default False).')
+@click.option('single_end', '--se', '-se', default=False, is_flag=True, required=False, help='Indicates single-end sequencing reads (Default False).')
 @click.option('plot', '--plot', '-p', required=False, is_flag=True, help='Phred scores will be visualised and output as a pdf file. Requires installed matplotlib.')
 @click.option('colors', '--colors', '-c', default=['teal', 'gray', 'maroon'], type=list, required=False, help="List of color values used for visualistion of CpG, CHG and CHH modification levels per read, which are given as color1,color2,color3. Accepts valid matplotlib color names, RGB and RGBA hex strings and  single letters denoting color {'b', 'g', 'r', 'c', 'm', 'y', 'k', 'w'}. (Default 'teal','gray','maroon')")
 @click.option('N_threads', '--N_threads', '-t', default=1, required=True, help='The number of threads to spawn (Default 1).')
@@ -254,9 +253,9 @@ def Mbias_plotting(input_file, directory, read_length, method, single_end, plot,
             else:
                 fig, fq = pyp.subplots(1, 1)
             fig.suptitle('Sequencing M-bias', fontsize=14)
-            pyp.subplots_adjust(hspace=0.4)
-            pyp.subplots_adjust(right=1)
             if single_end == False:
+                pyp.subplots_adjust(hspace=0.4)
+                pyp.subplots_adjust(right=1)
                 fq[0].set_ylabel('Modification level, %', fontsize=12)
                 fq[0].set_xlabel('First in pair base positions', fontsize=12)
                 fq[0].plot(x_axis, y_axis_CpG1, linewidth=1.0, linestyle='-', color=colors[0])

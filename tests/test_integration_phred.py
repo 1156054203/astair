@@ -17,7 +17,7 @@ class PhredOutputTest(unittest.TestCase):
     def test_phred_default_taps(self):
         """Tests whether the cytosine positions modified at CpG context will be used to correctly
         calculate the CpG modification rate per read length in a real TAPS sample."""
-        Phred_scores_plotting(current + '/test_data/small_real_taps_lambda_1.fq.gz', current + '/test_data/small_real_taps_lambda_2.fq.gz', 'means', current + '/test_data', 772, 0, ['skyblue', 'mediumaquamarine', 'khaki', 'lightcoral'], False)
+        Phred_scores_plotting(current + '/test_data/small_real_taps_lambda_1.fq.gz', current + '/test_data/small_real_taps_lambda_2.fq.gz', 'means', current + '/test_data', 772, 0, ['skyblue', 'mediumaquamarine', 'khaki', 'lightcoral'], False, False)
         data_generated = list()
         with open(current + '/test_data/small_real_taps_lambda_total_Phred.txt','r') as call_file:
             mod_reader = csv.reader(call_file, delimiter='\t', lineterminator='\n')
@@ -27,10 +27,23 @@ class PhredOutputTest(unittest.TestCase):
         remove = 'rm {}'.format(current + '/test_data/small_real_taps_lambda_total_Phred.txt')
         subprocess.Popen(remove, shell=True)
         
+    def test_phred_default_taps_SE(self):
+        """Tests whether the cytosine positions modified at CpG context will be used to correctly
+        calculate the CpG modification rate per read length in a real single-end TAPS sample."""
+        Phred_scores_plotting(current + '/test_data/small_real_taps_lambda_mCtoT_SE.fq.gz', None, 'means', current + '/test_data', 772, 0, ['skyblue', 'mediumaquamarine', 'khaki', 'lightcoral'], False, True)
+        data_generated = list()
+        with open(current + '/test_data/small_real_taps_lambda_mCtoT_SE_total_Phred.txt','r') as call_file:
+            mod_reader = csv.reader(call_file, delimiter='\t', lineterminator='\n')
+            for row in mod_reader:
+                data_generated.append(tuple((row)))
+        self.assertEqual(data_generated, [('______________________________________Single-end______________________________________',), ('______________________________________________________________________________________',), ('mean ', 'adenines: 32.864', 'cytosines: 33.649', 'thymines: 33.913', 'guanines: 33.287'), ('median ', 'adenines: 33.167', 'cytosines: 34.733', 'thymines: 34.7', 'guanines: 34.591'), ('q25 ', 'adenines: 31.625', 'cytosines: 33.0', 'thymines: 33.111', 'guanines: 32.6'), ('q75 ', 'adenines: 35.385', 'cytosines: 35.556', 'thymines: 35.652', 'guanines: 35.4'), ('sd ', 'adenines: 2.918', 'cytosines: 2.767', 'thymines: 2.268', 'guanines: 3.14'), ('min ', 'adenines: 24.923', 'cytosines: 24.0', 'thymines: 27.455', 'guanines: 23.125'), ('max ', 'adenines: 36.0', 'cytosines: 36.0', 'thymines: 35.826', 'guanines: 36.0'), ('______________________________________________________________________________________',)])
+        remove = 'rm {}'.format(current + '/test_data/small_real_taps_lambda_mCtoT_SE_total_Phred.txt')
+        subprocess.Popen(remove, shell=True)   
+        
     def test_phred_default_wgbs(self):
         """Tests whether the cytosine positions modified at CpG context will be used to correctly
         calculate the CpG modification rate per read length in a real WGBS sample."""
-        Phred_scores_plotting(current + '/test_data/small_real_wgbs_lambda_1.fq.gz', current + '/test_data/small_real_wgbs_lambda_2.fq.gz', 'means', current + '/test_data', 552, 0, ['skyblue', 'mediumaquamarine', 'khaki', 'lightcoral'], False)
+        Phred_scores_plotting(current + '/test_data/small_real_wgbs_lambda_1.fq.gz', current + '/test_data/small_real_wgbs_lambda_2.fq.gz', 'means', current + '/test_data', 552, 0, ['skyblue', 'mediumaquamarine', 'khaki', 'lightcoral'], False, False)
         data_generated = list()
         with open(current + '/test_data/small_real_wgbs_lambda_total_Phred.txt','r') as call_file:
             mod_reader = csv.reader(call_file, delimiter='\t', lineterminator='\n')
