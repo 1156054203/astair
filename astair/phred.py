@@ -241,6 +241,8 @@ def Phred_scores_color_change(plot_input, colors):
 def Phred_scores_plotting(fq1, fq2, calculation_mode, directory, sample_size, minimum_score, colors, plot, single_end):
     """The general function that takes the input file, calculates mean or absolute Phred scores per base, and outputs
     their summary statistics as a text file or as a plot when the plotting module is enabled."""
+    time_s = datetime.now()
+    logs.info("asTair's Phred scores statistics summary function started running. {} seconds".format((time_s - time_b).total_seconds()))
     try:
         file1 = open(fq1, 'r')
         file1.close()
@@ -304,7 +306,7 @@ def Phred_scores_plotting(fq1, fq2, calculation_mode, directory, sample_size, mi
     else:
         pass
     time_m = datetime.now()
-    logs.info("asTair's Phred scores statistics summary function has finished running. {} seconds".format((
+    logs.info("asTair's Phred scores statistics summary function finished running. {} seconds".format((
     time_m - time_b).total_seconds()))
 
 

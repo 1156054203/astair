@@ -335,6 +335,8 @@ def bam_input_simulation(directory, name, modification_level, context, input_fil
 def modification_simulator(reference, read_length, input_file, method, library, simulation_input, modification_level,
                            modified_positions, coverage, context, region, directory, seed, user_defined_context, N_threads, per_chromosome, GC_bias, sequence_bias, overwrite, reverse_modification):
     "Assembles the whole modification simulator and runs per mode, method, library and context."
+    time_s = datetime.now()
+    logs.info("asTair's cytosine modification simulator started running. {} seconds".format((time_s - time_b).total_seconds()))
     header = True
     name = path.splitext(path.basename(input_file))[0]
     directory = path.abspath(directory)
@@ -366,7 +368,7 @@ def modification_simulator(reference, read_length, input_file, method, library, 
                 'The output files will not be overwritten. Please rename the input or the existing output files before rerunning if the input is different.',
                 exc_info=True)
     time_m = datetime.now()
-    logs.info("asTair's cytosine modification simulator has finished running. {} seconds".format((
+    logs.info("asTair's cytosine modification simulator finished running. {} seconds".format((
     time_m - time_b).total_seconds()))
 
 

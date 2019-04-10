@@ -54,29 +54,29 @@ time_b = datetime.now()
 
 
 def removing_mod_err(input_file, method, bases_noncpg, N_threads, directory):
+    time_s = datetime.now()
+    logs.info("asTair's excessive non-CpG modification read removal function has started running. {} seconds".format((time_s - time_b).total_seconds()))
     name = path.splitext(path.basename(input_file))[0]
     directory = path.abspath(directory)
     if list(directory)[-1]!="/":
         directory = directory + "/"
     try:
-        inbam = bam_file_opener(input_file, 'fetch', N_threads)
+        inbam = bam_file_opener(input_file, None, N_threads)
     except Exception:
         sys.exit(1)
-    outbam3T = pysam.AlignmentFile(name+"3T_"+".bam", "wb", template=inbam)
-    removed3T = pysam.AlignmentFile(name+"removed_" + ".bam", "wb", template=inbam)
-    for read in inbam(input_file, 'fetch', N_threads):
-        if read.flag == 83 or read.flag == 99:
+    outbam3T = pysam.AlignmentFile(directory+name+"_high_CpH_filtered"+".bam", "wb", template=inbam)
+    removed3T = pysam.AlignmentFile(directory+name+"_high_CpH_removed" + ".bam", "wb", template=inbam)
+    for read in bam_file_opener(input_file, 'fetch', N_threads):
+        if read.flag == 147 or read.flag == 99:
             regs = "(?:.*C.*)" * int(bases_noncpg)
             ch = "(C)(A|C|T)(A|T|C|G)"
             ref = 'C'
-        elif read.flag == 163 or read.flag == 147:
+        elif read.flag == 163 or read.flag == 83:
             regs = "(?:.*G.*)" * int(bases_noncpg)
             ch = "(G)(A|G|T)(A|T|C|G)"
             ref = 'G'
-        if isinstance(read.tags[0][1],str):
-            read_data = read.tags[0][1]
-        elif isinstance(read.tags[1][1],str):
-            read_data = read.tags[1][1]
+        try:
+            read_data = read.get_tag('MD')
             if re.search(regs, read_data,re.IGNORECASE):
                 changes = [int(s) for s in re.findall(r'\d+', read_data)]
                 non_overlap = [x + 1 if x == 0 else x for x in changes]
@@ -103,12 +103,12 @@ def removing_mod_err(input_file, method, bases_noncpg, N_threads, directory):
                     outbam3T.write(read)
             else:
                 outbam3T.write(read)
+        except Exception:
+            logs.error('The input file does not contain a MD tag column.', exc_info=True)
+            sys.exit(1)
     inbam.close()
     time_m = datetime.now()
-    logs.info("asTair's excessive non-CpG modification read removal"
-              " function has finished running. {} seconds".format((time_m - time_b).total_seconds()))
-
-
+    logs.info("asTair's excessive non-CpG modification read removal function has finished running. {} seconds".format((time_m - time_b).total_seconds()))
 
 if __name__ == '__main__':
     filter3T_exec()

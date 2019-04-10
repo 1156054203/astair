@@ -224,6 +224,8 @@ def mbias_statistics_calculator(input_file, name, directory, read_length, method
 
 def Mbias_plotting(input_file, directory, read_length, method, single_end, plot, colors, N_threads):
     """The general M-bias calculation and statistics output function, which might be also visualised if the plotting module is enabled."""
+    time_s = datetime.now()
+    logs.info("asTair's M-bias summary function started running. {} seconds".format((time_s - time_b).total_seconds()))
     name = path.splitext(path.basename(input_file))[0]
     directory = path.abspath(directory)
     if list(directory)[-1]!="/":
@@ -289,7 +291,7 @@ def Mbias_plotting(input_file, directory, read_length, method, single_end, plot,
     else:
         pass
     time_m = datetime.now()
-    logs.info("asTair's M-bias summary function has finished running. {} seconds".format((
+    logs.info("asTair's M-bias summary function finished running. {} seconds".format((
     time_m - time_b).total_seconds()))
 
 if __name__ == '__main__':

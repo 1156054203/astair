@@ -91,6 +91,8 @@ def run_alignment(fq1, fq2, reference, bwa_path, samtools_path, directory, metho
                  gap_open_penalty, gap_extension_penalty, end_clipping_penalty, unpaired_penalty, read_type, single_end):
     """Aligns the provided pair-end reads to the reference according to the method specified.
     Outputs a sorted and indexed file."""
+    time_s = datetime.now()
+    logs.info("asTair genome aligner started running. {} seconds".format((time_s - time_b).total_seconds()))
     name = os.path.splitext(os.path.basename(fq1))[0]
     if single_end == False:
         name = re.sub('_(R1|1).fq', '', name)

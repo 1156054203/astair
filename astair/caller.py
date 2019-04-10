@@ -272,6 +272,8 @@ def cytosine_modification_finder(input_file, reference, context, zero_coverage, 
                                  minimum_mapping_quality, adjust_acapq_threshold, mark_matches, mark_ends, add_indels, redo_baq, compute_baq, ignore_orphans,
                                  max_depth, per_chromosome, N_threads, directory, compress, single_end):
     """Searches for cytosine modification positions in the desired contexts and calculates the modificaton levels."""
+    time_s = datetime.now()
+    logs.info("asTair modification finder started running. {} seconds".format((time_s - time_b).total_seconds()))
     name = path.splitext(path.basename(input_file))[0]
     directory = path.abspath(directory)
     if per_chromosome == None:

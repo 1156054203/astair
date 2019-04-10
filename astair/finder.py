@@ -72,6 +72,8 @@ def bed_like_context_writer(header, file_name, cytosine_contexts):
 
 def find_contexts(reference, context, user_defined_context, per_chromosome, compress, directory):
     """Looks for the coordinates of cytosines in different contexts."""
+    time_s = datetime.now()
+    logs.info("asTair cytosine contexts positions finder started running. {} seconds".format((time_s - time_b).total_seconds()))
     name = path.splitext(path.basename(reference))[0]
     directory = path.abspath(directory)
     if per_chromosome == None:
