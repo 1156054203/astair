@@ -27,6 +27,19 @@ class MbiasOutputTest(unittest.TestCase):
         remove = 'rm {}'.format(current + '/test_data/small_real_taps_lambda_mCtoT*Mbias.txt')
         subprocess.Popen(remove, shell=True)
         
+    def test_mbias_default_taps_SE(self):
+        """Tests whether the cytosine positions modified at CpG context will be used to correctly
+        calculate the CpG modification rate per read length in a real single-end TAPS sample."""
+        Mbias_plotting(current + '/test_data/small_real_taps_lambda_mCtoT_SE.bam', current + '/test_data/', 75, 'mCtoT', True, False, ['teal', 'gray', 'maroon'], 1)
+        data_generated = list()
+        with open(current + '/test_data/small_real_taps_lambda_mCtoT_SE_Mbias.txt','r') as call_file:
+            mod_reader = csv.reader(call_file, delimiter='\t', lineterminator='\n')
+            for row in mod_reader:
+                data_generated.append(tuple((row[0:2])))
+        self.assertEqual(data_generated[0:5], [('POSITION_(bp)', 'MOD_LVL_CpG_READ_OT'), ('1', '100.0'), ('2', '100.0'), ('3', '100.0'), ('4', '100.0')])
+        remove = 'rm {}'.format(current + '/test_data/small_real_taps_lambda_mCtoT*Mbias.txt')
+        subprocess.Popen(remove, shell=True)
+        
     def test_mbias_default_wgbs(self):
         """Tests whether the cytosine positions modified at CpG context will be used to correctly
         calculate the CpG modification rate per read length in a real WGBS sample."""
