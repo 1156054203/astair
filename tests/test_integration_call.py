@@ -33,7 +33,7 @@ class CallOutputTest(unittest.TestCase):
         subprocess.Popen(remove, shell=True)
         
         
-    def test_call_default_taps(self):
+    def test_call_default_taps_SE(self):
         """Looks for TAPS modified cytosine positions and compares their modification level with
         the expected one by context."""
         cytosine_modification_finder(current + '/test_data/small_real_taps_lambda_mCtoT_SE.bam', current + '/test_data/lambda_phage.fa', 'all', False, False, 13, None, 'mCtoT', 0, 0, True, True, True, False, True, True, 250, None, 1, current + '/test_data/', False, True)

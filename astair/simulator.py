@@ -162,7 +162,7 @@ def cigar_search(read_data):
     changes = [int(s) for s in re.findall(r'\d+', read_data)]
     non_overlap = [x + 1 if x == 0 else x for x in changes]
     names = list(re.findall(r'[^\W\d_]+', read_data))
-    positions = [x for x in list(itertools.accumulate(non_overlap))]
+    positions = [x for x in [sum(non_overlap[0:i]) for i in range(1, len(non_overlap)+1)]]
     return names, positions, changes
 
 

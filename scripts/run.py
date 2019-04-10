@@ -12,6 +12,7 @@ import astair.finder as finder
 import astair.aligner as aligner
 import astair.simulator as simulator
 import astair.separator as separator
+import astair.filter as filter 
 
 
 
@@ -46,6 +47,7 @@ cli.add_command(finder.find)
 cli.add_command(aligner.align)
 cli.add_command(simulator.simulate)
 cli.add_command(separator.separator)
+cli.add_command(filter.filter3T_exec)
 
 
 if __name__ == '__main__':
