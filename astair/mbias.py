@@ -35,21 +35,24 @@ except Exception:
 from astair.safe_division import non_zero_division
 from astair.bam_file_parser import bam_file_opener
 from astair.DNA_sequences_operations import complementary
+from astair.simple_fasta_parser import fasta_splitting_by_sequence
 
 
 
 @click.command()
+@click.option('reference', '--reference', '-f', required=True, help='Reference DNA sequence in FASTA format.')
 @click.option('input_file', '--input_file', '-i', required=True, help='BAM|CRAM format file containing sequencing reads.')
 @click.option('directory', '--directory', '-d', required=True, help='Output directory to save files.')
 @click.option('read_length', '--read_length', '-l', type=int, required=True, help='The read length is needed to calculate the M-bias.')
 @click.option('method', '--method', '-m',  required=False, default='mCtoT', type=click.Choice(['CtoT', 'mCtoT']), help='Specify sequencing method, possible options are CtoT (unmodified cytosines are converted to thymines, bisulfite sequencing-like) and mCtoT (modified cytosines are converted to thymines, TAPS-like). (Default mCtoT)')
+@click.option('per_chromosome', '--per_chromosome', '-chr', default=None, type=str, help='When used, it modifies the chromosome given only. (Default None')
 @click.option('single_end', '--se', '-se', default=False, is_flag=True, required=False, help='Indicates single-end sequencing reads (Default False).')
 @click.option('plot', '--plot', '-p', required=False, is_flag=True, help='Phred scores will be visualised and output as a pdf file. Requires installed matplotlib.')
 @click.option('colors', '--colors', '-c', default=['teal', 'gray', 'maroon'], type=list, required=False, help="List of color values used for visualistion of CpG, CHG and CHH modification levels per read, which are given as color1,color2,color3. Accepts valid matplotlib color names, RGB and RGBA hex strings and  single letters denoting color {'b', 'g', 'r', 'c', 'm', 'y', 'k', 'w'}. (Default 'teal','gray','maroon')")
 @click.option('N_threads', '--N_threads', '-t', default=1, required=True, help='The number of threads to spawn (Default 1).')
-def mbias(input_file, directory, read_length, method, single_end, plot, colors, N_threads):
+def mbias(reference, input_file, directory, read_length, method, single_end, plot, colors, N_threads, per_chromosome):
     """Generate modification per read length information (Mbias). This is a quality-control measure."""
-    Mbias_plotting(input_file, directory, read_length, method, single_end, plot, colors, N_threads)
+    Mbias_plotting(reference, input_file, directory, read_length, method, single_end, plot, colors, N_threads, per_chromosome)
 
 
 warnings.simplefilter(action='ignore', category=FutureWarning)
@@ -139,7 +142,7 @@ def mbias_calculator(flag, ref_sequence, read_sequence, read_length, read_mods_C
     return read_mods_CpG, read_mods_CHG, read_mods_CHH, read_umod_CpG, read_umod_CHG, read_umod_CHH
 
 
-def mbias_evaluater(input_file, read_length, method, single_end, N_threads):
+def mbias_evaluater(input_file, read_length, method, single_end, N_threads, fastas, per_chromosome):
     """Outputs the modification levels per read position, pair orientation and cytosine context."""
     read1_mods_CHH, read1_mods_CHG, read1_mods_CpG = initialise_data_counters(read_length)
     read1_umod_CHH, read1_umod_CHG, read1_umod_CpG = initialise_data_counters(read_length)
@@ -147,15 +150,14 @@ def mbias_evaluater(input_file, read_length, method, single_end, N_threads):
     read2_umod_CHH, read2_umod_CHG, read2_umod_CpG = initialise_data_counters(read_length)
     for read in bam_file_opener(input_file, 'fetch', N_threads):
         if single_end == False:
-            exp1, exp2  = [99, 83], [147, 163]
+            exp1, exp2 = [99, 83], [147, 163]
         else:
             exp1, exp2 = [0], [16]
-        if read.flag in exp1 and read.reference_length != 0:
-            mbias_calculator(read.flag, read.get_reference_sequence(), read.query_sequence, read_length,
-                             read1_mods_CpG, read1_mods_CHG, read1_mods_CHH, read1_umod_CpG, read1_umod_CHG, read1_umod_CHH, method, single_end)
-        elif read.flag in exp2 and read.reference_length != 0:
-            mbias_calculator(read.flag, read.get_reference_sequence(), read.query_sequence, read_length,
-                             read2_mods_CpG, read2_mods_CHG, read2_mods_CHH, read2_umod_CpG, read2_umod_CHG, read2_umod_CHH, method, single_end)
+        if read.reference_length != 0:
+            if (per_chromosome == None and read.flag in exp1) or (per_chromosome != None and read.reference_name == per_chromosome and read.flag in exp1):
+                mbias_calculator(read.flag, fastas[read.reference_name][read.reference_start:read.reference_start+read.qlen], read.query_sequence, read_length, read1_mods_CpG, read1_mods_CHG, read1_mods_CHH, read1_umod_CpG, read1_umod_CHG, read1_umod_CHH, method, single_end)
+            elif (per_chromosome == None and read.flag in exp2) or (per_chromosome != None and read.reference_name == per_chromosome and read.flag in exp2):
+                mbias_calculator(read.flag, fastas[read.reference_name][read.reference_start:read.reference_start+read.qlen], read.query_sequence, read_length,read2_mods_CpG, read2_mods_CHG, read2_mods_CHH, read2_umod_CpG, read2_umod_CHG, read2_umod_CHH, method, single_end)
     return read1_mods_CpG, read1_mods_CHG, read1_mods_CHH, read1_umod_CpG, read1_umod_CHG, read1_umod_CHH,\
            read2_mods_CpG, read2_mods_CHG, read2_mods_CHH, read2_umod_CpG, read2_umod_CHG, read2_umod_CHH
 
@@ -170,12 +172,12 @@ def context_calculator(i, read_mods, read_umods, read_values):
     return read_values, values, umod_counts, mod_counts
 
 
-def mbias_statistics_calculator(input_file, name, directory, read_length, method, single_end, N_threads):
+def mbias_statistics_calculator(fastas, input_file, name, directory, read_length, method, single_end, N_threads, per_chromosome):
     """Creates a summary statistics of the modification levels per read position, pair orientation and cytosine context,
     and then writes them as a text file that can be used for independent visualisation."""
     read1_mods_CpG, read1_mods_CHG, read1_mods_CHH, read1_umod_CpG, read1_umod_CHG, read1_umod_CHH,\
     read2_mods_CpG, read2_mods_CHG, read2_mods_CHH, read2_umod_CpG, read2_umod_CHG, read2_umod_CHH \
-        = mbias_evaluater(input_file, read_length, method, single_end, N_threads)
+        = mbias_evaluater(input_file, read_length, method, single_end, N_threads, fastas, per_chromosome)
     read_values_1_CpG, read_values_1_CHG, read_values_1_CHH = initialise_data_counters(read_length)
     read_values_2_CpG, read_values_2_CHG, read_values_2_CHH = initialise_data_counters(read_length)
     if single_end == True:
@@ -222,7 +224,7 @@ def mbias_statistics_calculator(input_file, name, directory, read_length, method
         logs.error('asTair cannot write to Mbias file.', exc_info=True)
     return values_1_CpG, values_2_CpG, values_1_CHG, values_2_CHG, values_1_CHH, values_2_CHH
 
-def Mbias_plotting(input_file, directory, read_length, method, single_end, plot, colors, N_threads):
+def Mbias_plotting(reference, input_file, directory, read_length, method, single_end, plot, colors, N_threads, per_chromosome):
     """The general M-bias calculation and statistics output function, which might be also visualised if the plotting module is enabled."""
     time_s = datetime.now()
     logs.info("asTair's M-bias summary function started running. {} seconds".format((time_s - time_b).total_seconds()))
@@ -230,7 +232,8 @@ def Mbias_plotting(input_file, directory, read_length, method, single_end, plot,
     directory = path.abspath(directory)
     if list(directory)[-1]!="/":
         directory = directory + "/"
-    values_1_CpG, values_2_CpG, values_1_CHG, values_2_CHG, values_1_CHH, values_2_CHH = mbias_statistics_calculator(input_file, name, directory, read_length, method, single_end, N_threads)
+    keys, fastas = fasta_splitting_by_sequence(reference, per_chromosome)
+    values_1_CpG, values_2_CpG, values_1_CHG, values_2_CHG, values_1_CHH, values_2_CHH = mbias_statistics_calculator(fastas, input_file, name, directory, read_length, method, single_end, N_threads, per_chromosome)
     try:
         if plot:
             if colors != ['teal', 'gray', 'maroon']:
@@ -293,6 +296,7 @@ def Mbias_plotting(input_file, directory, read_length, method, single_end, plot,
     time_m = datetime.now()
     logs.info("asTair's M-bias summary function finished running. {} seconds".format((
     time_m - time_b).total_seconds()))
+
 
 if __name__ == '__main__':
     mbias()
