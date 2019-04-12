@@ -72,16 +72,27 @@ logs = logging.getLogger(__name__)
 
 time_b = datetime.now()
 
-def modification_calls_writer(data_mods, file_name, header=False):
+def modification_calls_writer(data_mods, compress, data_line, header=False):
     """Outputs the modification calls per position in a tab-delimited format."""
     try:
-        with open(file_name, 'a') as calls_output:
-            data_line = csv.writer(calls_output, delimiter='\t', lineterminator='\n')
+        if compress == False:
             if header:
                 data_line.writerow(["CHROM", "START", "END", "MOD_LEVEL", "MOD", "UNMOD", "REF", "ALT", "SPECIFIC_CONTEXT", "CONTEXT", 'SNV', 'TOTAL_DEPTH'])
                 data_line.writerow(data_mods)
             else:
                 data_line.writerow(data_mods)
+        else:
+            if header:
+                data_line.write('{}\t{}\t{}\t{}\t{}\t{}\t{}\t{}\t{}\t{}\t{}\t{}\n'.format('CHROM', 'START', 'END', 'MOD_LEVEL', 'MOD', 'UNMOD', 'REF', 'ALT', 'SPECIFIC_CONTEXT', 'CONTEXT', 'SNV', 'TOTAL_DEPTH'))
+                data_line.write(
+                    '{}\t{}\t{}\t{}\t{}\t{}\t{}\t{}\t{}\t{}\t{}\t{}\n'.format(data_mods[0], data_mods[1], data_mods[2], data_mods[3],
+                                                                 data_mods[4], data_mods[5], data_mods[6], data_mods[7],
+                                                                 data_mods[8], data_mods[9], data_mods[10], data_mods[11]))
+            else:
+                data_line.write(
+                    '{}\t{}\t{}\t{}\t{}\t{}\t{}\t{}\t{}\t{}\t{}\t{}\n'.format(data_mods[0], data_mods[1], data_mods[2], data_mods[3],
+                                                                 data_mods[4], data_mods[5], data_mods[6], data_mods[7],
+                                                                 data_mods[8], data_mods[9], data_mods[10], data_mods[11]))
     except IOError:
         logs.error('asTair cannot write to modification calls file.', exc_info=True)
 
@@ -175,7 +186,7 @@ def flags_expectation(modification_information_per_position, position, ignore_or
 
         
 def pillup_summary(modification_information_per_position, position, read_counts, mean_mod, mean_unmod, user_defined_context,
-                   header, file_name, desired_tuples, undesired_tuples, modification, reference, depth, method, context_sample_counts, ignore_orphans, single_end):
+                   header, desired_tuples, undesired_tuples, modification, reference, depth, method, context_sample_counts, ignore_orphans, single_end, compress, data_line):
     """Gives the modication call rows given strand information."""
     if single_end == True:
         if non_zero_division(read_counts[undesired_tuples[1]], (read_counts[undesired_tuples[0]] + read_counts[undesired_tuples[1]])) < 0.8:
@@ -240,11 +251,11 @@ def pillup_summary(modification_information_per_position, position, read_counts,
                                  reference, modification, modification_information_per_position[position][0],
                                  modification_information_per_position[position][1], snp, depth))
     statistics_calculator(mean_mod, mean_unmod, all_data, user_defined_context, context_sample_counts)
-    modification_calls_writer(all_data, file_name, header=header)
+    modification_calls_writer(all_data, compress, data_line, header=header)
 
 
 def clean_pileup(pileups, cycles, modification_information_per_position, mean_mod, mean_unmod, user_defined_context, file_name, method,
-                 mark_matches, mark_ends, add_indels, context_sample_counts, ignore_orphans, single_end):
+                 mark_matches, mark_ends, add_indels, context_sample_counts, ignore_orphans, single_end, compress, data_line):
     """Takes reads from the piled-up region and calculates modification levels."""
     for reads in pileups:
         if cycles == 0:
@@ -263,8 +274,7 @@ def clean_pileup(pileups, cycles, modification_information_per_position, mean_mo
             for pileup, seq in zip_longest(reads.pileups, sequences, fillvalue='BLANK'):
                 if pileup != 'BLANK':
                     read_counts[(pileup.alignment.flag, seq.upper())] += 1
-            pillup_summary(modification_information_per_position, position, read_counts, mean_mod, mean_unmod, user_defined_context, header,
-                           file_name, desired_tuples, undesired_tuples, modification, reference, reads.get_num_aligned(), method, context_sample_counts, ignore_orphans, single_end)
+            pillup_summary(modification_information_per_position, position, read_counts, mean_mod, mean_unmod, user_defined_context, header, desired_tuples, undesired_tuples, modification, reference, reads.get_num_aligned(), method, context_sample_counts, ignore_orphans, single_end, compress, data_line)
             cycles+=1
             modification_information_per_position.pop(position)
 
@@ -276,9 +286,7 @@ def cytosine_modification_finder(input_file, reference, context, zero_coverage, 
     logs.info("asTair modification finder started running. {} seconds".format((time_s - time_b).total_seconds()))
     name = path.splitext(path.basename(input_file))[0]
     directory = path.abspath(directory)
-    if list(directory)[-1]!="/":
-        directory = directory + "/"
-    if path.exists(directory) == False:
+    if os.path.exists(directory) == False:
         raise Exception("The output directory does not exist.")
         sys.exit(1)
     if per_chromosome == None:
@@ -309,6 +317,12 @@ def cytosine_modification_finder(input_file, reference, context, zero_coverage, 
         contexts, all_keys = sequence_context_set_creation(context, user_defined_context)
         cycles = 0
         context_total_counts, context_sample_counts = defaultdict(int), defaultdict(int)
+        if compress == False:
+            calls_output = open(file_name, 'a')
+            data_line = csv.writer(calls_output, delimiter='\t', lineterminator='\n')
+        else:
+            logs.info("Compressing output modification calls file.")
+            data_line = gzip.open(file_name + '.gz', 'wt', compresslevel=9, encoding='utf8', newline='\n')
         if per_chromosome == None:
             for i in range(0, len(keys)):
                 time_m = datetime.now()
@@ -318,7 +332,7 @@ def cytosine_modification_finder(input_file, reference, context, zero_coverage, 
                                        max_depth=max_depth, redo_baq=redo_baq, ignore_orphans=ignore_orphans, compute_baq=compute_baq,
                                        min_mapping_quality=minimum_mapping_quality, adjust_acapq_threshold=adjust_acapq_threshold)
                 clean_pileup(pileups, cycles, modification_information_per_position, mean_mod, mean_unmod, user_defined_context, file_name, method,
-                             mark_matches, mark_ends, add_indels, context_sample_counts, ignore_orphans, single_end)
+                             mark_matches, mark_ends, add_indels, context_sample_counts, ignore_orphans, single_end, compress, data_line)
         else:
             time_m = datetime.now()
             logs.info("Starting modification calling on {} chromosome (sequence). {} seconds".format(keys, (time_m - time_b).total_seconds()))
@@ -327,26 +341,27 @@ def cytosine_modification_finder(input_file, reference, context, zero_coverage, 
                                    max_depth=max_depth, redo_baq=redo_baq, ignore_orphans=ignore_orphans, compute_baq=compute_baq,
                                    min_mapping_quality=minimum_mapping_quality, adjust_acapq_threshold=adjust_acapq_threshold)
             clean_pileup(pileups, cycles, modification_information_per_position, mean_mod, mean_unmod, user_defined_context, file_name, method,
-                         mark_matches, mark_ends, add_indels, context_sample_counts, ignore_orphans, single_end)
+                         mark_matches, mark_ends, add_indels, context_sample_counts, ignore_orphans, single_end, compress, data_line)
         if zero_coverage:
             for position in modification_information_per_position.keys():
                 if modification_information_per_position[position][3] == 'C':
                     all_data = list((position[0], position[1], position[1] + 1, 'NA', 0, 0, 'C', 'T',
                     modification_information_per_position[position][0], modification_information_per_position[position][1], 'No'))
-                    modification_calls_writer(all_data, file_name, header=False)
+                    modification_calls_writer(all_data, compress, data_line, header=False)
                 elif modification_information_per_position[position][3] == 'G':
                     all_data = list((position[0], position[1], position[1] + 1, 'NA', 0, 0, 'G', 'A',
                     modification_information_per_position[position][0], modification_information_per_position[position][1], 'No'))
-                    modification_calls_writer(all_data, file_name, header=False)
+                    modification_calls_writer(all_data, compress, data_line, header=False)
         inbam.close()
-        if compress == True:  
-            logs.info("Compressing output modification calls file.")
-            subprocess.Popen('gzip -f -9 {}'.format(file_name), shell=True)
         if per_chromosome == None:
             file_name = path.join(directory, name + "_" + method + "_" + context + ".stats")
         else:
             file_name = path.join(directory, name + "_" + method + "_" + per_chromosome + "_" + context + ".stats")
         final_statistics_output(mean_mod, mean_unmod, user_defined_context, file_name, context_sample_counts, context_total_counts, context)
+        if compress == False:
+             calls_output.close()
+        else:
+            data_line.close()
         time_e = datetime.now()
         logs.info("asTair modification finder finished running. {} seconds".format((time_e - time_b).total_seconds()))
     else:
