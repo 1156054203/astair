@@ -231,9 +231,11 @@ def Mbias_plotting(reference, input_file, directory, read_length, method, single
     time_s = datetime.now()
     logs.info("asTair's M-bias summary function started running. {} seconds".format((time_s - time_b).total_seconds()))
     name = path.splitext(path.basename(input_file))[0]
-    directory = path.abspath(directory)
     if list(directory)[-1]!="/":
         directory = directory + "/"
+    if path.exists(directory) == False:
+        raise Exception("The output directory does not exist.")
+        sys.exit(1)
     keys, fastas = fasta_splitting_by_sequence(reference, per_chromosome)
     values_1_CpG, values_2_CpG, values_1_CHG, values_2_CHG, values_1_CHH, values_2_CHH = mbias_statistics_calculator(fastas, input_file, name, directory, read_length, method, single_end, N_threads, per_chromosome)
     try:

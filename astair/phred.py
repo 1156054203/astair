@@ -260,6 +260,9 @@ def Phred_scores_plotting(fq1, fq2, calculation_mode, directory, sample_size, mi
     directory = path.abspath(directory)
     if list(directory)[-1]!="/":
         directory = directory + "/"
+    if path.exists(directory) == False:
+        raise Exception("The output directory does not exist.")
+        sys.exit(1)
     if colors != ['skyblue', 'mediumaquamarine', 'khaki', 'lightcoral']:
         colors = "".join(colors).split(',')
     read_values_fq1, read_values_fq2 = main_Phred_score_calculation_output(fq1, fq2, sample_size, directory, name, calculation_mode, single_end)

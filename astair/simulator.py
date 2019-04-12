@@ -337,6 +337,9 @@ def modification_simulator(reference, read_length, input_file, method, library, 
     directory = path.abspath(directory)
     if list(directory)[-1]!="/":
         directory = directory + "/"
+    if path.exists(directory) == False:
+        raise Exception("The output directory does not exist.")
+        sys.exit(1)
     if region.count(None)!=0:
         region = None
     modified_positions_data = list()

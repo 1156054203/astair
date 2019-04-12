@@ -62,6 +62,9 @@ def removing_mod_err(input_file, method, bases_noncpg, N_threads, directory):
     directory = path.abspath(directory)
     if list(directory)[-1]!="/":
         directory = directory + "/"
+    if os.path.exists(directory) == False:
+        raise Exception("The output directory does not exist.")
+        sys.exit(1)
     try:
         inbam = bam_file_opener(input_file, None, N_threads)
     except Exception:

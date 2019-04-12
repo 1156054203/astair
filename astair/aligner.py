@@ -98,9 +98,12 @@ def run_alignment(fq1, fq2, reference, bwa_path, samtools_path, directory, metho
         name = re.sub('_(R1|1).fq', '', name)
     else:
         name = re.sub('.fq', '', name)
-    directory = os.path.abspath(directory)
-    if list(directory)[-1] != "/":
+    directory = path.abspath(directory)
+    if list(directory)[-1]!="/":
         directory = directory + "/"
+    if os.path.exists(directory) == False:
+        raise Exception("The output directory does not exist.")
+        sys.exit(1)
     if keep_unmapped:
         aligned_string = ''
     else:

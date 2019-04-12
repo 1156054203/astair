@@ -76,6 +76,11 @@ def find_contexts(reference, context, user_defined_context, per_chromosome, comp
     logs.info("asTair cytosine contexts positions finder started running. {} seconds".format((time_s - time_b).total_seconds()))
     name = path.splitext(path.basename(reference))[0]
     directory = path.abspath(directory)
+    if list(directory)[-1]!="/":
+        directory = directory + "/"
+    if os.path.exists(directory) == False:
+        raise Exception("The output directory does not exist.")
+        sys.exit(1)
     if per_chromosome == None:
         file_name = path.join(directory, name + "_"  + context + ".bed")
     else:

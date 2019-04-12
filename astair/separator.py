@@ -116,6 +116,9 @@ def position_separator(input_file, read_length, method, modified_positions, modi
     directory = path.abspath(directory)
     if list(directory)[-1]!="/":
         directory = directory + "/"
+    if os.path.exists(directory) == False:
+        raise Exception("The output directory does not exist.")
+        sys.exit(1)
     modified_information = dict([(int(x), y) for x,y in zip(modified_positions, modified_positions_orientation)])
     inbam = pysam.AlignmentFile(input_file, "rb", header=True)
     bam_fetch = inbam.fetch(until_eof=True)
