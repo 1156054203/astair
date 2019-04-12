@@ -34,8 +34,8 @@ except Exception:
 
 from astair.safe_division import non_zero_division
 from astair.bam_file_parser import bam_file_opener
-from astair.DNA_sequences_operations import complementary
 from astair.simple_fasta_parser import fasta_splitting_by_sequence
+from astair.DNA_sequences_operations import complementary
 
 
 
@@ -110,8 +110,10 @@ def mbias_calculator(flag, ref_sequence, read_sequence, read_length, read_mods_C
         chh_all = [m.start() for m in re.finditer(r'C(A|C|T)(A|T|C)', ref_sequence, re.IGNORECASE)]
     elif flag in OB:
         cpg_all = [m.start() + 1 for m in re.finditer(r'CG', ref_sequence, re.IGNORECASE)]
-        chg_all = [m.start() for m in re.finditer(r'G(A|G|T)C', complementary(ref_sequence), re.IGNORECASE)]
-        chh_all = [m.start() for m in re.finditer(r'G(A|G|T)(A|T|G)', complementary(ref_sequence), re.IGNORECASE)]
+        chg_all = [m.end()-1 for m in re.finditer(r'C(A|G|T)G', ref_sequence, re.IGNORECASE)]
+        chh_all = list()
+        for chh_ in ['AAC', 'CAC', 'TAC', 'ACC', 'CCC', 'TCC', 'ATC', 'CTC', 'TTC']:
+            chh_all.extend([m.end()-1 for m in re.finditer(chh_, complementary(ref_sequence), re.IGNORECASE)])
     if len(positions) >= 1:
         cpg_mods = [x for x in positions if x in cpg_all]
         chg_mods = [x for x in positions if x in chg_all]
@@ -277,6 +279,7 @@ def Mbias_plotting(reference, input_file, directory, read_length, method, single
                 fq[1].xaxis.set_ticks(numpy.arange(0, read_length + 1, step=ceil(read_length/10)))
                 fq[1].yaxis.set_ticks(numpy.arange(0, 101, step=10))
                 fq[1].grid(color='lightgray', linestyle='solid', linewidth=1)
+                pyp.figlegend(['CpG', 'CHG', 'CHH'], loc='center left', bbox_to_anchor=(1, 0.5))
             else:
                 fq.set_ylabel('Modification level, %', fontsize=12)
                 fq.set_xlabel('Base positions', fontsize=12)
@@ -286,7 +289,7 @@ def Mbias_plotting(reference, input_file, directory, read_length, method, single
                 fq.xaxis.set_ticks(numpy.arange(0, read_length + 1, step=ceil(read_length / 10)))
                 fq.yaxis.set_ticks(numpy.arange(0, 101, step=10))
                 fq.grid(color='lightgray', linestyle='solid', linewidth=1)
-            pyp.figlegend(['CpG', 'CHG', 'CHH'], loc='center left', bbox_to_anchor=(1, 0.5))
+                pyp.figlegend(['CpG', 'CHG', 'CHH'], loc='center left', bbox_to_anchor=(0.9, 0.5))
             pyp.savefig(directory + name + '_M-bias_plot.pdf', figsize=(16, 12), dpi=330, bbox_inches='tight', pad_inches=0.15)
             pyp.close()
     except Exception:

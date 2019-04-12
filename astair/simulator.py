@@ -38,7 +38,7 @@ from astair.context_search import sequence_context_set_creation
 @click.option('coverage', '--coverage', '-cv', required=False, type=int, help='Desired depth of sequencing coverage.')
 @click.option('region', '--region', '-r', nargs=3, type=click.Tuple([str, int, int]), default=(None, None, None), required=False, help='The one-based genomic coordinates of the specific region of interest given in the form chromosome, start position, end position, e.g. chr1 100 2000.')
 @click.option('user_defined_context', '--user_defined_context', '-uc', required=False, type=str, help='At least two-letter contexts other than CG, CHH and CHG to be evaluated, will return the genomic coordinates for the first cytosine in the string.')
-@click.option('overwrite', '--overwrite', '-ov', required=False, default=False, type=bool, help='Indicates whether existing output files with matching names will be overwritten. (Default False)')
+@click.option('overwrite', '--overwrite', '-ov', required=False, default=False, is_flag=True, help='Indicates whether existing output files with matching names will be overwritten. (Default False)')
 @click.option('per_chromosome', '--per_chromosome', '-chr', default=None, type=str, help='When used, it modifies the chromosome given only. (Default None')
 @click.option('GC_bias', '--GC_bias', '-gc', default=0.3, required=True, type=float, help='The value of total GC levels in the read above which lower coverage will be observed in Ns and fasta modes. (Default 0.5)')
 @click.option('sequence_bias', '--sequence_bias', '-sb', default=0.1, required=True, type=float, help='The proportion of lower-case letters in the read string for the Ns and fasta modes that will decrease the chance of the read being output. (Default 0.1)')
@@ -213,14 +213,9 @@ def modification_by_strand(read, library, reverse_modification, fastas):
                 base, ref = 'C', 'C'
             elif read.flag in [83, 163]:
                 base, ref = 'G', 'G'
-        if len(read.tags) == 0:
-            posit = [val.start() + read.reference_start for val in re.finditer(ref, read.query_sequence)]
-            positions = set((read.reference_name, pos, pos + 1) for pos in posit)
-            return positions, base
-        else:
-            posit = [val.start() + read.reference_start for val in re.finditer(ref, fastas[read.reference_name][read.reference_start:read.reference_start+read.qlen].upper())]
-            positions = set((read.reference_name, pos, pos + 1) for pos in posit)
-            return positions, base
+        posit = [val.start() + read.reference_start for val in re.finditer(ref, fastas[read.reference_name][read.reference_start:read.reference_start+read.qlen].upper())]
+        positions = set((read.reference_name, pos, pos + 1) for pos in posit)
+        return positions, base
 
 
 
