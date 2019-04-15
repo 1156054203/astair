@@ -17,8 +17,7 @@ class SimulateOutputTest(unittest.TestCase):
 
     def test_simulate_CHG_taps(self):
         """Tests whether CHG positions will be fully modified in TAPS."""
-        modification_simulator(current + '/test_data/lambda_phage.fa', 75, current + '/test_data/small_lambda.bam', 'mCtoT', 'directional', 'bam', 100,
-              None,  1, 'CHG', (None, None, None),  current + '/test_data/', 0, False, 1, None, 0.3, 0.1, False, False)
+        modification_simulator(current + '/test_data/lambda_phage.fa', 75, current + '/test_data/small_lambda.bam', 'mCtoT', 'directional', 'bam', 100, None,  1, 'CHG', (None, None, None),  current + '/test_data/', 0, False, 1, None, 0.3, 0.1, False, False)
         data_generated = list()
         with open(current + '/test_data/small_lambda_mCtoT_100_CHG_modified_positions_information.txt','r') as simulated_file:
             mod_reader = csv.reader(simulated_file, delimiter='\t', lineterminator='\n')
@@ -47,8 +46,7 @@ class SimulateOutputTest(unittest.TestCase):
    
     def test_simulate_CHG_wgbs(self):
         """Tests whether CHG positions will be fully modified in WGBS."""
-        modification_simulator(current + '/test_data/lambda_phage.fa', 75, current + '/test_data/small_lambda.bam', 'CtoT', 'directional', 'bam', 100,
-              None,  1, 'CHG', (None, None, None),  current + '/test_data/', 0, False, 1, None, 0.3, 0.1, False, False)
+        modification_simulator(current + '/test_data/lambda_phage.fa', 75, current + '/test_data/small_lambda.bam', 'CtoT', 'directional', 'bam', 100, None,  1, 'CHG', (None, None, None),  current + '/test_data/', 0, False, 1, None, 0.3, 0.1, False, False)
         data_generated = list()
         with open(current + '/test_data/small_lambda_CtoT_100_CHG_modified_positions_information.txt','r') as simulated_file:
             mod_reader = csv.reader(simulated_file, delimiter='\t', lineterminator='\n')

@@ -65,23 +65,18 @@ logs = logging.getLogger(__name__)
 time_b = datetime.now()
 
 
-def cytosine_modification_lookup(reference, context, user_defined_context, modified_positions, region, per_chromosome):
+def cytosine_modification_lookup(context, user_defined_context, modified_positions, region, fastas, keys, context_total_counts):
     """Finds all required cytosine contexts or takes positions from a tab-delimited file containing
      the list of positions to be modified."""
-    keys, fastas = fasta_splitting_by_sequence(reference, per_chromosome)
-    context_total_counts = defaultdict(int)
     if modified_positions is None:
         contexts, all_keys = sequence_context_set_creation(context, user_defined_context)
-        if region == None and per_chromosome == None:
-            for i in range(0, len(keys)):
-                modification_information = context_sequence_search(contexts, all_keys, fastas, keys[i], user_defined_context, context_total_counts, region)
-        elif region == None and per_chromosome != None:
+        if region == None:
             modification_information = context_sequence_search(contexts, all_keys, fastas, keys, user_defined_context, context_total_counts, region)
         else:
             if region[0] in keys:
                  modification_information = context_sequence_search(contexts, all_keys, fastas, region[0], user_defined_context, context_total_counts, region)
         try:
-            return modification_information, keys, fastas
+            return modification_information
         except UnboundLocalError:
             logs.error('There is no reference sequence of this name in the provided fasta file.', exc_info=True)
             sys.exit(1)
@@ -111,7 +106,6 @@ def modification_level_transformation(modification_level, modified_positions):
 
 def random_position_modification(modification_information, modification_level, modified_positions, library, seed, context):
     """Creates lists of positions per context that will be modified according to the method."""
-    modification_level = modification_level_transformation(modification_level, modified_positions)
     if modification_level == None:
         modification_level = 0
     if context == 'all' and modified_positions == None:
@@ -232,9 +226,9 @@ def absolute_modification_information(modified_positions_data, modification_info
         mod_level = round((len(modified_positions_data) / context_list_length) * 100, 3)
         try:
             if per_chromosome == None:
-                name_to_use = name + '_' + method + '_' + str(modification_level) + '_' + context + '_modified_positions_information.txt'
+                name_to_use = name + '_' + method + '_' + str(100*int(modification_level)) + '_' + context + '_modified_positions_information.txt'
             else:
-                name_to_use = name + '_' + method + '_' + str(modification_level) + '_' + context + '_' + per_chromosome + '_modified_positions_information.txt'
+                name_to_use = name + '_' + method + '_' + str(100*int(modification_level)) + '_' + context + '_' + per_chromosome + '_modified_positions_information.txt'
             with open(path.join(directory, name_to_use), 'w') as reads_info_output:
                 line = csv.writer(reads_info_output, delimiter='\t', lineterminator='\n')
                 line.writerow(['__________________________________________________________________________________________________'])
@@ -249,6 +243,73 @@ def absolute_modification_information(modified_positions_data, modification_info
         pass
 
 
+
+def modification_information_and_reads_fetching(context, user_defined_context, modified_positions, region, fastas, key, context_total_counts, modification_level, library, seed):
+    """Prepares the required cytosine positions vectors."""
+    modification_information = cytosine_modification_lookup(context, user_defined_context, modified_positions, region, fastas, key, context_total_counts)
+    modification_level, random_sample = random_position_modification(modification_information, modification_level, modified_positions, library, seed, context)
+    return modification_information, random_sample, modification_level
+
+
+
+def read_modification(input_file, fetch, N_threads, name, directory, modification_level, header, region, method, context, modified_positions_data, random_sample, fastas, library, reverse_modification, outbam):
+    """Looks at the sequencing reads and modifies/removes modifications at the required cytosine positions."""
+    for read in bam_file_opener(input_file, fetch, N_threads):
+        general_read_information_output(name, directory, read, modification_level, header, region, method, context)
+        quals = read.query_qualities
+        if read.flag in [99, 147, 83, 163] and read.reference_length != 0:
+            positions, base = modification_by_strand(read, library, reverse_modification, fastas)
+            modified_positions_data.extend(list(random_sample.intersection(positions)))
+            if method == 'mCtoT':
+                if len(read.tags) != 0 and (
+                    re.findall('I', read.cigarstring, re.IGNORECASE) or re.findall('D', read.cigarstring,
+                                                                                   re.IGNORECASE)) or re.findall('S',
+                                                                                                                 read.cigarstring,
+                                                                                                                 re.IGNORECASE):
+                    indices = position_correction_cigar(read, method, random_sample, positions)
+                else:
+                    indices = [position[1] - read.reference_start for position in random_sample.intersection(positions)]
+                if len(indices) > 0:
+                    strand = list(read.query_sequence)
+                    replace = list(base * len(indices))
+                    for (index, replacement) in zip(indices, replace):
+                        if len(strand) > index:
+                            if ((strand[index] in ['C', 'T'] and read.flag in [99, 147])) or (
+                            (strand[index] in ['G', 'A'] and read.flag in [83, 163])):
+                                strand[index] = replacement
+                    read.query_sequence = "".join(strand)
+                    read.query_qualities = quals
+                    outbam.write(read)
+                else:
+                    outbam.write(read)
+            else:
+                if len(read.tags) != 0 and (
+                    re.findall('I', read.cigarstring, re.IGNORECASE) or re.findall('D', read.cigarstring,
+                                                                                   re.IGNORECASE)) or re.findall('S',
+                                                                                                                 read.cigarstring,
+                                                                                                                 re.IGNORECASE):
+                    indices = position_correction_cigar(read, method, random_sample, positions)
+                else:
+                    indices = [position[1] - read.reference_start for position in positions if
+                               position not in random_sample.intersection(positions)]
+                if len(indices) > 0:
+                    strand = list(read.query_sequence)
+                    replace = list(base * len(indices))
+                    for (index, replacement) in zip(indices, replace):
+                        if len(strand) > index:
+                            if ((strand[index] in ['C', 'T'] and read.flag in [99, 147])) or (
+                            (strand[index] in ['G', 'A'] and read.flag in [83, 163])):
+                                strand[index] = replacement
+                    read.query_sequence = "".join(strand)
+                    read.query_qualities = quals
+                    outbam.write(read)
+                else:
+                    outbam.write(read)
+            header = False
+        elif read.flag in [99, 147, 83, 163]:
+            outbam.write(read)
+
+
 def bam_input_simulation(directory, name, modification_level, context, input_file, reference, user_defined_context, per_chromosome,
     modified_positions, library, seed, region, modified_positions_data, method, N_threads, header, overwrite, extension, reverse_modification):
     """Inserts modification information acording to method and context to a bam or cram file."""
@@ -259,72 +320,37 @@ def bam_input_simulation(directory, name, modification_level, context, input_fil
             file_type = 'wb'
         if reverse_modification == False:
             if per_chromosome == None:
-                outbam = pysam.AlignmentFile(path.join(directory, name + '_' + method + '_' + str(modification_level) + '_' + context + extension),
+                outbam = pysam.AlignmentFile(path.join(directory, name + '_' + method + '_' + str(100*int(modification_level)) + '_' + context + extension),
                 file_type, reference_filename=reference, template=bam_file_opener(input_file, None, N_threads), header=header)
             else:
-                outbam = pysam.AlignmentFile(path.join(directory, name + '_' + method + '_' + str(modification_level) + '_' + context  + '_' + per_chromosome  + extension),
+                outbam = pysam.AlignmentFile(path.join(directory, name + '_' + method + '_' + str(100*int(modification_level)) + '_' + context  + '_' + per_chromosome  + extension),
                 file_type, reference_filename=reference, template=bam_file_opener(input_file, None, N_threads), header=header)
-                
         else:
             if per_chromosome == None:
-                outbam = pysam.AlignmentFile(path.join(directory, name + '_' + method + '_' + str(modification_level) + '_' + context + '_reversed' + extension),
+                outbam = pysam.AlignmentFile(path.join(directory, name + '_' + method + '_' + str(100*int(modification_level)) + '_' + context + '_reversed' + extension),
                 file_type, reference_filename=reference, template=bam_file_opener(input_file, None, N_threads), header=header)
             else:
-                outbam = pysam.AlignmentFile(path.join(directory, name + '_' + method + '_' + str(modification_level) + '_' + context  + '_reversed_' + per_chromosome  + extension),
+                outbam = pysam.AlignmentFile(path.join(directory, name + '_' + method + '_' + str(100*int(modification_level)) + '_' + context  + '_reversed_' + per_chromosome  + extension),
                 file_type, reference_filename=reference, template=bam_file_opener(input_file, None, N_threads), header=header)
-        modification_information, keys, fastas = cytosine_modification_lookup(reference, context, user_defined_context, modified_positions, region, per_chromosome)
-        modification_level, random_sample = random_position_modification(modification_information, modification_level,
-                                                                         modified_positions, library, seed, context)
-        if per_chromosome == None and region == None:
-            fetch = 'fetch'
+        keys, fastas = fasta_splitting_by_sequence(reference, per_chromosome)
+        context_total_counts = defaultdict(int)
+        if region == None and per_chromosome == None:
+            for i in range(0, len(keys)):
+                modification_information, random_sample, modification_level = modification_information_and_reads_fetching(context, user_defined_context, modified_positions, region, fastas, keys[i], context_total_counts, modification_level, library, seed)
+                fetch = tuple((keys[i], 0, pysam.AlignmentFile(input_file).get_reference_length(keys[i])))
+                read_modification(input_file, fetch, N_threads, name, directory, modification_level, header, region, method, context, modified_positions_data, random_sample, fastas, library, reverse_modification, outbam)
+            return modification_information
         elif per_chromosome == None and region != None:
+            modification_information, random_sample, modification_level = modification_information_and_reads_fetching(context, user_defined_context, modified_positions, region, fastas, region[0], context_total_counts, modification_level, library, seed)
             fetch = tuple((region[0], region[1], region[2]))
+            read_modification(input_file, fetch, N_threads, name, directory, modification_level, header, region, method, context, modified_positions_data, random_sample, fastas, library, reverse_modification, outbam)
+            return modification_information
         else:
+            modification_information, random_sample, modification_level = modification_information_and_reads_fetching(context, user_defined_context, modified_positions, region, fastas, per_chromosome, context_total_counts, modification_level, library, seed)
             fetch = tuple((per_chromosome, 0, pysam.AlignmentFile(input_file).get_reference_length(per_chromosome)))
-        for read in bam_file_opener(input_file, fetch, N_threads):
-            general_read_information_output(name, directory, read, modification_level, header, region, method, context)
-            quals = read.query_qualities
-            if read.flag in [99, 147, 83, 163] and read.reference_length != 0:
-                positions, base = modification_by_strand(read, library, reverse_modification, fastas)
-                modified_positions_data.extend(list(random_sample.intersection(positions)))
-                if method == 'mCtoT':
-                    if len(read.tags) != 0 and (re.findall('I', read.cigarstring, re.IGNORECASE) or re.findall('D', read.cigarstring, re.IGNORECASE)) or re.findall('S', read.cigarstring, re.IGNORECASE):
-                        indices = position_correction_cigar(read, method, random_sample, positions)
-                    else:
-                        indices = [position[1] - read.reference_start for position in random_sample.intersection(positions)]
-                    if len(indices) > 0:
-                        strand = list(read.query_sequence)
-                        replace = list(base * len(indices))
-                        for (index, replacement) in zip(indices, replace):
-                            if len(strand) > index:
-                                if ((strand[index] in ['C', 'T'] and read.flag in [99,147])) or ((strand[index] in ['G', 'A'] and read.flag in [83,163])):
-                                    strand[index] = replacement
-                        read.query_sequence = "".join(strand)
-                        read.query_qualities = quals
-                        outbam.write(read)
-                    else:
-                        outbam.write(read)
-                else:
-                    if len(read.tags) != 0 and (re.findall('I', read.cigarstring, re.IGNORECASE) or re.findall('D', read.cigarstring, re.IGNORECASE)) or re.findall('S', read.cigarstring, re.IGNORECASE):
-                        indices = position_correction_cigar(read, method, random_sample, positions)
-                    else:
-                        indices = [position[1] - read.reference_start for position in positions if position not in random_sample.intersection(positions)]
-                    if len(indices) > 0:
-                        strand = list(read.query_sequence)
-                        replace = list(base * len(indices))
-                        for (index, replacement) in zip(indices, replace):
-                            if len(strand) > index:
-                                if ((strand[index] in ['C', 'T'] and read.flag in [99,147])) or ((strand[index] in ['G', 'A'] and read.flag in [83,163])):
-                                    strand[index] = replacement
-                        read.query_sequence = "".join(strand)
-                        read.query_qualities = quals
-                        outbam.write(read)
-                    else:
-                        outbam.write(read)
-                header = False
-            elif read.flag in [99, 147, 83, 163]:
-                outbam.write(read)
-        return modification_information
+            read_modification(input_file, fetch, N_threads, name, directory, modification_level, header, region, method, context, modified_positions_data, random_sample, fastas, library, reverse_modification, outbam)
+            return modification_information
+
 
 
 def modification_simulator(reference, read_length, input_file, method, library, simulation_input, modification_level,
@@ -349,18 +375,19 @@ def modification_simulator(reference, read_length, input_file, method, library, 
         else:
             extension = '.bam'
         try:
+            modification_level = modification_level_transformation(modification_level, modified_positions)
             modification_information = bam_input_simulation(directory, name, modification_level, context, input_file, reference, user_defined_context, per_chromosome, modified_positions, library, seed, region, modified_positions_data, method, N_threads, header, overwrite, extension, reverse_modification)
             absolute_modification_information(modified_positions_data, modification_information, modified_positions,name,directory, modification_level, context, method, per_chromosome)
             if reverse_modification == False:
                 if per_chromosome == None:
-                    pysam.index(path.join(directory, name + '_' + method + '_' + str(modification_level) + '_' + context + extension))
+                    pysam.index(path.join(directory, name + '_' + method + '_' + str(100*int(modification_level)) + '_' + context + extension))
                 else:
-                    pysam.index(path.join(directory, name + '_' + method + '_' + str(modification_level) + '_' + context + '_' + per_chromosome + extension))
+                    pysam.index(path.join(directory, name + '_' + method + '_' + str(100*int(modification_level)) + '_' + context + '_' + per_chromosome + extension))
             else:
                 if per_chromosome == None:
-                    pysam.index(path.join(directory, name + '_' + method + '_' + str(modification_level) + '_' + context + '_reversed' + extension))
+                    pysam.index(path.join(directory, name + '_' + method + '_' + str(100*int(modification_level)) + '_' + context + '_reversed' + extension))
                 else:
-                    pysam.index(path.join(directory, name + '_' + method + '_' + str(modification_level) + '_' + context + '_reversed_' + per_chromosome + extension))
+                    pysam.index(path.join(directory, name + '_' + method + '_' + str(100*int(modification_level)) + '_' + context + '_reversed_' + per_chromosome + extension))
         except AttributeError:
             logs.error(
                 'The output files will not be overwritten. Please rename the input or the existing output files before rerunning if the input is different.',
