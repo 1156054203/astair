@@ -201,7 +201,10 @@ def position_correction_cigar(read, method, random_sample, positions, reverse_mo
                     else:
                         corrected_positions = [x[1] - abs(read.qstart-read.reference_start) for x in subsample]
                 else:
-                    corrected_positions = [x for x in positions if x < positions_cigar[index]]
+                    if index == 0:
+                        corrected_positions = [x for x in positions if x > positions_cigar[index]]
+                    else:
+                        corrected_positions = [x for x in positions if x < positions_cigar[index]]
                 index += 1
                 positions = corrected_positions
             else:

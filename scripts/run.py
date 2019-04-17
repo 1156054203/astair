@@ -47,7 +47,7 @@ cli.add_command(finder.find)
 cli.add_command(aligner.align)
 cli.add_command(simulator.simulate)
 cli.add_command(separator.separator)
-cli.add_command(filter.filter3T_exec)
+cli.add_command(filter.filter)
 
 
 if __name__ == '__main__':
