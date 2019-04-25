@@ -64,8 +64,46 @@ logs = logging.getLogger(__name__)
 
 time_b = datetime.now()
 
+def csv_line_skipper(csvfile, start, end, count, key):
+    """Random access for tab-delimited file reading."""
+    if count == 0:
+        list_of_rows = list()
+        csvfile.seek(start)
+        for read in csvfile.readlines():
+            if read.split()[3].lower().islower() == False and float(read.split()[3]) != 0 and read.split()[0]==key:
+                list_of_rows.append(tuple(read.split()))
+    else:
+        csvfile.seek(start)
+        list_of_rows = list(csv.reader(csvfile, delimiter='\t', lineterminator='\n'))
+    return list_of_rows
 
-def cytosine_modification_lookup(context, user_defined_context, modified_positions, region, fastas, keys, context_total_counts):
+
+def simple_reader(tupler, line, input_file, keys):
+    """Simplified function used for tab-delimited file reading."""
+    inbam = bam_file_opener(input_file, None, 1)
+    for row in line:
+        if row[0] != 'CHROM' and row[0] == keys and float(row[3]) != 0:
+            tupler[tuple((str(row[0]), int(row[1]), int(row[2])))] = numpy.array(object=[0, float(row[3]) * len([i.flag for i in inbam.fetch(contig=str(row[0]), start=int(row[1]), stop=int(row[2])) if (i.flag in [99, 147] and row[7] in ['C', 'T']) or (i.flag in [163, 83] and row[7] in ['A', 'G'])])], dtype=numpy.int8, copy=False)
+
+
+def chunck_sizer(input_list, threadN, input_file, keys, tupler):
+    """Threading for reading of larger files."""
+    chunk_list = list()
+    queue = Queue(maxsize=0)
+    chunk = round(len(input_list)/threadN)
+    for i in range(0, threadN):
+        chunk_list.append(input_list[i*chunk:i*chunk+chunk])
+    threads = [Thread(target=simple_reader, args=(tupler, line, input_file, keys), ) for line in chunk_list]
+    for thread in threads:
+        thread.daemon = True
+        thread.start()
+        queue.put(thread, block=False, timeout=10)
+        thread.join()
+        queue.task_done()
+    return queue
+
+
+def cytosine_modification_lookup(context, user_defined_context, modified_positions, region, fastas, keys, context_total_counts, input_file, N_threads, csvfile):
     """Finds all required cytosine contexts or takes positions from a tab-delimited file containing
      the list of positions to be modified."""
     if modified_positions is None:
@@ -81,12 +119,16 @@ def cytosine_modification_lookup(context, user_defined_context, modified_positio
             logs.error('There is no reference sequence of this name in the provided fasta file.', exc_info=True)
             sys.exit(1)
     else:
-        tupler = list()
+        tupler = dict()
         try:
-            with open(modified_positions) as csvfile:
-                position_reader = csv.reader(csvfile, delimiter='\t', lineterminator='\n')
-                for row in position_reader:
-                    tupler.append(tuple((str(row[0]), int(row[1]), int(row[2]))))
+            memory_map = mmap.mmap(csvfile.fileno(), 0)
+            start = memory_map.find(keys.encode('utf8'))
+            bam_to_view = bam_file_opener(input_file, None, 1)
+            count = bam_to_view.header.references.index(keys)
+            end = memory_map.rfind(keys.encode('utf8'))
+            position_reader = csv_line_skipper(csvfile, start, end, count, keys)
+            queue = chunck_sizer(position_reader, N_threads, input_file, keys, tupler)
+            queue.join()
             return tupler
         except Exception:
             logs.error('The cytosine positions file does not exist.', exc_info=True)
@@ -129,24 +171,20 @@ def random_position_modification(modification_information, modification_level, m
     return modification_level, random_sample
 
 
-def general_read_information_output(name, directory, read, modification_level, header, region, method, context):
+def general_read_information_output(read, header, line):
     """Writes to fastq file."""
     if read.is_read1 == True:
         orientation = '/1'
     else:
         orientation = '/2'
     try:
-        if not isinstance(modification_level, str):
-            modification_level = int(modification_level*100)
-        with open(path.join(directory, name + '_' + method + '_' + str(modification_level) + '_' + context + '_read_information.txt'), 'a') as reads_info_output:
-            line = csv.writer(reads_info_output, delimiter='\t', lineterminator='\n')
-            if header == True:
-                line.writerow(['Read ID', 'reference', 'start', 'end'])
-                line.writerow([read.qname + orientation, read.reference_name, read.reference_start,
-                                    read.reference_start + read.query_length])
-            else:
-                line.writerow([read.qname + orientation, read.reference_name, read.reference_start,
-                                    read.reference_start + read.query_length])
+        if header == True:
+            line.writerow(['Read ID', 'reference', 'start', 'end'])
+            line.writerow([read.qname + orientation, read.reference_name, read.reference_start,
+                                read.reference_start + read.query_length])
+        else:
+            line.writerow([read.qname + orientation, read.reference_name, read.reference_start,
+                                read.reference_start + read.query_length])
     except IOError:
         logs.error('asTair cannot write to read information file.', exc_info=True)
 
@@ -231,7 +269,7 @@ def modification_by_strand(read, library, reverse_modification, fastas):
 
 
 
-def absolute_modification_information(modified_positions_data, modification_information, modified_positions, name, directory, modification_level, context, method, per_chromosome):
+def absolute_modification_information(modified_positions_data, modification_information, modified_positions, name, directory, modification_level, context, method, per_chromosome, line):
     """Gives a statistics summary file about the modified positions."""
     modified_positions_data = set(modified_positions_data)
     modified_positions_data = list(modified_positions_data)
@@ -242,38 +280,32 @@ def absolute_modification_information(modified_positions_data, modification_info
         else:
             context_list_length = len(set(keys for keys, vals in modification_information.items() if vals[1] == context))
         mod_level = round((len(modified_positions_data) / context_list_length) * 100, 3)
-        try:
-            if per_chromosome == None:
-                name_to_use = name + '_' + method + '_' + str(int(100*modification_level)) + '_' + context + '_modified_positions_information.txt'
-            else:
-                name_to_use = name + '_' + method + '_' + str(int(100*modification_level)) + '_' + context + '_' + per_chromosome + '_modified_positions_information.txt'
-            with open(path.join(directory, name_to_use), 'w') as reads_info_output:
-                line = csv.writer(reads_info_output, delimiter='\t', lineterminator='\n')
-                line.writerow(['__________________________________________________________________________________________________'])
-                line.writerow(['Absolute modified positions: ' + str(len(modified_positions_data)) + '   |   ' +
-                               'Percentage to all positions of the desired context: ' + str(mod_level) + ' %'])
-                line.writerow(['__________________________________________________________________________________________________'])
-                for row in modified_positions_data:
-                    line.writerow(row)
-        except IOError:
-            logs.error('asTair cannot write to modified positions summary file.', exc_info=True)
     else:
-        pass
+        mod_level = 'Custom'
+    try:
+        line.writerow(['__________________________________________________________________________________________________'])
+        line.writerow(['Absolute modified positions: ' + str(len(modified_positions_data)) + '   |   ' +
+                       'Percentage to all positions of the desired context: ' + str(mod_level) + ' %'])
+        line.writerow(['__________________________________________________________________________________________________'])
+        for row in modified_positions_data:
+            line.writerow(row)
+    except IOError:
+        logs.error('asTair cannot write to modified positions summary file.', exc_info=True)
 
 
 
-def modification_information_and_reads_fetching(context, user_defined_context, modified_positions, region, fastas, key, context_total_counts, modification_level, library, seed):
+def modification_information_and_reads_fetching(context, user_defined_context, modified_positions, region, fastas, key, context_total_counts, modification_level, library, seed, input_file, N_threads, csvfile):
     """Prepares the required cytosine positions vectors."""
-    modification_information = cytosine_modification_lookup(context, user_defined_context, modified_positions, region, fastas, key, context_total_counts)
+    modification_information = cytosine_modification_lookup(context, user_defined_context, modified_positions, region, fastas, key, context_total_counts, input_file, N_threads, csvfile)
     modification_level, random_sample = random_position_modification(modification_information, modification_level, modified_positions, library, seed, context)
     return modification_information, random_sample, modification_level
 
 
 
-def read_modification(input_file, fetch, N_threads, name, directory, modification_level, header, region, method, context, modified_positions_data, random_sample, fastas, library, reverse_modification, outbam):
+def read_modification(input_file, fetch, N_threads, name, directory, modification_level, header, region, method, context, modified_positions_data, random_sample, fastas, library, reverse_modification, outbam, line, modified_positions, modification_information):
     """Looks at the sequencing reads and modifies/removes modifications at the required cytosine positions."""
     for read in bam_file_opener(input_file, fetch, N_threads):
-        general_read_information_output(name, directory, read, modification_level, header, region, method, context)
+        general_read_information_output(read, header, line)
         quals = read.query_qualities
         if read.flag in [99, 147, 83, 163] and read.reference_length != 0:
             positions, base = modification_by_strand(read, library, reverse_modification, fastas)
@@ -289,12 +321,25 @@ def read_modification(input_file, fetch, N_threads, name, directory, modificatio
                     indices = [position[1] - read.reference_start for position in random_sample.intersection(positions)]
                 if len(indices) > 0:
                     strand = list(read.query_sequence)
-                    replace = list(base * len(indices))
-                    for (index, replacement) in zip(indices, replace):
-                        if len(strand) > index:
-                            if ((strand[index] in ['C', 'T'] and read.flag in [99, 147])) or (
-                            (strand[index] in ['G', 'A'] and read.flag in [83, 163])):
-                                strand[index] = replacement
+                    indices.sort()
+                    if modified_positions:
+                        not_changed = list(random_sample.intersection(positions))
+                        not_changed.sort()
+                        for index in range(0, len(not_changed)):
+                           if modification_information[not_changed[index]][0] <= modification_information[not_changed[index]][1] and len(indices) > index:
+                               if len(strand) > indices[index] and (
+                                   ((strand[index] in ['C', 'T'] and read.flag in [99, 147])) or (
+                                       (strand[index] in ['G', 'A'] and read.flag in [83, 163]))):
+                                    strand[indices[index]] = base
+                                    modification_information[not_changed[index]][0] += 1
+
+                    else:
+                        replace = list(base * len(indices))
+                        for (index, replacement) in zip(indices, replace):
+                            if len(strand) > index:
+                                if ((strand[index] in ['C', 'T'] and read.flag in [99, 147])) or (
+                                (strand[index] in ['G', 'A'] and read.flag in [83, 163])):
+                                    strand[index] = replacement
                     read.query_sequence = "".join(strand)
                     read.query_qualities = quals
                     outbam.write(read)
@@ -315,12 +360,24 @@ def read_modification(input_file, fetch, N_threads, name, directory, modificatio
                                    position not in random_sample.intersection(positions)]
                 if len(indices) > 0:
                     strand = list(read.query_sequence)
-                    replace = list(base * len(indices))
-                    for (index, replacement) in zip(indices, replace):
-                        if len(strand) > index:
-                            if ((strand[index] in ['C', 'T'] and read.flag in [99, 147])) or (
-                            (strand[index] in ['G', 'A'] and read.flag in [83, 163])):
-                                strand[index] = replacement
+                    indices.sort()
+                    if modified_positions:
+                        not_changed = list(random_sample.intersection(positions))
+                        not_changed.sort()
+                        for index in range(0, len(not_changed)):
+                            if modification_information[not_changed[index]][0] <= modification_information[not_changed[index]][1] and len(indices) > index:
+                                if len(strand) > indices[index] and (
+                                    ((strand[index] in ['C', 'T'] and read.flag in [99, 147])) or (
+                                        (strand[index] in ['G', 'A'] and read.flag in [83, 163]))):
+                                    strand[indices[index]] = base
+                                    modification_information[not_changed[index]][0] += 1
+                    else:
+                        replace = list(base * len(indices))
+                        for (index, replacement) in zip(indices, replace):
+                            if len(strand) > index:
+                                if ((strand[index] in ['C', 'T'] and read.flag in [99, 147])) or (
+                                (strand[index] in ['G', 'A'] and read.flag in [83, 163])):
+                                    strand[index] = replacement
                     read.query_sequence = "".join(strand)
                     read.query_qualities = quals
                     outbam.write(read)
@@ -339,37 +396,73 @@ def bam_input_simulation(directory, name, modification_level, context, input_fil
             file_type = 'wc'
         else:
             file_type = 'wb'
+        if not isinstance(modification_level, str):
+            modification_level_= int(modification_level*100)
+        else:
+            modification_level_ = modification_level
+        if modified_positions:
+            csvfile = open(modified_positions, 'r+')
+        else:
+            csvfile = None
         if reverse_modification == False:
             if per_chromosome == None:
-                outbam = pysam.AlignmentFile(path.join(directory, name + '_' + method + '_' + str(int(100*modification_level)) + '_' + context + extension),
+                outbam = pysam.AlignmentFile(path.join(directory, name + '_' + method + '_' + str(modification_level_) + '_' + context + extension),
                 file_type, reference_filename=reference, template=bam_file_opener(input_file, None, N_threads), header=header)
             else:
-                outbam = pysam.AlignmentFile(path.join(directory, name + '_' + method + '_' + str(int(100*modification_level)) + '_' + context  + '_' + per_chromosome  + extension),
+                outbam = pysam.AlignmentFile(path.join(directory, name + '_' + method + '_' + str(modification_level_) + '_' + context  + '_' + per_chromosome  + extension),
                 file_type, reference_filename=reference, template=bam_file_opener(input_file, None, N_threads), header=header)
         else:
             if per_chromosome == None:
-                outbam = pysam.AlignmentFile(path.join(directory, name + '_' + method + '_' + str(int(100*modification_level)) + '_' + context + '_reversed' + extension),
+                outbam = pysam.AlignmentFile(path.join(directory, name + '_' + method + '_' + str(modification_level_) + '_' + context + '_reversed' + extension),
                 file_type, reference_filename=reference, template=bam_file_opener(input_file, None, N_threads), header=header)
             else:
-                outbam = pysam.AlignmentFile(path.join(directory, name + '_' + method + '_' + str(int(100*modification_level)) + '_' + context  + '_reversed_' + per_chromosome  + extension),
+                outbam = pysam.AlignmentFile(path.join(directory, name + '_' + method + '_' + str(modification_level_) + '_' + context  + '_reversed_' + per_chromosome  + extension),
                 file_type, reference_filename=reference, template=bam_file_opener(input_file, None, N_threads), header=header)
         keys, fastas = fasta_splitting_by_sequence(reference, per_chromosome)
+        if per_chromosome == None:
+            name_to_use = path.join(directory, name + '_' + method + '_' + str(modification_level_) + '_' + context + '_read_information.txt')
+            name_to_use_absolute = path.join(directory,name + '_' + method + '_' + str(modification_level_) + '_' + context + '_modified_positions_information.txt')
+        else:
+            name_to_use = path.join(directory, name + '_' + method + '_' + str(modification_level_) + '_' + per_chromosome + '_' + context + '_read_information.txt')
+            name_to_use_absolute = path.join(directory,name + '_' + method + '_' + str(modification_level_) + '_' + context + '_' + per_chromosome + '_modified_positions_information.txt')
+        reads_info_output = open(name_to_use, 'w')
+        line = csv.writer(reads_info_output, delimiter='\t', lineterminator='\n')
+        reads_info_absolute = open(name_to_use_absolute, 'w')
+        line_ = csv.writer(reads_info_absolute, delimiter='\t', lineterminator='\n')
         context_total_counts = defaultdict(int)
         if region == None and per_chromosome == None:
             for i in range(0, len(keys)):
-                modification_information, random_sample, modification_level = modification_information_and_reads_fetching(context, user_defined_context, modified_positions, region, fastas, keys[i], context_total_counts, modification_level, library, seed)
+                modified_positions_data = list()
+                modification_information, random_sample, modification_level = modification_information_and_reads_fetching(context, user_defined_context, modified_positions, region, fastas, keys[i], context_total_counts, modification_level, library, seed, input_file, N_threads, csvfile)
                 fetch = tuple((keys[i], 0, pysam.AlignmentFile(input_file).get_reference_length(keys[i])))
-                read_modification(input_file, fetch, N_threads, name, directory, modification_level, header, region, method, context, modified_positions_data, random_sample, fastas, library, reverse_modification, outbam)
+                read_modification(input_file, fetch, N_threads, name, directory, modification_level, header, region, method, context, modified_positions_data, random_sample, fastas, library, reverse_modification, outbam, line, modified_positions, modification_information)
+                absolute_modification_information(modified_positions_data, modification_information, modified_positions,name,directory, modification_level, context, method, per_chromosome, line_)
+            reads_info_output.close()
+            reads_info_absolute.close()
+            if modified_positions:
+                csvfile.close()
             return modification_information
         elif per_chromosome == None and region != None:
-            modification_information, random_sample, modification_level = modification_information_and_reads_fetching(context, user_defined_context, modified_positions, region, fastas, region[0], context_total_counts, modification_level, library, seed)
+            modified_positions_data = list()
+            modification_information, random_sample, modification_level = modification_information_and_reads_fetching(context, user_defined_context, modified_positions, region, fastas, region[0], context_total_counts, modification_level, library, seed, input_file, N_threads, csvfile)
             fetch = tuple((region[0], region[1], region[2]))
-            read_modification(input_file, fetch, N_threads, name, directory, modification_level, header, region, method, context, modified_positions_data, random_sample, fastas, library, reverse_modification, outbam)
+            read_modification(input_file, fetch, N_threads, name, directory, modification_level, header, region, method, context, modified_positions_data, random_sample, fastas, library, reverse_modification, outbam, line, modified_positions, modification_information)
+            absolute_modification_information(modified_positions_data, modification_information, modified_positions,name,directory, modification_level, context, method, per_chromosome, line_)
+            reads_info_output.close()
+            reads_info_absolute.close()
+            if modified_positions:
+                csvfile.close()
             return modification_information
         else:
-            modification_information, random_sample, modification_level = modification_information_and_reads_fetching(context, user_defined_context, modified_positions, region, fastas, per_chromosome, context_total_counts, modification_level, library, seed)
+            modified_positions_data = list()
+            modification_information, random_sample, modification_level = modification_information_and_reads_fetching(context, user_defined_context, modified_positions, region, fastas, per_chromosome, context_total_counts, modification_level, library, seed, input_file, N_threads, csvfile)
             fetch = tuple((per_chromosome, 0, pysam.AlignmentFile(input_file).get_reference_length(per_chromosome)))
-            read_modification(input_file, fetch, N_threads, name, directory, modification_level, header, region, method, context, modified_positions_data, random_sample, fastas, library, reverse_modification, outbam)
+            read_modification(input_file, fetch, N_threads, name, directory, modification_level, header, region, method, context, modified_positions_data, random_sample, fastas, library, reverse_modification, outbam, line, modified_positions, modification_information)
+            absolute_modification_information(modified_positions_data, modification_information, modified_positions,name,directory, modification_level, context, method, per_chromosome, line_)
+            reads_info_output.close()
+            reads_info_absolute.close()
+            if modified_positions:
+                csvfile.close()
             return modification_information
 
 
@@ -389,7 +482,6 @@ def modification_simulator(reference, read_length, input_file, method, library, 
         sys.exit(1)
     if region.count(None)!=0:
         region = None
-    modified_positions_data = list()
     if simulation_input == 'bam':
         if pysam.AlignmentFile(input_file).is_cram:
             extension = '.cram'
@@ -397,18 +489,21 @@ def modification_simulator(reference, read_length, input_file, method, library, 
             extension = '.bam'
         try:
             modification_level = modification_level_transformation(modification_level, modified_positions)
-            modification_information = bam_input_simulation(directory, name, modification_level, context, input_file, reference, user_defined_context, per_chromosome, modified_positions, library, seed, region, modified_positions_data, method, N_threads, header, overwrite, extension, reverse_modification)
-            absolute_modification_information(modified_positions_data, modification_information, modified_positions,name,directory, modification_level, context, method, per_chromosome)
+            if not isinstance(modification_level, str):
+                modification_level_ = int(modification_level*100)
+            else:
+                modification_level_ = modification_level
+            modification_information = bam_input_simulation(directory, name, modification_level, context, input_file, reference, user_defined_context, per_chromosome, modified_positions, library, seed, region, None, method, N_threads, header, overwrite, extension, reverse_modification)
             if reverse_modification == False:
                 if per_chromosome == None:
-                    pysam.index(path.join(directory, name + '_' + method + '_' + str(int(100*modification_level)) + '_' + context + extension))
+                    pysam.index(path.join(directory, name + '_' + method + '_' + str(modification_level_) + '_' + context + extension))
                 else:
-                    pysam.index(path.join(directory, name + '_' + method + '_' + str(int(100*modification_level)) + '_' + context + '_' + per_chromosome + extension))
+                    pysam.index(path.join(directory, name + '_' + method + '_' + str(modification_level_) + '_' + context + '_' + per_chromosome + extension))
             else:
                 if per_chromosome == None:
-                    pysam.index(path.join(directory, name + '_' + method + '_' + str(int(100*modification_level)) + '_' + context + '_reversed' + extension))
+                    pysam.index(path.join(directory, name + '_' + method + '_' + str(modification_level_) + '_' + context + '_reversed' + extension))
                 else:
-                    pysam.index(path.join(directory, name + '_' + method + '_' + str(int(100*modification_level)) + '_' + context + '_reversed_' + per_chromosome + extension))
+                    pysam.index(path.join(directory, name + '_' + method + '_' + str(modification_level_) + '_' + context + '_reversed_' + per_chromosome + extension))
         except AttributeError:
             logs.error(
                 'The output files will not be overwritten. Please rename the input or the existing output files before rerunning if the input is different.',

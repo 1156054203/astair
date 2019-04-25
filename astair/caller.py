@@ -331,7 +331,7 @@ def cytosine_modification_finder(input_file, reference, context, zero_coverage, 
                 pileups = inbam.pileup(keys[i], ignore_overlaps=skip_clip_overlap, min_base_quality=minimum_base_quality, stepper='samtools',
                                        max_depth=max_depth, redo_baq=redo_baq, ignore_orphans=ignore_orphans, compute_baq=compute_baq,
                                        min_mapping_quality=minimum_mapping_quality, adjust_acapq_threshold=adjust_acapq_threshold)
-                clean_pileup(pileups, cycles, modification_information_per_position, mean_mod, mean_unmod, user_defined_context, file_name, method,
+                clean_pileup(pileups, i, modification_information_per_position, mean_mod, mean_unmod, user_defined_context, file_name, method,
                              mark_matches, mark_ends, add_indels, context_sample_counts, ignore_orphans, single_end, compress, data_line)
         else:
             time_m = datetime.now()
