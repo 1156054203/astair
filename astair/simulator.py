@@ -8,6 +8,7 @@ import os
 import sys
 import csv
 import pdb
+import mmap
 import click
 import pysam
 import random
