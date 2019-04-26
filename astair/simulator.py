@@ -11,6 +11,7 @@ import pdb
 import mmap
 import click
 import pysam
+import numpy
 import random
 import logging
 import warnings
