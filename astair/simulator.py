@@ -9,6 +9,7 @@ import sys
 import csv
 import pdb
 import mmap
+import gzip
 import click
 import pysam
 import numpy
@@ -74,17 +75,18 @@ logs = logging.getLogger(__name__)
 
 time_b = datetime.now()
 
-def csv_line_skipper(csvfile, start, end, count, key):
+def csv_line_skipper(csvfile, start, key):
     """Random access for tab-delimited file reading."""
-    if count == 0:
-        list_of_rows = list()
-        csvfile.seek(start)
+    list_of_rows = list()
+    csvfile.seek(start)
+    if isinstance(csvfile, gzip.GzipFile):
+        for read in csvfile.readlines():
+            if read.decode('utf8').split()[3].lower().islower() == False and float(read.decode('utf8').split()[3]) != 0 and read.decode('utf8').split()[0] == key:
+                list_of_rows.append(tuple(read.decode('utf8').split()))
+    else:
         for read in csvfile.readlines():
             if read.split()[3].lower().islower() == False and float(read.split()[3]) != 0 and read.split()[0]==key:
                 list_of_rows.append(tuple(read.split()))
-    else:
-        csvfile.seek(start)
-        list_of_rows = list(csv.reader(csvfile, delimiter='\t', lineterminator='\n'))
     return list_of_rows
 
 
@@ -133,10 +135,7 @@ def cytosine_modification_lookup(context, user_defined_context, modified_positio
         try:
             memory_map = mmap.mmap(csvfile.fileno(), 0)
             start = memory_map.find(keys.encode('utf8'))
-            bam_to_view = bam_file_opener(input_file, None, 1)
-            count = bam_to_view.header.references.index(keys)
-            end = memory_map.rfind(keys.encode('utf8'))
-            position_reader = csv_line_skipper(csvfile, start, end, count, keys)
+            position_reader = csv_line_skipper(csvfile, start, keys)
             queue = chunck_sizer(position_reader, N_threads, input_file, keys, tupler)
             queue.join()
             return tupler
@@ -411,7 +410,10 @@ def bam_input_simulation(directory, name, modification_level, context, input_fil
         else:
             modification_level_ = modification_level
         if modified_positions:
-            csvfile = open(modified_positions, 'r+')
+            if modified_positions[-3:] == '.gz':
+                csvfile = gzip.open(modified_positions, 'r+')
+            else:
+                csvfile = open(modified_positions, 'r+')
         else:
             csvfile = None
         if reverse_modification == False:
@@ -451,7 +453,6 @@ def bam_input_simulation(directory, name, modification_level, context, input_fil
             reads_info_absolute.close()
             if modified_positions:
                 csvfile.close()
-            return modification_information
         elif per_chromosome == None and region != None:
             modified_positions_data = list()
             modification_information, random_sample, modification_level = modification_information_and_reads_fetching(context, user_defined_context, modified_positions, region, fastas, region[0], context_total_counts, modification_level, library, seed, input_file, N_threads, csvfile)
@@ -462,7 +463,6 @@ def bam_input_simulation(directory, name, modification_level, context, input_fil
             reads_info_absolute.close()
             if modified_positions:
                 csvfile.close()
-            return modification_information
         else:
             modified_positions_data = list()
             modification_information, random_sample, modification_level = modification_information_and_reads_fetching(context, user_defined_context, modified_positions, region, fastas, per_chromosome, context_total_counts, modification_level, library, seed, input_file, N_threads, csvfile)
@@ -473,7 +473,6 @@ def bam_input_simulation(directory, name, modification_level, context, input_fil
             reads_info_absolute.close()
             if modified_positions:
                 csvfile.close()
-            return modification_information
 
 
 
@@ -503,7 +502,7 @@ def modification_simulator(reference, read_length, input_file, method, library, 
                 modification_level_ = int(modification_level*100)
             else:
                 modification_level_ = modification_level
-            modification_information = bam_input_simulation(directory, name, modification_level, context, input_file, reference, user_defined_context, per_chromosome, modified_positions, library, seed, region, None, method, N_threads, header, overwrite, extension, reverse_modification)
+            bam_input_simulation(directory, name, modification_level, context, input_file, reference, user_defined_context, per_chromosome, modified_positions, library, seed, region, None, method, N_threads, header, overwrite, extension, reverse_modification)
             if reverse_modification == False:
                 if per_chromosome == None:
                     pysam.index(path.join(directory, name + '_' + method + '_' + str(modification_level_) + '_' + context + extension))
