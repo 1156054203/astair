@@ -18,6 +18,14 @@ import itertools
 from os import path
 from datetime import datetime
 from collections import defaultdict
+from threading import Thread as Thread
+
+if sys.version[0] == '3':
+    from queue import Queue as Queue
+elif sys.version[0] == '2':
+    from Queue import Queue as Queue
+else:
+    raise Exception("This is not the python we're looking for (version {})".format(sys.version[0]))
 
 from astair.bam_file_parser import bam_file_opener
 from astair.simple_fasta_parser import fasta_splitting_by_sequence
