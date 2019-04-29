@@ -8,31 +8,25 @@ import os
 import sys
 import csv
 import pdb
-import mmap
+import zlib
 import gzip
+import mmap
 import click
 import pysam
 import numpy
 import random
 import logging
 import warnings
-import itertools
 from os import path
 from datetime import datetime
 from collections import defaultdict
-from threading import Thread as Thread
 
-if sys.version[0] == '3':
-    from queue import Queue as Queue
-elif sys.version[0] == '2':
-    from Queue import Queue as Queue
-else:
-    raise Exception("This is not the python we're looking for (version {})".format(sys.version[0]))
 
+from astair.cigar_search import cigar_search
 from astair.bam_file_parser import bam_file_opener
-from astair.simple_fasta_parser import fasta_splitting_by_sequence
 from astair.context_search import context_sequence_search
 from astair.context_search import sequence_context_set_creation
+from astair.simple_fasta_parser import fasta_splitting_by_sequence
 
 
 @click.command()
@@ -75,44 +69,42 @@ logs = logging.getLogger(__name__)
 
 time_b = datetime.now()
 
-def csv_line_skipper(csvfile, start, key):
+def csv_line_skipper(csvfile, start, key, tupler, input_file):
     """Random access for tab-delimited file reading."""
-    list_of_rows = list()
+    cycles = 0
     csvfile.seek(start)
+    inbam = bam_file_opener(input_file, None, 1)
     if isinstance(csvfile, gzip.GzipFile):
         for read in csvfile.readlines():
-            if read.decode('utf8').split()[3].lower().islower() == False and float(read.decode('utf8').split()[3]) != 0 and read.decode('utf8').split()[0] == key:
-                list_of_rows.append(tuple(read.decode('utf8').split()))
+            cycles += 1
+            if read.decode('utf8').split()[0] == key:
+                if read.decode('utf8').split()[3].lower().islower()==False and float(
+                        read.decode('utf8').split()[3]) != 0:
+                    tupler[tuple((str(read.decode('utf8').split()[0]), int(read.decode('utf8').split()[1]), int(read.decode('utf8').split()[2])))] = numpy.array(object=[0, float(read.decode('utf8').split()[3]) * len(
+                        [i.flag for i in inbam.fetch(contig=str(read.decode('utf8').split()[0]), start=int(read.decode('utf8').split()[1]), stop=int(read.decode('utf8').split()[2])) if
+                         (i.flag in [99, 147] and read.decode('utf8').split()[7] in ['C', 'T']) or (
+                         i.flag in [163, 83] and read.decode('utf8').split()[7] in ['A', 'G'])])], dtype=numpy.int8, copy=False)
+            else:
+                break
     else:
         for read in csvfile.readlines():
-            if read.split()[3].lower().islower() == False and float(read.split()[3]) != 0 and read.split()[0]==key:
-                list_of_rows.append(tuple(read.split()))
-    return list_of_rows
-
-
-def simple_reader(tupler, line, input_file, keys):
-    """Simplified function used for tab-delimited file reading."""
-    inbam = bam_file_opener(input_file, None, 1)
-    for row in line:
-        if row[0] != 'CHROM' and row[0] == keys and float(row[3]) != 0:
-            tupler[tuple((str(row[0]), int(row[1]), int(row[2])))] = numpy.array(object=[0, float(row[3]) * len([i.flag for i in inbam.fetch(contig=str(row[0]), start=int(row[1]), stop=int(row[2])) if (i.flag in [99, 147] and row[7] in ['C', 'T']) or (i.flag in [163, 83] and row[7] in ['A', 'G'])])], dtype=numpy.int8, copy=False)
-
-
-def chunck_sizer(input_list, threadN, input_file, keys, tupler):
-    """Threading for reading of larger files."""
-    chunk_list = list()
-    queue = Queue(maxsize=0)
-    chunk = round(len(input_list)/threadN)
-    for i in range(0, threadN):
-        chunk_list.append(input_list[i*chunk:i*chunk+chunk])
-    threads = [Thread(target=simple_reader, args=(tupler, line, input_file, keys), ) for line in chunk_list]
-    for thread in threads:
-        thread.daemon = True
-        thread.start()
-        queue.put(thread, block=False, timeout=10)
-        thread.join()
-        queue.task_done()
-    return queue
+            cycles += 1
+            if read.split()[0] == key:
+                if read.split()[3].lower().islower()==False and float(read.split()[3]) != 0 and read.split()[0] == key:
+                    tupler[tuple((str(read.split()[0]), int(read.split()[1]),
+                                  int(read.split()[2])))] = numpy.array(
+                        object=[0, float(read.split()[3]) * len(
+                            [i.flag for i in inbam.fetch(contig=str(read.split()[0]),
+                                                         start=int(read.split()[1]),
+                                                         stop=int(read.split()[2])) if
+                             (i.flag in [99, 147] and read.split()[7] in ['C', 'T']) or (
+                                 i.flag in [163, 83] and read.split()[7] in ['A', 'G'])])], dtype=numpy.int8,
+                        copy=False)
+            else:
+                break
+    time_r = datetime.now()
+    logs.info("Random access of positions is completed. {} seconds".format((
+    time_r - time_b).total_seconds()))
 
 
 def cytosine_modification_lookup(context, user_defined_context, modified_positions, region, fastas, keys, context_total_counts, input_file, N_threads, csvfile):
@@ -135,9 +127,7 @@ def cytosine_modification_lookup(context, user_defined_context, modified_positio
         try:
             memory_map = mmap.mmap(csvfile.fileno(), 0)
             start = memory_map.find(keys.encode('utf8'))
-            position_reader = csv_line_skipper(csvfile, start, keys)
-            queue = chunck_sizer(position_reader, N_threads, input_file, keys, tupler)
-            queue.join()
+            csv_line_skipper(csvfile, start, keys, tupler, input_file)
             return tupler
         except Exception:
             logs.error('The cytosine positions file does not exist.', exc_info=True)
@@ -187,24 +177,18 @@ def general_read_information_output(read, header, line):
     else:
         orientation = '/2'
     try:
-        if header == True:
-            line.writerow(['Read ID', 'reference', 'start', 'end'])
-            line.writerow([read.qname + orientation, read.reference_name, read.reference_start,
-                                read.reference_start + read.query_length])
+        if header:
+            line.write(
+                '{}\t{}\t{}\t{}\n'.format('Read ID', 'reference', 'start', 'end'))
+            line.write(
+                '{}\t{}\t{}\t{}\n'.format(read.qname + orientation, read.reference_name, read.reference_start,
+                                read.reference_start + read.query_length))
         else:
-            line.writerow([read.qname + orientation, read.reference_name, read.reference_start,
-                                read.reference_start + read.query_length])
+            line.write(
+                '{}\t{}\t{}\t{}\n'.format(read.qname + orientation, read.reference_name, read.reference_start,
+                                          read.reference_start + read.query_length))
     except IOError:
         logs.error('asTair cannot write to read information file.', exc_info=True)
-
-
-def cigar_search(read_data):
-    """Looks whether there are indels, soft clipping or pads the CIGAR string"""
-    changes = [int(s) for s in re.findall(r'\d+', read_data)]
-    non_overlap = [x + 1 if x == 0 else x for x in changes]
-    names = list(re.findall(r'[^\W\d_]+', read_data))
-    positions = [x for x in [sum(non_overlap[0:i]) for i in range(1, len(non_overlap)+1)]]
-    return names, positions, changes
 
 
 def position_correction_cigar(read, method, random_sample, positions, reverse_modification):
@@ -292,12 +276,12 @@ def absolute_modification_information(modified_positions_data, modification_info
     else:
         mod_level = 'Custom'
     try:
-        line.writerow(['__________________________________________________________________________________________________'])
-        line.writerow(['Absolute modified positions: ' + str(len(modified_positions_data)) + '   |   ' +
-                       'Percentage to all positions of the desired context: ' + str(mod_level) + ' %'])
-        line.writerow(['__________________________________________________________________________________________________'])
+        line.write('__________________________________________________________________________________________________\n')
+        line.write('Absolute modified positions: ' + str(len(modified_positions_data)) + '   |   ' +
+                       'Percentage to all positions of the desired context: ' + str(mod_level) + ' %\n')
+        line.write('__________________________________________________________________________________________________\n')
         for row in modified_positions_data:
-            line.writerow(row)
+            line.write('{}\t{}\t{}\n'.format(row[0], row[1], row[2]))
     except IOError:
         logs.error('asTair cannot write to modified positions summary file.', exc_info=True)
 
@@ -411,7 +395,7 @@ def bam_input_simulation(directory, name, modification_level, context, input_fil
             modification_level_ = modification_level
         if modified_positions:
             if modified_positions[-3:] == '.gz':
-                csvfile = gzip.open(modified_positions, 'r+')
+                csvfile = gzip.open(modified_positions, 'rt+')
             else:
                 csvfile = open(modified_positions, 'r+')
         else:
@@ -437,10 +421,8 @@ def bam_input_simulation(directory, name, modification_level, context, input_fil
         else:
             name_to_use = path.join(directory, name + '_' + method + '_' + str(modification_level_) + '_' + per_chromosome + '_' + context + '_read_information.txt')
             name_to_use_absolute = path.join(directory,name + '_' + method + '_' + str(modification_level_) + '_' + context + '_' + per_chromosome + '_modified_positions_information.txt')
-        reads_info_output = open(name_to_use, 'w')
-        line = csv.writer(reads_info_output, delimiter='\t', lineterminator='\n')
-        reads_info_absolute = open(name_to_use_absolute, 'w')
-        line_ = csv.writer(reads_info_absolute, delimiter='\t', lineterminator='\n')
+        line = gzip.open(name_to_use + '.gz', 'wt', compresslevel=9)
+        line_ = gzip.open(name_to_use_absolute + '.gz', 'wt', compresslevel=9)
         context_total_counts = defaultdict(int)
         if region == None and per_chromosome == None:
             for i in range(0, len(keys)):
@@ -449,8 +431,8 @@ def bam_input_simulation(directory, name, modification_level, context, input_fil
                 fetch = tuple((keys[i], 0, pysam.AlignmentFile(input_file).get_reference_length(keys[i])))
                 read_modification(input_file, fetch, N_threads, name, directory, modification_level, header, region, method, context, modified_positions_data, random_sample, fastas, library, reverse_modification, outbam, line, modified_positions, modification_information)
                 absolute_modification_information(modified_positions_data, modification_information, modified_positions,name,directory, modification_level, context, method, per_chromosome, line_)
-            reads_info_output.close()
-            reads_info_absolute.close()
+            line.close()
+            line_.close()
             if modified_positions:
                 csvfile.close()
         elif per_chromosome == None and region != None:
@@ -459,8 +441,8 @@ def bam_input_simulation(directory, name, modification_level, context, input_fil
             fetch = tuple((region[0], region[1], region[2]))
             read_modification(input_file, fetch, N_threads, name, directory, modification_level, header, region, method, context, modified_positions_data, random_sample, fastas, library, reverse_modification, outbam, line, modified_positions, modification_information)
             absolute_modification_information(modified_positions_data, modification_information, modified_positions,name,directory, modification_level, context, method, per_chromosome, line_)
-            reads_info_output.close()
-            reads_info_absolute.close()
+            line.close()
+            line_.close()
             if modified_positions:
                 csvfile.close()
         else:
@@ -469,8 +451,8 @@ def bam_input_simulation(directory, name, modification_level, context, input_fil
             fetch = tuple((per_chromosome, 0, pysam.AlignmentFile(input_file).get_reference_length(per_chromosome)))
             read_modification(input_file, fetch, N_threads, name, directory, modification_level, header, region, method, context, modified_positions_data, random_sample, fastas, library, reverse_modification, outbam, line, modified_positions, modification_information)
             absolute_modification_information(modified_positions_data, modification_information, modified_positions,name,directory, modification_level, context, method, per_chromosome, line_)
-            reads_info_output.close()
-            reads_info_absolute.close()
+            line.close()
+            line_.close()
             if modified_positions:
                 csvfile.close()
 
