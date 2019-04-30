@@ -41,6 +41,7 @@ class listsParamType(click.ParamType):
 lists = listsParamType()
 
 
+
 @click.command()
 @click.option('input_file', '--input_file', '-i', required=True, help='BAM|CRAM format file containing sequencing reads.')
 @click.option('read_length', '--read_length', '-l', type=int, required=True, help='The read length is needed to separate the reads.')
@@ -48,14 +49,22 @@ lists = listsParamType()
 @click.option('modified_positions', '--modified_positions', '-mp', type=lists, required=True, help='Provide a list of positions that were modified in one-based coordinates. List positions with commas and no spaces e.g. 51,111.')
 @click.option('modified_positions_orientation', '--modified_positions_orientation', '-mpo', type=lists, required=True, help='Provide a list of additional information for the modified positions with commas and no spaces e.g. OT,OB')
 @click.option('output_bam', '-output_bam', '-sb', required=False, default=False, is_flag=True, help='If given, bam files separated by the context surrounding the positions of interest will be output.')
+@click.option('single_end', '--se', '-se', default=False, is_flag=True, required=False, help='Indicates single-end sequencing reads (Default False).')
 @click.option('directory', '--directory', '-d', required=True, type=str, help='Output directory to save files.')
-def separator(input_file, read_length, method, modified_positions, modified_positions_orientation, output_bam, directory):
+def separator(input_file, read_length, method, modified_positions, modified_positions_orientation, output_bam, single_end, directory):
     """Separates a bam file based on the context at certain positions.
     Suitable for highly variable and covered spike-ins, as it calculates a rough estimate of the modification value at
     few known positions."""
-    position_separator(input_file, read_length, method, modified_positions, modified_positions_orientation, output_bam, directory)
+    position_separator(input_file, read_length, method, modified_positions, modified_positions_orientation, output_bam, single_end, directory)
 
 
+warnings.simplefilter(action='ignore', category=FutureWarning)
+warnings.simplefilter(action='ignore', category=UserWarning)
+
+# logging.basicConfig(level=logging.DEBUG)
+logs = logging.getLogger(__name__)
+
+time_b = datetime.now()
 
 
 def base_counter(method, modified_bases, unmodified_bases, position, context, read_info, base):
@@ -72,11 +81,11 @@ def base_counter(method, modified_bases, unmodified_bases, position, context, re
             unmodified_bases[(position, context)] += 1
 
 
-def mods_like_context_writer(header, file_name, modified_bases, unmodified_bases):
+def mods_like_context_writer(read, header, file_name, modified_bases, unmodified_bases):
     """Outputs a mods file containing only information about the positions of interest."""
-    sorted_keys_mod = [('spike', dict_keys[0]-1, dict_keys[0], dict_keys[1], dict_values) for dict_keys, dict_values in modified_bases.items()]
+    sorted_keys_mod = [(read.reference_name, dict_keys[0]-1, dict_keys[0], dict_keys[1], dict_values) for dict_keys, dict_values in modified_bases.items()]
     sorted_keys_mod.sort()
-    sorted_keys_unmod = [('spike', dict_keys[0]-1, dict_keys[0], dict_keys[1], dict_values)for dict_keys, dict_values in unmodified_bases.items()]
+    sorted_keys_unmod = [(read.reference_name, dict_keys[0]-1, dict_keys[0], dict_keys[1], dict_values)for dict_keys, dict_values in unmodified_bases.items()]
     sorted_keys_unmod.sort()
     mod_values = [(x[0], x[1], x[2], x[3], round(non_zero_division(x[4], (x[4]+y[4]))*100,3), x[4], y[4]) for x in sorted_keys_mod for y in sorted_keys_unmod if y[1]==x[1] and y[3]==x[3]]
     with open(file_name, 'w') as contexts_file:
@@ -110,7 +119,7 @@ def per_context_and_query_output(output_bam, read, outbam_CHH, outbam_CHG, outba
             outbam_CpG.write(read)
 
 
-def position_separator(input_file, read_length, method, modified_positions, modified_positions_orientation, output_bam, directory):
+def position_separator(input_file, read_length, method, modified_positions, modified_positions_orientation, output_bam, single_end, directory):
     """Does the main bam splitting by context."""
     name = path.splitext(path.basename(input_file))[0]
     directory = path.abspath(directory)
@@ -135,20 +144,25 @@ def position_separator(input_file, read_length, method, modified_positions, modi
             unmodified_bases[(int(position), context)] = 0
     for read in bam_fetch:
         if len(read.tags) > 0:
-            if isinstance(read.tags[0][1],str):
-                read_data = read.tags[0][1]
-            elif isinstance(read.tags[1][1],str):
-                read_data = read.tags[1][1]
+            read_data = read.get_tag('MD')
         else:
             read_data = list()
         start = read.reference_start
         end = read.reference_start + read.query_length
-        if read.flag == 99 or read.flag == 147:
-            read_info = 'OT'
-        elif read.flag == 163 or read.flag == 83:
-            read_info = 'OB'
+        if single_end == False:
+            if read.flag == 99 or read.flag == 147:
+                read_info = 'OT'
+            elif read.flag == 163 or read.flag == 83:
+                read_info = 'OB'
+            else:
+                read_info = None
         else:
-            read_info = None
+            if read.flag == 0:
+                read_info = 'OT'
+            elif read.flag == 16:
+                read_info = 'OB'
+            else:
+                read_info = None
         if (len(read_data)==0 or not re.search("\^", read_data,re.IGNORECASE)) and len(read.query_sequence) <= read_length:
             for whole in modified_information.keys():
                 if whole in range(start, end+1):
@@ -175,7 +189,15 @@ def position_separator(input_file, read_length, method, modified_positions, modi
                             elif read.qstart > read_length:
                                 per_context_and_query_output(output_bam, read, outbam_CHH, outbam_CHG, outbam_CpG, whole, start, lens, read_info, ["A", 'G', "T"], 'C', method, modified_bases, unmodified_bases, abs(whole - abs(read_length - read.qstart))-2, abs(whole - abs(read_length - read.qstart)))
     file_name = path.join(directory, name + '_' + method + "_positions" + ".mods")
-    mods_like_context_writer(True, file_name, modified_bases, unmodified_bases)
+    mods_like_context_writer(read, True, file_name, modified_bases, unmodified_bases)
+    inbam.close()
+    if output_bam is True:
+        outbam_CpG.close()
+        outbam_CHG.close()
+        outbam_CHH.close()
+    time_e = datetime.now()
+    logs.info("asTair cytosine contexts positions separator finished running. {} seconds".format(
+        (time_e - time_b).total_seconds()))
 
 
 if __name__ == '__main__':
