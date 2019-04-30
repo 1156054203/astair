@@ -110,25 +110,12 @@ def removing_mod_err(reference, input_file, method, bases_noncpg, per_chromosome
                     total = [m.start() for m in re.finditer(ref, fastas[read.reference_name][read.reference_start:read.reference_start+read.qlen], re.IGNORECASE)]
                     total_ref = position_correction_cigar(read, total)
                     cpg = position_correction_cigar(read, cpg)
-                    if method == 'mCtoT':
-                        total = set(
-                            [m.start() for m in re.finditer(alt, read.query_sequence, re.IGNORECASE)]).intersection(
-                            set(total_ref))
-                    else:
-                        total = set(
-                            [m.start() for m in re.finditer(alt, read.query_sequence, re.IGNORECASE)]).difference(
-                            set(total_ref))
                 else:
                     total_ref = [m.start() for m in re.finditer(ref, fastas[read.reference_name][read.reference_start:read.reference_start+read.qlen], re.IGNORECASE)]
-                    if method == 'mCtoT':
-                        total = set(
-                            [m.start() for m in re.finditer(alt, read.query_sequence, re.IGNORECASE)]).intersection(
-                            set(total_ref))
-                    else:
-                        total = set(
-                            [m.start() for m in re.finditer(alt, read.query_sequence, re.IGNORECASE)]).difference(
-                            set(total_ref))
-                mismatch = total.difference(cpg)
+                if method == 'mCtoT':
+                    mismatch = (set(total_ref).intersection(set([m.start() for m in re.finditer(alt, read.query_sequence, re.IGNORECASE)]))).difference(cpg)
+                else:
+                    mismatch = (set(total_ref).intersection((set(total_ref).difference(cpg))).difference([m.start() for m in re.finditer(alt, read.query_sequence, re.IGNORECASE)]))
                 if len(mismatch) >= int(bases_noncpg):
                     removed3T.write(read)
                 else:
@@ -137,6 +124,8 @@ def removing_mod_err(reference, input_file, method, bases_noncpg, per_chromosome
             logs.error('The input file does not contain a MD tag column.', exc_info=True)
             sys.exit(1)
     inbam.close()
+    outbam3T.close()
+    removed3T.close()
     time_m = datetime.now()
     logs.info("asTair's excessive non-CpG modification read removal function finished running. {} seconds".format((time_m - time_b).total_seconds()))
 
