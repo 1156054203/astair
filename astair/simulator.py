@@ -226,7 +226,7 @@ def position_correction_cigar(read, method, random_sample, positions, reverse_mo
                     corrected_positions = [x if x < positions_cigar[index] else x + changes[index] for x in positions]
                 index += 1
                 positions = corrected_positions
-            elif change == 'S':
+            elif change == 'S' or change == 'H':
                 if isinstance(list(positions)[0], tuple):
                     subsample = random_sample.intersection(positions)
                     if method == 'CtoT' and reverse_modification == False:
@@ -311,6 +311,8 @@ def read_modification(input_file, fetch, N_threads, name, directory, modificatio
                     re.findall('I', read.cigarstring, re.IGNORECASE) or re.findall('D', read.cigarstring,
                                                                                    re.IGNORECASE)) or re.findall('S',
                                                                                                                  read.cigarstring,
+                                                                                                                 re.IGNORECASE) or re.findall('H',
+                                                                                                                 read.cigarstring,
                                                                                                                  re.IGNORECASE):
                     indices = position_correction_cigar(read, method, random_sample, positions, reverse_modification)
                 else:
@@ -345,6 +347,8 @@ def read_modification(input_file, fetch, N_threads, name, directory, modificatio
                 if len(read.tags) != 0 and (
                     re.findall('I', read.cigarstring, re.IGNORECASE) or re.findall('D', read.cigarstring,
                                                                                    re.IGNORECASE)) or re.findall('S',
+                                                                                                                 read.cigarstring,
+                                                                                                                 re.IGNORECASE) or re.findall('H',
                                                                                                                  read.cigarstring,
                                                                                                                  re.IGNORECASE):
                     indices = position_correction_cigar(read, method, random_sample, positions, reverse_modification)

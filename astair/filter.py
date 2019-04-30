@@ -56,7 +56,7 @@ def position_correction_cigar(read, positions):
                 corrected_positions = [x if x < positions_cigar[index] else x + changes[index] for x in positions]
                 index += 1
                 positions = corrected_positions
-            elif change == 'S':
+            elif change == 'S' or change == 'H':
                 if index == 0:
                     corrected_positions = [x for x in positions if x > positions_cigar[index]]
                 else:
@@ -106,7 +106,9 @@ def removing_mod_err(reference, input_file, method, bases_noncpg, per_chromosome
                                                                      read.reference_start:read.reference_start + read.qlen],
                                                               re.IGNORECASE)]
                     ref, alt = 'G', 'A'
-                if len(read.tags) != 0 and (re.findall('I', read.cigarstring, re.IGNORECASE) or re.findall('D', read.cigarstring, re.IGNORECASE)) or re.findall('S',read.cigarstring, re.IGNORECASE):
+                if len(read.tags) != 0 and (re.findall('I', read.cigarstring, re.IGNORECASE) or re.findall('D', read.cigarstring, re.IGNORECASE)) or re.findall('S',read.cigarstring, re.IGNORECASE) or re.findall('H',
+                                                                                                                 read.cigarstring,
+                                                                                                                 re.IGNORECASE):
                     total = [m.start() for m in re.finditer(ref, fastas[read.reference_name][read.reference_start:read.reference_start+read.qlen], re.IGNORECASE)]
                     total_ref = position_correction_cigar(read, total)
                     cpg = position_correction_cigar(read, cpg)
