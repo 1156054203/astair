@@ -120,6 +120,8 @@ def removing_mod_err(reference, input_file, method, bases_noncpg, per_chromosome
                     removed3T.write(read)
                 else:
                     outbam3T.write(read)
+            else:
+                outbam3T.write(read)
         except Exception:
             logs.error('The input file does not contain a MD tag column.', exc_info=True)
             sys.exit(1)

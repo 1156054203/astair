@@ -22,7 +22,7 @@ class CallOutputTest(unittest.TestCase):
             mod_reader = csv.reader(call_file, delimiter='\t', lineterminator='\n')
             for row in mod_reader:
                 data_generated.append(tuple((row)))
-        self.assertEqual(data_generated[0:6], [('CONTEXT', 'SPECIFIC_CONTEXT', 'MEAN_MODIFICATION_RATE_PERCENT', 'TOTAL_POSITIONS', 'COVERED_POSITIONS'), ('CpG', '', '87.567', '6225', '48'), ('', 'CGA', '97.222', '1210', '12'), ('', 'CGC', '64.51', '1730', '13'), ('', 'CGG', '96.689', '1847', '13'), ('', 'CGT', '100.0', '1438', '10')])
+        self.assertEqual(data_generated[0:6], [('CONTEXT', 'SPECIFIC_CONTEXT', 'MEAN_MODIFICATION_RATE_PERCENT', 'TOTAL_POSITIONS', 'COVERED_POSITIONS'), ('CpG', '', '87.584', '6225', '48'), ('', 'CGA', '96.998', '1210', '12'), ('', 'CGC', '64.579', '1730', '13'), ('', 'CGG', '96.025', '1847', '13'), ('', 'CGT', '98.062', '1438', '10')])
         remove = 'rm {}'.format(current + '/test_data/small_real_taps_lambda_mCtoT_high*')
         subprocess.Popen(remove, shell=True)
         
@@ -36,7 +36,7 @@ class CallOutputTest(unittest.TestCase):
             mod_reader = csv.reader(call_file, delimiter='\t', lineterminator='\n')
             for row in mod_reader:
                 data_generated.append(tuple((row)))
-        self.assertEqual(data_generated[0], ('CONTEXT', 'SPECIFIC_CONTEXT', 'MEAN_MODIFICATION_RATE_PERCENT', 'TOTAL_POSITIONS', 'COVERED_POSITIONS'))
+        self.assertEqual(data_generated[0:6], [('CONTEXT', 'SPECIFIC_CONTEXT', 'MEAN_MODIFICATION_RATE_PERCENT', 'TOTAL_POSITIONS', 'COVERED_POSITIONS'), ('CpG', '', '95.283', '6225', '48'), ('', 'CGA', '93.04', '1210', '12'), ('', 'CGC', '96.471', '1730', '13'), ('', 'CGG', '93.636', '1847', '13'), ('', 'CGT', '97.287', '1438', '10')])
         remove = 'rm {}'.format(current + '/test_data/small_real_wgbs_lambda_CtoT_high*')
         subprocess.Popen(remove, shell=True)
 

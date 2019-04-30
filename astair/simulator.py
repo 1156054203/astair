@@ -60,7 +60,6 @@ def simulate(reference, read_length, input_file, method, library, simulation_inp
               modified_positions, coverage, context, region, directory, seed, user_defined_context, N_threads, per_chromosome, GC_bias, sequence_bias, overwrite, reverse_modification)
 
 
-
 warnings.simplefilter(action='ignore', category=FutureWarning)
 warnings.simplefilter(action='ignore', category=UserWarning)
 
@@ -125,7 +124,11 @@ def cytosine_modification_lookup(context, user_defined_context, modified_positio
     else:
         tupler = dict()
         try:
-            memory_map = mmap.mmap(csvfile.fileno(), 0)
+            if isinstance(csvfile, gzip.GzipFile):
+                decompressed = zlib.decompress(csvfile, 16 + zlib.MAX_WBITS)
+                memory_map = mmap.mmap(decompressed.fileno(), 0)
+            else:
+                memory_map = mmap.mmap(csvfile.fileno(), 0)
             start = memory_map.find(keys.encode('utf8'))
             csv_line_skipper(csvfile, start, keys, tupler, input_file)
             return tupler
@@ -395,7 +398,7 @@ def bam_input_simulation(directory, name, modification_level, context, input_fil
             modification_level_ = modification_level
         if modified_positions:
             if modified_positions[-3:] == '.gz':
-                csvfile = gzip.open(modified_positions, 'rt+')
+                csvfile = gzip.open(modified_positions, 'rt+', encoding='utf8')
             else:
                 csvfile = open(modified_positions, 'r+')
         else:
@@ -506,4 +509,3 @@ def modification_simulator(reference, read_length, input_file, method, library, 
 
 if __name__ == '__main__':
     simulate()
-

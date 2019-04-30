@@ -73,7 +73,7 @@ class SimulateOutputTest(unittest.TestCase):
 
 
     def test_reverse_CpG_taps(self):
-        """Tests whether truely modified Cpg positions will be will be reverted in TAPS."""
+        """Tests whether truely modified CpG positions will be will be reverted in TAPS."""
         modification_simulator(current + '/test_data/lambda_phage.fa', 80, current + '/test_data/small_real_taps_lambda_mCtoT.bam', 'mCtoT', 'directional', 'bam', 100,
               None,  1, 'all', (None, None, None),  current + '/test_data/', 0, False, 1, None, 0.3, 0.1, False, False)
         modification_simulator(current + '/test_data/lambda_phage.fa', 80, current + '/test_data/small_real_taps_lambda_mCtoT_mCtoT_100_all.bam', 'mCtoT', 'directional', 'bam', 100,
@@ -89,6 +89,26 @@ class SimulateOutputTest(unittest.TestCase):
         remove = 'rm {}'.format(current + '/test_data/small_real_taps_lambda_mCtoT_mCtoT_100_all*')
         subprocess.Popen(remove, shell=True)
         
+
+
+    def test_by_list_CpG_taps(self):
+        """Tests whether truely modified CpG positions will be modified in TAPS if a list of positions is given."""
+        cytosine_modification_finder(current + '/test_data/small_real_taps_lambda_mCtoT.bam', current + '/test_data/lambda_phage.fa', 'CpG', False, False, 13, None, 'mCtoT', 0, 0, True, True, True, False, True, True, 250, None, 1, current + '/test_data/', False, False)
+        modification_simulator(current + '/test_data/lambda_phage.fa', 80, current + '/test_data/small_real_taps_lambda_mCtoT.bam', 'mCtoT', 'directional', 'bam', 100,
+              None,  1, 'all', (None, None, None),  current + '/test_data/', 0, False, 1, None, 0.3, 0.1, False, True)
+        modification_simulator(current + '/test_data/lambda_phage.fa', 80, current + '/test_data/small_real_taps_lambda_mCtoT.bam', 'mCtoT', 'directional', 'bam', 100,
+              current + '/test_data/small_real_taps_lambda_mCtoT_mCtoT_CpG.mods',  1, 'all', (None, None, None),  current + '/test_data/', 0, False, 1, None, 0.3, 0.1, False, False)
+        cytosine_modification_finder(current + '/test_data/small_real_taps_lambda_mCtoT_mCtoT_user_provided_list_all.bam', current + '/test_data/lambda_phage.fa', 'CpG', False, False, 13, None, 'mCtoT', 0, 0, True, True, True, False, True, True, 250, None, 1, current + '/test_data/', False, False)
+        data_generated = list()
+        modification_simulator(current + '/test_data/lambda_phage.fa', 80, current + '/test_data/small_real_taps_lambda_mCtoT.bam', 'mCtoT', 'directional', 'bam', 100,
+              None,  1, 'all', (None, None, None),  current + '/test_data/', 0, False, 1, None, 0.3, 0.1, False, True)
+        with open(current + '/test_data/small_real_taps_lambda_mCtoT_mCtoT_user_provided_list_all_mCtoT_CpG.stats','rt') as call_file:
+            mod_reader = csv.reader(call_file, delimiter='\t', lineterminator='\n')
+            for row in mod_reader:
+                data_generated.append(tuple((row)))
+        self.assertEqual(data_generated[0:6],[('CONTEXT', 'SPECIFIC_CONTEXT', 'MEAN_MODIFICATION_RATE_PERCENT', 'TOTAL_POSITIONS', 'COVERED_POSITIONS'), ('CpG', '', '88.871', '6225', '48'), ('', 'CGA', '97.561', '1210', '12'), ('', 'CGC', '66.418', '1730', '13'), ('', 'CGG', '97.018', '1847', '13'), ('', 'CGT', '98.799', '1438', '10')])
+        remove = 'rm {}'.format(current + '/test_data/small_real_taps_lambda_mCtoT_mCtoT*')
+        subprocess.Popen(remove, shell=True)
 
 if __name__ == '__main__':
     unittest.main()
