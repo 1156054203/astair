@@ -59,7 +59,6 @@ def simulate(reference, read_length, input_file, method, library, simulation_inp
     modification_simulator(reference, read_length, input_file, method, library, simulation_input, modification_level,
               modified_positions, coverage, context, region, directory, seed, user_defined_context, N_threads, per_chromosome, GC_bias, sequence_bias, overwrite, reverse_modification)
 
-
 warnings.simplefilter(action='ignore', category=FutureWarning)
 warnings.simplefilter(action='ignore', category=UserWarning)
 
@@ -112,10 +111,10 @@ def cytosine_modification_lookup(context, user_defined_context, modified_positio
     if modified_positions is None:
         contexts, all_keys = sequence_context_set_creation(context, user_defined_context)
         if region == None:
-            modification_information = context_sequence_search(contexts, all_keys, fastas, keys, user_defined_context, context_total_counts, region)
+            modification_information = context_sequence_search(contexts, all_keys, fastas, keys, user_defined_context, context_total_counts, region, None)
         else:
             if region[0] in keys:
-                 modification_information = context_sequence_search(contexts, all_keys, fastas, region[0], user_defined_context, context_total_counts, region)
+                 modification_information = context_sequence_search(contexts, all_keys, fastas, region[0], user_defined_context, context_total_counts, None)
         try:
             return modification_information
         except UnboundLocalError:
@@ -513,3 +512,4 @@ def modification_simulator(reference, read_length, input_file, method, library, 
 
 if __name__ == '__main__':
     simulate()
+

@@ -33,6 +33,7 @@ from astair.context_search import sequence_context_set_creation
 from astair.context_search import context_sequence_search
 
 
+
 @click.command()
 @click.option('reference', '--reference', '-f', required=True, help='Reference DNA sequence in FASTA format used for aligning of the sequencing reads and for pileup.')
 @click.option('context', '--context', '-co', required=False, default='all',  type=click.Choice(['all', 'CpG', 'CHG', 'CHH']), help='Explains which cytosine sequence contexts are to be expected in the output file. Default behaviour is all, which includes CpG, CHG, CHH contexts and their sub-contexts for downstream filtering and analysis.')
@@ -62,20 +63,20 @@ def bed_like_context_writer(header, data_line, cytosine_contexts, compress):
     sorted_keys.sort()
     if compress == True:
         if header:
-            data_line.write('{}\t{}\t{}\t{}\t{}\n'.format("CHROM", "START", "END", "SPECIFIC_CONTEXT", "CONTEXT"))
+            data_line.write('{}\t{}\t{}\t{}\t{}\n'.format("CHROM", "START", "END", "STRAND", "SPECIFIC_CONTEXT", "CONTEXT"))
             for line in sorted_keys:
-                data_line.write('{}\t{}\t{}\t{}\t{}\n'.format(line[0], line[1], line[2], cytosine_contexts[line][0], cytosine_contexts[line][1]))
+                data_line.write('{}\t{}\t{}\t{}\t{}\n'.format(line[0], line[1], line[2], line[3], cytosine_contexts[line][0], cytosine_contexts[line][1]))
         else:
             for line in sorted_keys:
-                data_line.write('{}\t{}\t{}\t{}\t{}\n'.format(line[0], line[1], line[2], cytosine_contexts[line][0], cytosine_contexts[line][1]))
+                data_line.write('{}\t{}\t{}\t{}\t{}\n'.format(line[0], line[1], line[2], line[3], cytosine_contexts[line][0], cytosine_contexts[line][1]))
     else:
         if header == True:
-            data_line.writerow(["CHROM", "START", "END", "SPECIFIC_CONTEXT", "CONTEXT"])
+            data_line.writerow(["CHROM", "START", "END", "STRAND", "SPECIFIC_CONTEXT", "CONTEXT"])
             for line in sorted_keys:
-                data_line.writerow([line[0], line[1], line[2], cytosine_contexts[line][0], cytosine_contexts[line][1]])
+                data_line.writerow([line[0], line[1], line[2], line[3], cytosine_contexts[line][0], cytosine_contexts[line][1]])
         else:
             for line in sorted_keys:
-                data_line.writerow([line[0], line[1], line[2], cytosine_contexts[line][0], cytosine_contexts[line][1]])
+                data_line.writerow([line[0], line[1], line[2], line[3], cytosine_contexts[line][0], cytosine_contexts[line][1]])
 
 
 
@@ -96,12 +97,12 @@ def find_contexts(reference, context, user_defined_context, per_chromosome, comp
         sys.exit(1)
     if compress == False:
         if per_chromosome == None:
-            file_name = path.join(directory, name + "_"  + context + ".bed")
+            file_name = path.join(directory, name + "_" + context + ".bed")
         else:
             file_name = path.join(directory, name + "_" + per_chromosome + "_" + context + ".bed")
     else:
         if per_chromosome == None:
-            file_name = path.join(directory, name + "_"  + context + ".bed.gz")
+            file_name = path.join(directory, name + "_" + context + ".bed.gz")
         else:
             file_name = path.join(directory, name + "_" + per_chromosome + "_" + context + ".bed.gz")
     if not os.path.isfile(file_name) and not os.path.isfile(file_name + '.gz'):
@@ -117,13 +118,13 @@ def find_contexts(reference, context, user_defined_context, per_chromosome, comp
             for i in range(0, len(keys)):
                 time_m = datetime.now()
                 logs.info("Looking for cytosine positions on {} chromosome (sequence). {} seconds".format(keys[i], (time_m - time_b).total_seconds()))
-                cytosine_contexts = context_sequence_search(contexts, all_keys, fastas, keys[i], user_defined_context, context_total_counts, None)
+                cytosine_contexts = context_sequence_search(contexts, all_keys, fastas, keys[i], user_defined_context, context_total_counts, None, 'include')
                 if i == 0:
                     bed_like_context_writer(True, write_fasta, cytosine_contexts, compress)
                 else:
                     bed_like_context_writer(False, write_fasta, cytosine_contexts, compress)
         else:
-            cytosine_contexts = context_sequence_search(contexts, all_keys, fastas, keys, user_defined_context, context_total_counts, None)
+            cytosine_contexts = context_sequence_search(contexts, all_keys, fastas, keys, user_defined_context, context_total_counts, None, 'include')
             bed_like_context_writer(True, write_fasta, cytosine_contexts, compress)
         if compress == True:
            write_fasta.close()

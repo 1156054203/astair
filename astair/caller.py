@@ -64,7 +64,6 @@ def call(input_file, reference, context, zero_coverage, skip_clip_overlap, minim
         cytosine_modification_finder(input_file, reference, context, zero_coverage, skip_clip_overlap, minimum_base_quality, user_defined_context, method, minimum_mapping_quality, adjust_acapq_threshold,mark_matches, mark_ends, add_indels, redo_baq, compute_baq, ignore_orphans, max_depth, per_chromosome, N_threads, directory, compress, single_end)
 
 
-
 warnings.simplefilter(action='ignore', category=FutureWarning)
 warnings.simplefilter(action='ignore', category=UserWarning)
 
@@ -72,7 +71,6 @@ warnings.simplefilter(action='ignore', category=UserWarning)
 logs = logging.getLogger(__name__)
 
 time_b = datetime.now()
-
 
 def modification_calls_writer(data_mods, compress, data_line, header=False):
     """Outputs the modification calls per position in a tab-delimited format."""
@@ -329,7 +327,7 @@ def cytosine_modification_finder(input_file, reference, context, zero_coverage, 
             for i in range(0, len(keys)):
                 time_m = datetime.now()
                 logs.info("Starting modification calling on {} chromosome (sequence). {} seconds".format(keys[i], (time_m - time_b).total_seconds()))
-                modification_information_per_position = context_sequence_search(contexts, all_keys, fastas, keys[i], user_defined_context, context_total_counts, None)
+                modification_information_per_position = context_sequence_search(contexts, all_keys, fastas, keys[i], user_defined_context, context_total_counts, None, None)
                 pileups = inbam.pileup(keys[i], ignore_overlaps=skip_clip_overlap, min_base_quality=minimum_base_quality, stepper='samtools',
                                        max_depth=max_depth, redo_baq=redo_baq, ignore_orphans=ignore_orphans, compute_baq=compute_baq,
                                        min_mapping_quality=minimum_mapping_quality, adjust_acapq_threshold=adjust_acapq_threshold)
@@ -338,7 +336,7 @@ def cytosine_modification_finder(input_file, reference, context, zero_coverage, 
         else:
             time_m = datetime.now()
             logs.info("Starting modification calling on {} chromosome (sequence). {} seconds".format(keys, (time_m - time_b).total_seconds()))
-            modification_information_per_position = context_sequence_search(contexts, all_keys, fastas, keys, user_defined_context, context_total_counts, None)
+            modification_information_per_position = context_sequence_search(contexts, all_keys, fastas, keys, user_defined_context, context_total_counts, None, None)
             pileups = inbam.pileup(keys, ignore_overlaps=skip_clip_overlap, min_base_quality=minimum_base_quality, stepper='samtools',
                                    max_depth=max_depth, redo_baq=redo_baq, ignore_orphans=ignore_orphans, compute_baq=compute_baq,
                                    min_mapping_quality=minimum_mapping_quality, adjust_acapq_threshold=adjust_acapq_threshold)
@@ -372,3 +370,5 @@ def cytosine_modification_finder(input_file, reference, context, zero_coverage, 
 
 if __name__ == '__main__':
     call()
+
+
