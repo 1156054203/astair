@@ -28,10 +28,12 @@ from astair.simple_fasta_parser import fasta_splitting_by_sequence
 @click.option('bases_noncpg', '--bases_noncpg', default=3, type=int, help='The number of cytosines conversion events in CpH content to consider the read for removal. Default value is 3.')
 @click.option('per_chromosome', '--per_chromosome', '-chr', default=None, type=str, help='When used, it modifies the chromosome given only. (Default None')
 @click.option('N_threads', '--N_threads', '-t', default=1, required=True, help='The number of threads to spawn (Default 1).')
+@click.option('single_end', '--se', '-se', default=False, is_flag=True, required=False, help='Indicates single-end sequencing reads (Default False).')
 @click.option('directory', '--directory', '-d', required=True, type=str, help='Output directory to save files.')
-def filter(reference, input_file, method, bases_noncpg, per_chromosome, N_threads, directory):
+def filter(reference, input_file, method, bases_noncpg, per_chromosome, N_threads, single_end, directory):
     """Looks for sequencing reads with more than N CpH modifications."""
-    removing_mod_err(reference, input_file, method, bases_noncpg, per_chromosome, N_threads, directory)
+    removing_mod_err(reference, input_file, method, bases_noncpg, per_chromosome, N_threads, single_end, directory)
+
 
 
 warnings.simplefilter(action='ignore', category=FutureWarning)
@@ -69,7 +71,7 @@ def position_correction_cigar(read, positions):
     return positions
 
 
-def removing_mod_err(reference, input_file, method, bases_noncpg, per_chromosome, N_threads, directory):
+def removing_mod_err(reference, input_file, method, bases_noncpg, per_chromosome, N_threads, single_end, directory):
     """ The main function to look for sequencing reads with more than N CpH modifications and remove them."""
     time_s = datetime.now()
     logs.info("asTair's excessive non-CpG modification read removal function started running. {} seconds".format((time_s - time_b).total_seconds()))
@@ -87,23 +89,27 @@ def removing_mod_err(reference, input_file, method, bases_noncpg, per_chromosome
     keys, fastas = fasta_splitting_by_sequence(reference, per_chromosome)
     outbam3T = pysam.AlignmentFile(directory+name+"_high_CpH_filtered" + ".bam", "wb", template=inbam)
     removed3T = pysam.AlignmentFile(directory+name+"_high_CpH_removed" + ".bam", "wb", template=inbam)
+    if single_end == False:
+        read_flags = [83, 99, 147, 163]
+    else:
+        read_flags = [0, 16]
     for read in bam_file_opener(input_file, 'fetch', N_threads):
-        if read.flag in [83, 99, 147, 163]:
-            if read.flag == 147 or read.flag == 99:
+        if read.flag in read_flags:
+            if read.flag == 147 or read.flag == 99 or read.flag == 0:
                 regs = "(?:.*C.*)" * int(bases_noncpg)
                 ref = 'C'
-            elif read.flag == 163 or read.flag == 83:
+            elif read.flag == 163 or read.flag == 83 or read.flag == 16:
                 regs = "(?:.*G.*)" * int(bases_noncpg)
                 ref = 'G'
             try:
                 read_data = read.get_tag('MD')
                 if re.search(regs, read_data,re.IGNORECASE):
-                    if read.flag == 147 or read.flag == 99:
+                    if read.flag == 147 or read.flag == 99 or read.flag == 0:
                         cpg = [m.start() for m in re.finditer(r'CG', fastas[read.reference_name][
                                                                     read.reference_start:read.reference_start + read.qlen],
                                                             re.IGNORECASE)]
                         ref, alt = 'C', 'T'
-                    elif read.flag == 163 or read.flag == 83:
+                    elif read.flag == 163 or read.flag == 83 or read.flag == 16:
                         cpg = [m.start() + 1 for m in re.finditer(r'CG', fastas[read.reference_name][
                                                                         read.reference_start:read.reference_start + read.qlen],
                                                                 re.IGNORECASE)]
