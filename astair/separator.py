@@ -138,56 +138,61 @@ def position_separator(input_file, read_length, method, modified_positions, modi
     else:
         outbam_CpG, outbam_CHG, outbam_CHH = None, None, None
     modified_bases, unmodified_bases = {}, {}
+    if single_end == False:
+        list_of_flags = [83, 99, 147, 163]
+    else:
+        list_of_flags = [0, 16]
     for position in modified_positions:
         for context in ['CpG', 'CHG', 'CHH']:
             modified_bases[(int(position), context)] = 0
             unmodified_bases[(int(position), context)] = 0
     for read in bam_fetch:
-        if len(read.tags) > 0:
-            read_data = read.get_tag('MD')
-        else:
-            read_data = list()
-        start = read.reference_start
-        end = read.reference_start + read.query_length
-        if single_end == False:
-            if read.flag == 99 or read.flag == 147:
-                read_info = 'OT'
-            elif read.flag == 163 or read.flag == 83:
-                read_info = 'OB'
+        if read.flag in list_of_flags:
+            if len(read.tags) > 0:
+                read_data = read.get_tag('MD')
             else:
-                read_info = None
-        else:
-            if read.flag == 0:
-                read_info = 'OT'
-            elif read.flag == 16:
-                read_info = 'OB'
+                read_data = list()
+            start = read.reference_start
+            end = read.reference_start + read.query_length
+            if single_end == False:
+                if read.flag == 99 or read.flag == 147:
+                    read_info = 'OT'
+                elif read.flag == 163 or read.flag == 83:
+                    read_info = 'OB'
+                else:
+                    read_info = None
             else:
-                read_info = None
-        if (len(read_data)==0 or not re.search("\^", read_data,re.IGNORECASE)) and len(read.query_sequence) <= read_length:
-            for whole in modified_information.keys():
-                if whole in range(start, end+1):
-                    if (modified_information[whole] == 'OT' and whole in range(start, end+1) and read_info == 'OT') or (modified_information[whole] == 'OT' and whole in range(start, end+1) and read_info == 'OB'):
-                        whole = abs(whole - start)
-                        string_of_interest = read.query_sequence[whole-1:whole+2]
-                        lens = len(string_of_interest)
-                        if (read.qstart == 0 or read.qstart == read_length) and len(read.query_sequence) > whole + 1:
-                            per_context_and_query_output(output_bam, read, outbam_CHH, outbam_CHG, outbam_CpG, whole, start, lens, read_info, ["A", 'C', "T"], 'G', method, modified_bases, unmodified_bases, whole, whole)
-                        elif (read.qstart != 0 or read.qstart != read_length) and len(read.query_sequence) > abs(whole - read.qstart) + 1 > 0:
-                             if read.qstart > 0 and read.qstart < read_length:
-                                 per_context_and_query_output(output_bam, read, outbam_CHH, outbam_CHG, outbam_CpG, whole, start, lens, read_info, ["A", 'C', "T"], 'G', method, modified_bases, unmodified_bases, abs(whole - read.qstart), abs(whole - read.qstart))
-                             elif read.qstart > read_length:
-                                 per_context_and_query_output(output_bam, read, outbam_CHH, outbam_CHG, outbam_CpG, whole, start, lens, read_info, ["A", 'C', "T"], 'G', method, modified_bases, unmodified_bases, abs(whole - abs(read_length - read.qstart)), abs(whole - abs(read_length - read.qstart)))
-                    elif (modified_information[whole] == 'OB' and whole in range(start, end+1) and read_info == 'OT') or (modified_information[whole] == 'OB' and whole in range(start, end+1) and read_info == 'OB'):
-                        whole = abs(whole - start)
-                        string_of_interest = read.query_sequence[whole-1:whole+2]
-                        lens = len(string_of_interest)
-                        if (read.qstart == 0 or read.qstart == read_length) and len(read.query_sequence) > whole + 1:
-                            per_context_and_query_output(output_bam, read, outbam_CHH, outbam_CHG, outbam_CpG, whole, start, lens, read_info, ["A", 'G', "T"], 'C', method, modified_bases, unmodified_bases, whole-2, whole)
-                        elif (read.qstart != 0 or read.qstart != read_length) and len(read.query_sequence) > abs(whole - read.qstart) + 1 > 0:
-                            if read.qstart > 0 and read.qstart < read_length:
-                                per_context_and_query_output(output_bam, read, outbam_CHH, outbam_CHG, outbam_CpG, whole, start, lens, read_info, ["A", 'G', "T"], 'C', method, modified_bases, unmodified_bases, abs(whole - read.qstart)-2, abs(whole - read.qstart))
-                            elif read.qstart > read_length:
-                                per_context_and_query_output(output_bam, read, outbam_CHH, outbam_CHG, outbam_CpG, whole, start, lens, read_info, ["A", 'G', "T"], 'C', method, modified_bases, unmodified_bases, abs(whole - abs(read_length - read.qstart))-2, abs(whole - abs(read_length - read.qstart)))
+                if read.flag == 0:
+                    read_info = 'OT'
+                elif read.flag == 16:
+                    read_info = 'OB'
+                else:
+                    read_info = None
+            if (len(read_data)==0 or not re.search("\^", read_data,re.IGNORECASE)) and len(read.query_sequence) <= read_length:
+                for whole in modified_information.keys():
+                    if whole in range(start, end+1):
+                        if (modified_information[whole] == 'OT' and whole in range(start, end+1) and read_info == 'OT') or (modified_information[whole] == 'OT' and whole in range(start, end+1) and read_info == 'OB'):
+                            whole = abs(whole - start)
+                            string_of_interest = read.query_sequence[whole-1:whole+2]
+                            lens = len(string_of_interest)
+                            if (read.qstart == 0 or read.qstart == read_length) and len(read.query_sequence) > whole + 1:
+                                per_context_and_query_output(output_bam, read, outbam_CHH, outbam_CHG, outbam_CpG, whole, start, lens, read_info, ["A", 'C', "T"], 'G', method, modified_bases, unmodified_bases, whole, whole)
+                            elif (read.qstart != 0 or read.qstart != read_length) and len(read.query_sequence) > abs(whole - read.qstart) + 1 > 0:
+                                if read.qstart > 0 and read.qstart < read_length:
+                                    per_context_and_query_output(output_bam, read, outbam_CHH, outbam_CHG, outbam_CpG, whole, start, lens, read_info, ["A", 'C', "T"], 'G', method, modified_bases, unmodified_bases, abs(whole - read.qstart), abs(whole - read.qstart))
+                                elif read.qstart > read_length:
+                                    per_context_and_query_output(output_bam, read, outbam_CHH, outbam_CHG, outbam_CpG, whole, start, lens, read_info, ["A", 'C', "T"], 'G', method, modified_bases, unmodified_bases, abs(whole - abs(read_length - read.qstart)), abs(whole - abs(read_length - read.qstart)))
+                        elif (modified_information[whole] == 'OB' and whole in range(start, end+1) and read_info == 'OT') or (modified_information[whole] == 'OB' and whole in range(start, end+1) and read_info == 'OB'):
+                            whole = abs(whole - start)
+                            string_of_interest = read.query_sequence[whole-1:whole+2]
+                            lens = len(string_of_interest)
+                            if (read.qstart == 0 or read.qstart == read_length) and len(read.query_sequence) > whole + 1:
+                                per_context_and_query_output(output_bam, read, outbam_CHH, outbam_CHG, outbam_CpG, whole, start, lens, read_info, ["A", 'G', "T"], 'C', method, modified_bases, unmodified_bases, whole-2, whole)
+                            elif (read.qstart != 0 or read.qstart != read_length) and len(read.query_sequence) > abs(whole - read.qstart) + 1 > 0:
+                                if read.qstart > 0 and read.qstart < read_length:
+                                    per_context_and_query_output(output_bam, read, outbam_CHH, outbam_CHG, outbam_CpG, whole, start, lens, read_info, ["A", 'G', "T"], 'C', method, modified_bases, unmodified_bases, abs(whole - read.qstart)-2, abs(whole - read.qstart))
+                                elif read.qstart > read_length:
+                                    per_context_and_query_output(output_bam, read, outbam_CHH, outbam_CHG, outbam_CpG, whole, start, lens, read_info, ["A", 'G', "T"], 'C', method, modified_bases, unmodified_bases, abs(whole - abs(read_length - read.qstart))-2, abs(whole - abs(read_length - read.qstart)))
     file_name = path.join(directory, name + '_' + method + "_positions" + ".mods")
     mods_like_context_writer(read, True, file_name, modified_bases, unmodified_bases)
     inbam.close()

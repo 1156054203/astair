@@ -42,6 +42,7 @@ logs = logging.getLogger(__name__)
 
 time_b = datetime.now()
 
+
 def position_correction_cigar(read, positions):
     """Uses the CIGAR string information to correct the expected cytosine positions."""
     names, positions_cigar, changes = cigar_search(read.cigarstring)
@@ -87,46 +88,47 @@ def removing_mod_err(reference, input_file, method, bases_noncpg, per_chromosome
     outbam3T = pysam.AlignmentFile(directory+name+"_high_CpH_filtered" + ".bam", "wb", template=inbam)
     removed3T = pysam.AlignmentFile(directory+name+"_high_CpH_removed" + ".bam", "wb", template=inbam)
     for read in bam_file_opener(input_file, 'fetch', N_threads):
-        if read.flag == 147 or read.flag == 99:
-            regs = "(?:.*C.*)" * int(bases_noncpg)
-            ref = 'C'
-        elif read.flag == 163 or read.flag == 83:
-            regs = "(?:.*G.*)" * int(bases_noncpg)
-            ref = 'G'
-        try:
-            read_data = read.get_tag('MD')
-            if re.search(regs, read_data,re.IGNORECASE):
-                if read.flag == 147 or read.flag == 99:
-                    cpg = [m.start() for m in re.finditer(r'CG', fastas[read.reference_name][
-                                                                 read.reference_start:read.reference_start + read.qlen],
-                                                          re.IGNORECASE)]
-                    ref, alt = 'C', 'T'
-                elif read.flag == 163 or read.flag == 83:
-                    cpg = [m.start() + 1 for m in re.finditer(r'CG', fastas[read.reference_name][
-                                                                     read.reference_start:read.reference_start + read.qlen],
-                                                              re.IGNORECASE)]
-                    ref, alt = 'G', 'A'
-                if len(read.tags) != 0 and (re.findall('I', read.cigarstring, re.IGNORECASE) or re.findall('D', read.cigarstring, re.IGNORECASE)) or re.findall('S',read.cigarstring, re.IGNORECASE) or re.findall('H',
-                                                                                                                 read.cigarstring,
-                                                                                                                 re.IGNORECASE):
-                    total = [m.start() for m in re.finditer(ref, fastas[read.reference_name][read.reference_start:read.reference_start+read.qlen], re.IGNORECASE)]
-                    total_ref = position_correction_cigar(read, total)
-                    cpg = position_correction_cigar(read, cpg)
-                else:
-                    total_ref = [m.start() for m in re.finditer(ref, fastas[read.reference_name][read.reference_start:read.reference_start+read.qlen], re.IGNORECASE)]
-                if method == 'mCtoT':
-                    mismatch = (set(total_ref).intersection(set([m.start() for m in re.finditer(alt, read.query_sequence, re.IGNORECASE)]))).difference(cpg)
-                else:
-                    mismatch = (set(total_ref).intersection((set(total_ref).difference(cpg))).difference([m.start() for m in re.finditer(alt, read.query_sequence, re.IGNORECASE)]))
-                if len(mismatch) >= int(bases_noncpg):
-                    removed3T.write(read)
+        if read.flag in [83, 99, 147, 163]:
+            if read.flag == 147 or read.flag == 99:
+                regs = "(?:.*C.*)" * int(bases_noncpg)
+                ref = 'C'
+            elif read.flag == 163 or read.flag == 83:
+                regs = "(?:.*G.*)" * int(bases_noncpg)
+                ref = 'G'
+            try:
+                read_data = read.get_tag('MD')
+                if re.search(regs, read_data,re.IGNORECASE):
+                    if read.flag == 147 or read.flag == 99:
+                        cpg = [m.start() for m in re.finditer(r'CG', fastas[read.reference_name][
+                                                                    read.reference_start:read.reference_start + read.qlen],
+                                                            re.IGNORECASE)]
+                        ref, alt = 'C', 'T'
+                    elif read.flag == 163 or read.flag == 83:
+                        cpg = [m.start() + 1 for m in re.finditer(r'CG', fastas[read.reference_name][
+                                                                        read.reference_start:read.reference_start + read.qlen],
+                                                                re.IGNORECASE)]
+                        ref, alt = 'G', 'A'
+                    if len(read.tags) != 0 and (re.findall('I', read.cigarstring, re.IGNORECASE) or re.findall('D', read.cigarstring, re.IGNORECASE)) or re.findall('S',read.cigarstring, re.IGNORECASE) or re.findall('H',
+                                                                                                                    read.cigarstring,
+                                                                                                                    re.IGNORECASE):
+                        total = [m.start() for m in re.finditer(ref, fastas[read.reference_name][read.reference_start:read.reference_start+read.qlen], re.IGNORECASE)]
+                        total_ref = position_correction_cigar(read, total)
+                        cpg = position_correction_cigar(read, cpg)
+                    else:
+                        total_ref = [m.start() for m in re.finditer(ref, fastas[read.reference_name][read.reference_start:read.reference_start+read.qlen], re.IGNORECASE)]
+                    if method == 'mCtoT':
+                        mismatch = (set(total_ref).intersection(set([m.start() for m in re.finditer(alt, read.query_sequence, re.IGNORECASE)]))).difference(cpg)
+                    else:
+                        mismatch = (set(total_ref).intersection((set(total_ref).difference(cpg))).difference([m.start() for m in re.finditer(alt, read.query_sequence, re.IGNORECASE)]))
+                    if len(mismatch) >= int(bases_noncpg):
+                        removed3T.write(read)
+                    else:
+                        outbam3T.write(read)
                 else:
                     outbam3T.write(read)
-            else:
-                outbam3T.write(read)
-        except Exception:
-            logs.error('The input file does not contain a MD tag column.', exc_info=True)
-            sys.exit(1)
+            except Exception:
+                logs.error('The input file does not contain a MD tag column.', exc_info=True)
+                sys.exit(1)
     inbam.close()
     outbam3T.close()
     removed3T.close()
@@ -137,8 +139,3 @@ def removing_mod_err(reference, input_file, method, bases_noncpg, per_chromosome
 if __name__ == '__main__':
     filter()
 
-
-
-
-
-  

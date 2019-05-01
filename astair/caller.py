@@ -64,6 +64,7 @@ def call(input_file, reference, context, zero_coverage, skip_clip_overlap, minim
         cytosine_modification_finder(input_file, reference, context, zero_coverage, skip_clip_overlap, minimum_base_quality, user_defined_context, method, minimum_mapping_quality, adjust_acapq_threshold,mark_matches, mark_ends, add_indels, redo_baq, compute_baq, ignore_orphans, max_depth, per_chromosome, N_threads, directory, compress, single_end)
 
 
+
 warnings.simplefilter(action='ignore', category=FutureWarning)
 warnings.simplefilter(action='ignore', category=UserWarning)
 
@@ -71,6 +72,7 @@ warnings.simplefilter(action='ignore', category=UserWarning)
 logs = logging.getLogger(__name__)
 
 time_b = datetime.now()
+
 
 def modification_calls_writer(data_mods, compress, data_line, header=False):
     """Outputs the modification calls per position in a tab-delimited format."""
@@ -122,14 +124,14 @@ def context_output(mean_mod, mean_unmod, user_defined_context, file_name, contex
     with open(file_name, 'a') as statistics_output:
             write_file = csv.writer(statistics_output, delimiter='\t', lineterminator='\n')
             if header == True:
-                write_file.writerow(["CONTEXT", "SPECIFIC_CONTEXT", "MEAN_MODIFICATION_RATE_PERCENT", "TOTAL_POSITIONS", "COVERED_POSITIONS"])
+                write_file.writerow(["CONTEXT", "SPECIFIC_CONTEXT", "MEAN_MODIFICATION_RATE_PERCENT", "TOTAL_POSITIONS", "COVERED_POSITIONS", 'MODIFIED', 'UNMODIFIED'])
             write_file.writerow([context, "", round(non_zero_division(mean_mod[context], mean_mod[context] + mean_unmod[context]) * 100, 3),
-                        context_total_counts[total_contexts]+context_total_counts[total_contexts + 'b'], context_sample_counts[context]])
+                        context_total_counts[total_contexts]+context_total_counts[total_contexts + 'b'], context_sample_counts[context], mean_mod[context], mean_unmod[context]])
             if len(sub_contexts) >= 1:
                 for subcontext in sub_contexts:
-                    write_file.writerow(["", subcontext, round(non_zero_division(mean_mod[subcontext], mean_mod[subcontext] + mean_unmod[subcontext]) * 100, 3), context_total_counts[subcontext], context_sample_counts[subcontext]])
+                    write_file.writerow(["", subcontext, round(non_zero_division(mean_mod[subcontext], mean_mod[subcontext] + mean_unmod[subcontext]) * 100, 3), context_total_counts[subcontext], context_sample_counts[subcontext], mean_mod[subcontext], mean_unmod[subcontext]])
             if user_defined_context:
-                wr.writerow([user_defined_context, "", round(non_zero_division(mean_mod['user defined context'], mean_mod['user defined context'] + mean_unmod['user defined context']) * 100, 3), context_total_counts['user defined context'], context_sample_counts['user defined context']])
+                wr.writerow([user_defined_context, "", round(non_zero_division(mean_mod['user defined context'], mean_mod['user defined context'] + mean_unmod['user defined context']) * 100, 3), context_total_counts['user defined context'], context_sample_counts['user defined context'], mean_mod['user defined context'], mean_unmod['user defined context']])
             
 
 def final_statistics_output(mean_mod, mean_unmod, user_defined_context, file_name, context_sample_counts, context_total_counts, context):
@@ -275,8 +277,8 @@ def clean_pileup(pileups, cycles, modification_information_per_position, mean_mo
                 if pileup != 'BLANK':
                     read_counts[(pileup.alignment.flag, seq.upper())] += 1
             pillup_summary(modification_information_per_position, position, read_counts, mean_mod, mean_unmod, user_defined_context, header, desired_tuples, undesired_tuples, modification, reference, reads.get_num_aligned(), method, context_sample_counts, ignore_orphans, single_end, compress, data_line)
-            cycles+=1
             modification_information_per_position.pop(position)
+            cycles += 1
 
 def cytosine_modification_finder(input_file, reference, context, zero_coverage, skip_clip_overlap, minimum_base_quality, user_defined_context, method,
                                  minimum_mapping_quality, adjust_acapq_threshold, mark_matches, mark_ends, add_indels, redo_baq, compute_baq, ignore_orphans,
@@ -370,5 +372,3 @@ def cytosine_modification_finder(input_file, reference, context, zero_coverage, 
 
 if __name__ == '__main__':
     call()
-
-

@@ -22,7 +22,7 @@ class CallOutputTest(unittest.TestCase):
             mod_reader = csv.reader(call_file, delimiter='\t', lineterminator='\n')
             for row in mod_reader:
                 data_generated.append(tuple((row)))
-        self.assertEqual(data_generated[0:6], [('CONTEXT', 'SPECIFIC_CONTEXT', 'MEAN_MODIFICATION_RATE_PERCENT', 'TOTAL_POSITIONS', 'COVERED_POSITIONS'), ('CpG', '', '87.584', '6225', '48'), ('', 'CGA', '96.998', '1210', '12'), ('', 'CGC', '64.579', '1730', '13'), ('', 'CGG', '96.025', '1847', '13'), ('', 'CGT', '98.062', '1438', '10')])
+        self.assertEqual(data_generated[0:6], [('CONTEXT', 'SPECIFIC_CONTEXT', 'MEAN_MODIFICATION_RATE_PERCENT', 'TOTAL_POSITIONS', 'COVERED_POSITIONS', 'MODIFIED', 'UNMODIFIED'), ('CpG', '', '87.584', '6225', '48', '1559', '221'), ('', 'CGA', '96.998', '1210', '12', '517', '16'), ('', 'CGC', '64.579', '1730', '13', '330', '181'), ('', 'CGG', '96.025', '1847', '13', '459', '19'), ('', 'CGT', '98.062', '1438', '10', '253', '5')])
         remove = 'rm {}'.format(current + '/test_data/small_real_taps_lambda_mCtoT_high*')
         subprocess.Popen(remove, shell=True)
         
@@ -36,7 +36,7 @@ class CallOutputTest(unittest.TestCase):
             mod_reader = csv.reader(call_file, delimiter='\t', lineterminator='\n')
             for row in mod_reader:
                 data_generated.append(tuple((row)))
-        self.assertEqual(data_generated[0:6], [('CONTEXT', 'SPECIFIC_CONTEXT', 'MEAN_MODIFICATION_RATE_PERCENT', 'TOTAL_POSITIONS', 'COVERED_POSITIONS'), ('CpG', '', '95.283', '6225', '48'), ('', 'CGA', '93.04', '1210', '12'), ('', 'CGC', '96.471', '1730', '13'), ('', 'CGG', '93.636', '1847', '13'), ('', 'CGT', '97.287', '1438', '10')])
+        self.assertEqual(data_generated[0:6], [('CONTEXT', 'SPECIFIC_CONTEXT', 'MEAN_MODIFICATION_RATE_PERCENT', 'TOTAL_POSITIONS', 'COVERED_POSITIONS', 'MODIFIED', 'UNMODIFIED'), ('CpG', '', '95.283', '6225', '48', '1414', '70'), ('', 'CGA', '93.04', '1210', '12', '254', '19'), ('', 'CGC', '96.471', '1730', '13', '246', '9'), ('', 'CGG', '93.636', '1847', '13', '412', '28'), ('', 'CGT', '97.287', '1438', '10', '502', '14')])
         remove = 'rm {}'.format(current + '/test_data/small_real_wgbs_lambda_CtoT_high*')
         subprocess.Popen(remove, shell=True)
 
