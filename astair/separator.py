@@ -51,7 +51,7 @@ lists = listsParamType()
 @click.option('output_bam', '-output_bam', '-sb', required=False, default=False, is_flag=True, help='If given, bam files separated by the context surrounding the positions of interest will be output.')
 @click.option('single_end', '--se', '-se', default=False, is_flag=True, required=False, help='Indicates single-end sequencing reads (Default False).')
 @click.option('directory', '--directory', '-d', required=True, type=str, help='Output directory to save files.')
-def separator(input_file, read_length, method, modified_positions, modified_positions_orientation, output_bam, single_end, directory):
+def separate(input_file, read_length, method, modified_positions, modified_positions_orientation, output_bam, single_end, directory):
     """Separates a bam file based on the context at certain positions.
     Suitable for highly variable and covered spike-ins, as it calculates a rough estimate of the modification value at
     few known positions."""
@@ -198,7 +198,7 @@ def position_separator(input_file, read_length, method, modified_positions, modi
 
 
 if __name__ == '__main__':
-    separator()
+    separate()
 
 
 

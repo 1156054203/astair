@@ -46,7 +46,7 @@ cli.add_command(mbias.mbias)
 cli.add_command(finder.find)
 cli.add_command(aligner.align)
 cli.add_command(simulator.simulate)
-cli.add_command(separator.separator)
+cli.add_command(separator.separate)
 cli.add_command(filter.filter)
 
 
