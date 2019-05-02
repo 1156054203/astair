@@ -141,7 +141,7 @@ astair mbias -i lambda.phage_test_sample_mCtoT.cram --context CpG --read_length 
 ```
 In this case the plot doesn't show significant modification biases in the sequencing reads:
 
-![Alt text](https://bitbucket.org/bsblabludwig/astair/raw/0ee089d81fe6a42df7e9f77cd1c58ab84f7c5675/figures/lambda.phage_test_sample_mCtoT_M-bias_plot.png)
+![Alt text](https://bitbucket.org/bsblabludwig/astair/raw/88032ca211048cb3a6cd241286d171f5a5d627e5/figures/lambda.phage_test_sample_mCtoT_M-bias_plot.png)
 
 ### Base quality analysis
 
@@ -150,16 +150,17 @@ Another useful quality control measure is the per base sequencing quality. asTai
 ```bash
 astair phred --fq1 lambda.phage_test_sample_1.fq.gz --fq2 lambda.phage_test_sample_2.fq.gz --plot -d output_dir/
 ```
+
 TAPS data don't show lowering of the base quality of cytosines in the forward read and the guanines in the reverse read as seen in WGBS data (see [TET-Assisted Pyridine Borane (TAPS) sequencing](https://www.nature.com/articles/s41587-019-0041-2)). This is a result of TAPS chemistry, which results in more balanced sequencing libraries:
 
-![Alt text](https://bitbucket.org/bsblabludwig/astair/raw/0ee089d81fe6a42df7e9f77cd1c58ab84f7c5675/figures/lambda.phage_test_sample_phred_scores_plot.png)
+![Alt text](https://bitbucket.org/bsblabludwig/astair/raw/88032ca211048cb3a6cd241286d171f5a5d627e5/figures/lambda.phage_test_sample_phred_scores_plot.png)
 
 ### Separation and analyses of highly variable and highly covered short sequences
 
 In the original TAPS experiment, a synthetically generated spike-in that was highly variable in two known NCNN positions was used to evaluate the modification levels at non-CpG contexts, and the level of bias of 5-hydroxymethyl cytosine versus 5-methyl cytosine positions. asTair separate can summarise as a `.mods` file the information over these positions, given the strand orientation and optionally it can split the input BAM|CRAM file based on the contexts at these positions. _Separate_ can be a helpful command for very highly covered short sequences with known modified positions (1-based coordinates).
 
 ```bash
-astair separate -i /tests/test_data/small_real_taps_synthetic.bam --read_length 75 --modified_positions 51,111 --modified_positions_orientation OT,OB -d output_dir/
+astair separate -i /tests/test_data/small_real_taps_synthetic.bam --read_length 80 --modified_positions 51,111 --modified_positions_orientation OT,OB -d output_dir/
 ```
 
 As a result we get a `.mods` file containing the following information:
@@ -175,7 +176,11 @@ As a result we get a `.mods` file containing the following information:
 
 ### Simulation of modification on WGS to create TAPS or WGBS data
 
-### Removal of highly non-CpG modifications per read for WGBS data
+In some cases simulated sequencing reads data is needed for the development of pipelines, tools, and for understanding possible biases in the data. asTair simulate can introduce TAPS or bisulfite-sequencing type of modifications on a WGS synthetic or real data at desired contexts or as a list of positions.
+
+```bash
+astair simulate -i output_dir/lambda.phage_test_sample_mCtoT.cram -f lambda_phage.fa --context CpG  -ml 100 -l 75 -d output_dir/
+```
 
 # Other useful information
 
@@ -184,6 +189,7 @@ As a result we get a `.mods` file containing the following information:
 1. Do quality control of the sequencing reads and do quality trimming before mapping and dispose of very short reads, using [FastQC](https://www.bioinformatics.babraham.ac.uk/projects/fastqc/), [trimgalore](https://www.bioinformatics.babraham.ac.uk/projects/trim_galore/) or similar tools.
 2. In most cases, it will be best to remove PCR duplicates before running the modification caller, unless your reads are non-randomly fragmented (e.g. enzymatically digested).
 3. Check the fragment (insert) size distribution and decide on an overlap removal method for paired-end reads. The simplest option is the default removal of overlaps handled by `astair call`, which will randomly select one of two overlapping reads. This behaviour can be disabled by the `-sc` option, in case you are using a more sophisticated overlap-clipping tool.
+4.  For speed and convenience we recommend using --per_chromosome option when available in order to run them in parallel or with fewer resources.
 
 ## Installing asTair without `pip`
 
@@ -238,6 +244,13 @@ You can now use `astair call` with `--method CtoT` for the modifcation calling:
 astair call -i output_dir/lambda.phage_test_sample_BS_CtoT.cram -f lambda_phage.fa --method CtoT --context CpG --minimum_base_quality 13 -d output_dir/
 ```
 
+### Removal of highly non-CpG modifications per read for WGBS data
+
+In some cases multiple non-CpG modification events per read are viewed as a result of incomplete bisulfite conversion. asTair filter removes such reads:
+
+```bash
+astair filter -i tests/test_data/small_real_wgbs_lambda_CtoT.bam -f lambda_phage.fa --method CtoT -d output_dir/
+```
 # License
 
 This software is made available under the terms of the [GNU General Public License v3](http://www.gnu.org/licenses/gpl-3.0.html).
