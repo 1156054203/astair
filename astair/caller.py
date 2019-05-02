@@ -29,10 +29,9 @@ else:
 
 from astair.safe_division import non_zero_division
 from astair.bam_file_parser import bam_file_opener
-from astair.simple_fasta_parser import fasta_splitting_by_sequence
-from astair.context_search import sequence_context_set_creation
 from astair.context_search import context_sequence_search
-
+from astair.context_search import sequence_context_set_creation
+from astair.simple_fasta_parser import fasta_splitting_by_sequence
 
 @click.command()
 @click.option('input_file', '--input_file', '-i', required=True, help='BAM|CRAM format file containing sequencing reads.')
@@ -311,7 +310,7 @@ def cytosine_modification_finder(input_file, reference, context, zero_coverage, 
         except Exception:
             sys.exit(1)
         try:
-            keys, fastas = fasta_splitting_by_sequence(reference, per_chromosome)
+            keys, fastas = fasta_splitting_by_sequence(reference, per_chromosome, None)
         except Exception:
             sys.exit(1)
         contexts, all_keys = sequence_context_set_creation(context, user_defined_context)

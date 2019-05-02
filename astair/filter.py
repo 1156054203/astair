@@ -86,7 +86,7 @@ def removing_mod_err(reference, input_file, method, bases_noncpg, per_chromosome
         inbam = bam_file_opener(input_file, None, N_threads)
     except Exception:
         sys.exit(1)
-    keys, fastas = fasta_splitting_by_sequence(reference, per_chromosome)
+    keys, fastas = fasta_splitting_by_sequence(reference, per_chromosome, None)
     outbam3T = pysam.AlignmentFile(directory+name+"_high_CpH_filtered" + ".bam", "wb", template=inbam)
     removed3T = pysam.AlignmentFile(directory+name+"_high_CpH_removed" + ".bam", "wb", template=inbam)
     if single_end == False:

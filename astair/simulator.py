@@ -420,7 +420,7 @@ def bam_input_simulation(directory, name, modification_level, context, input_fil
             else:
                 outbam = pysam.AlignmentFile(path.join(directory, name + '_' + method + '_' + str(modification_level_) + '_' + context  + '_reversed_' + per_chromosome  + extension),
                 file_type, reference_filename=reference, template=bam_file_opener(input_file, None, N_threads), header=header)
-        keys, fastas = fasta_splitting_by_sequence(reference, per_chromosome)
+        keys, fastas = fasta_splitting_by_sequence(reference, per_chromosome, None)
         if per_chromosome == None:
             name_to_use = path.join(directory, name + '_' + method + '_' + str(modification_level_) + '_' + context + '_read_information.txt')
             name_to_use_absolute = path.join(directory,name + '_' + method + '_' + str(modification_level_) + '_' + context + '_modified_positions_information.txt')

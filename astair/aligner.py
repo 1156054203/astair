@@ -12,6 +12,8 @@ import subprocess
 from datetime import datetime
 from distutils.spawn import find_executable
 
+from astair.simple_fasta_parser import fasta_splitting_by_sequence
+
 
 @click.command()
 @click.option('fq1', '--fq1', '-1', required=True, help='First in pair (R1) sequencing reads file in fastq.gz format')
@@ -61,6 +63,7 @@ logs = logging.getLogger(__name__)
 
 time_b = datetime.now()
 
+
 def which_path(bwa_path, samtools_path, method):
     """Discovers the paths to BWA and Samtools."""
     if bwa_path:
@@ -77,13 +80,25 @@ def which_path(bwa_path, samtools_path, method):
 
     return use_bwa, use_samtools
 
+
+def check_reference_string_names(reference):
+    """Checks whether there are spaces in the reference names in the fasta file. In case such spaces exist, they will be replaced with underscores before building the index."""
+    fasta_splitting_by_sequence(reference, None, 'w')
+
+
 def check_index(use_bwa, reference, method):
     """Checks if the provided reference is indexed, and creates an index if one is not found."""
+    check_reference_string_names(reference)
     if (os.path.isfile(reference + '.bwt') == False and method == 'mCtoT') \
             or (os.path.isfile(reference + '.bwameth.c2t') == False and method == 'CtoT'):
-        build_command = '{} index {}'.format(use_bwa, reference)
+        if os.path.isfile(reference[:-3] + '_no_spaces.fa.gz') == False:
+            build_command = '{} index {}'.format(use_bwa, reference)
+        else:
+            build_command = '{} index {}'.format(use_bwa, reference[:-3] + '_no_spaces.fa.gz')
+            reference = reference[:-3] + '_no_spaces.fa.gz'
         index_fasta = subprocess.Popen(build_command, shell=True)
         index_fasta.wait()
+    return reference
 
 
 def run_alignment(fq1, fq2, reference, bwa_path, samtools_path, directory, method, output_format, minimum_mapping_quality, keep_unmapped, N_threads, minimum_seed_length, band_width, dropoff,
@@ -95,10 +110,9 @@ def run_alignment(fq1, fq2, reference, bwa_path, samtools_path, directory, metho
     logs.info("asTair genome aligner started running. {} seconds".format((time_s - time_b).total_seconds()))
     name = os.path.splitext(os.path.basename(fq1))[0]
     if single_end == False:
-        name = re.sub('_(R1|1).fq', '', name)
-    else:
-        name = re.sub('.fq', '', name)
-    directory = path.abspath(directory)
+        name = re.sub('(_R1|_1)', '', name)
+    name = re.sub('.fq', '', name)
+    directory = os.path.abspath(directory)
     if list(directory)[-1]!="/":
         directory = directory + "/"
     if os.path.exists(directory) == False:
@@ -113,7 +127,7 @@ def run_alignment(fq1, fq2, reference, bwa_path, samtools_path, directory, metho
         output_f = '-hC'
     else:
         output_f = '-hb'
-    check_index(use_bwa, reference, method)
+    reference = check_index(use_bwa, reference, method)
     if skip_mate_rescue:
         skip_mate_rescue = '-S'
     else:

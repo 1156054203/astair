@@ -34,9 +34,8 @@ except Exception:
 
 from astair.safe_division import non_zero_division
 from astair.bam_file_parser import bam_file_opener
-from astair.simple_fasta_parser import fasta_splitting_by_sequence
 from astair.DNA_sequences_operations import complementary
-
+from astair.simple_fasta_parser import fasta_splitting_by_sequence
 
 
 @click.command()
@@ -236,7 +235,7 @@ def Mbias_plotting(reference, input_file, directory, read_length, method, single
     if path.exists(directory) == False:
         raise Exception("The output directory does not exist.")
         sys.exit(1)
-    keys, fastas = fasta_splitting_by_sequence(reference, per_chromosome)
+    keys, fastas = fasta_splitting_by_sequence(reference, per_chromosome, None)
     values_1_CpG, values_2_CpG, values_1_CHG, values_2_CHG, values_1_CHH, values_2_CHH = mbias_statistics_calculator(fastas, input_file, name, directory, read_length, method, single_end, N_threads, per_chromosome)
     try:
         if plot:

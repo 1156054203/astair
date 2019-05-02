@@ -27,11 +27,9 @@ elif sys.version[0] == '2':
 else:
     raise Exception("This is not the python we're looking for (version {})".format(sys.version[0]))
 
-
-from astair.simple_fasta_parser import fasta_splitting_by_sequence
-from astair.context_search import sequence_context_set_creation
 from astair.context_search import context_sequence_search
-
+from astair.context_search import sequence_context_set_creation
+from astair.simple_fasta_parser import fasta_splitting_by_sequence
 
 
 @click.command()
@@ -92,7 +90,7 @@ def find_contexts(reference, context, user_defined_context, per_chromosome, comp
         raise Exception("The output directory does not exist.")
         sys.exit(1)
     try:
-        keys, fastas = fasta_splitting_by_sequence(reference, per_chromosome)
+        keys, fastas = fasta_splitting_by_sequence(reference, per_chromosome, None)
     except Exception:
         sys.exit(1)
     if compress == False:
