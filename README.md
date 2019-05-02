@@ -116,7 +116,7 @@ The header should be mostly self-explanatory. `MOD` and `UNMOD` refer to the num
 
 ###  Base-resolution localisation of cytosine contexts 
 
-In some cases, getting the complete positional information of cytosine contexts from the reference file can be helpful for downstream analyses. asTair helps you get this information by running:
+In some cases, getting the complete positional information of cytosine contexts from the reference file can be useful for downstream analyses. asTair helps you get this information by running:
 
 ```bash
 astair find -f lambda_phage.fa --context CpG -d output_dir/
