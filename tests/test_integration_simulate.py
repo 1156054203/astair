@@ -106,7 +106,7 @@ class SimulateOutputTest(unittest.TestCase):
             mod_reader = csv.reader(call_file, delimiter='\t', lineterminator='\n')
             for row in mod_reader:
                 data_generated.append(tuple((row)))
-        self.assertEqual(data_generated,[('CONTEXT', 'SPECIFIC_CONTEXT', 'MEAN_MODIFICATION_RATE_PERCENT', 'TOTAL_POSITIONS', 'COVERED_POSITIONS', 'MODIFIED', 'UNMODIFIED'), ('CpG', '', '88.871', '6225', '48', '1693', '212'), ('', 'CGA', '97.561', '1210', '12', '520', '13'), ('', 'CGC', '66.418', '1730', '13', '356', '180'), ('', 'CGG', '97.018', '1847', '13', '488', '15'), ('', 'CGT', '98.799', '1438', '10', '329', '4')])
+        self.assertEqual(data_generated,[('CONTEXT', 'SPECIFIC_CONTEXT', 'MEAN_MODIFICATION_RATE_PERCENT', 'TOTAL_POSITIONS', 'COVERED_POSITIONS', 'MODIFIED', 'UNMODIFIED'), ('CpG', '*', '88.871', '6225', '48', '1693', '212'), ('*', 'CGA', '97.561', '1210', '12', '520', '13'), ('*', 'CGC', '66.418', '1730', '13', '356', '180'), ('*', 'CGG', '97.018', '1847', '13', '488', '15'), ('*', 'CGT', '98.799', '1438', '10', '329', '4')])
         remove = 'rm {}'.format(current + '/test_data/small_real_taps_lambda_mCtoT_mCtoT*')
         subprocess.Popen(remove, shell=True)
 

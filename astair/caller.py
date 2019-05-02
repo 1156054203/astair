@@ -123,13 +123,13 @@ def context_output(mean_mod, mean_unmod, user_defined_context, file_name, contex
             write_file = csv.writer(statistics_output, delimiter='\t', lineterminator='\n')
             if header == True:
                 write_file.writerow(["CONTEXT", "SPECIFIC_CONTEXT", "MEAN_MODIFICATION_RATE_PERCENT", "TOTAL_POSITIONS", "COVERED_POSITIONS", 'MODIFIED', 'UNMODIFIED'])
-            write_file.writerow([context, "", round(non_zero_division(mean_mod[context], mean_mod[context] + mean_unmod[context]) * 100, 3),
+            write_file.writerow([context, "*", round(non_zero_division(mean_mod[context], mean_mod[context] + mean_unmod[context]) * 100, 3),
                         context_total_counts[total_contexts]+context_total_counts[total_contexts + 'b'], context_sample_counts[context], mean_mod[context], mean_unmod[context]])
             if len(sub_contexts) >= 1:
                 for subcontext in sub_contexts:
-                    write_file.writerow(["", subcontext, round(non_zero_division(mean_mod[subcontext], mean_mod[subcontext] + mean_unmod[subcontext]) * 100, 3), context_total_counts[subcontext], context_sample_counts[subcontext], mean_mod[subcontext], mean_unmod[subcontext]])
+                    write_file.writerow(["*", subcontext, round(non_zero_division(mean_mod[subcontext], mean_mod[subcontext] + mean_unmod[subcontext]) * 100, 3), context_total_counts[subcontext], context_sample_counts[subcontext], mean_mod[subcontext], mean_unmod[subcontext]])
             if user_defined_context:
-                wr.writerow([user_defined_context, "", round(non_zero_division(mean_mod['user defined context'], mean_mod['user defined context'] + mean_unmod['user defined context']) * 100, 3), context_total_counts['user defined context'], context_sample_counts['user defined context'], mean_mod['user defined context'], mean_unmod['user defined context']])
+                wr.writerow([user_defined_context, "*", round(non_zero_division(mean_mod['user defined context'], mean_mod['user defined context'] + mean_unmod['user defined context']) * 100, 3), context_total_counts['user defined context'], context_sample_counts['user defined context'], mean_mod['user defined context'], mean_unmod['user defined context']])
             
 
 def final_statistics_output(mean_mod, mean_unmod, user_defined_context, file_name, context_sample_counts, context_total_counts, context):
