@@ -121,6 +121,13 @@ The header should be mostly self-explanatory. `MOD` and `UNMOD` refer to the num
 3. Check the fragment (insert) size distribution and decide on an overlap removal method for paired-end reads. The simplest option is the default removal of overlaps handled by `astair call`, which will randomly select one of two overlapping reads. This behaviour can be disabled by the `-sc` option, in case you are using a more sophisticated overlap-clipping tool.
 4.  For speed and convenience we recommend using --per_chromosome option when available in order to run them in parallel or with fewer resources.
 
+## Read our Wiki
+
+### More information on asTair [tools](https://bitbucket.org/bsblabludwig/astair/wiki/Home)
+
+### asTair [FAQ](https://bitbucket.org/bsblabludwig/astair/wiki/FAQ) 
+
+
 ## Installing asTair without `pip`
 
 If pip is not available for some reason, you can simply download the package directly and install it manually:
