@@ -40,7 +40,7 @@ Commands:
   asTair was written by Gergana V. Velikova and Benjamin Schuster-Boeckler.
   This code is made available under the GNU General Public License, see
   LICENSE.txt for more details.
-                                                           Version: 3.10
+                                                           Version: 3.x.x
 ```
 
 In general, you can use `--help` on all `astair` sub-commands to get detailed instructions on the available options.
@@ -112,76 +112,6 @@ The `.mods` file contains per-position information on your sample:
 
 The header should be mostly self-explanatory. `MOD` and `UNMOD` refer to the number of reads covering that base that showed evidence of modification/no modification, and were of the right orientation to be meaningful for modification calling. The total coverage, including reads that were oriented in a way that no modification information can be extracted, is shown in `TOTAL_DEPTH`. `SNV` gives a heuristic indication whether the position is indeed a modified base, or a genetic C to T variant in the genome of the sample.
 
-## 4. Other features
-
-###  Base-resolution localisation of cytosine contexts 
-
-In some cases, getting the complete positional information of cytosine contexts from the reference file can be useful for downstream analyses. asTair helps you get this information by running:
-
-```bash
-astair find -f lambda_phage.fa --context CpG -d output_dir/
-```
-The resulting `.bed` file contains full positional and context information:
-
-| CHROM | START | END   | STRAND | SPECIFIC_CONTEXT | CONTEXT | 
-| ----- | ----- | ----- | --------- | ----------------- | ----------- |
-| lambda |3 | 4 | + | CGG | CpG |
-| lambda |4 | 5 | - | CGC | CpG |
-| lambda  |6 | 7 | + | CGA | CpG | 
-| lambda  |7 | 8 | - | CGC | CpG |
-| lambda | 12 | 13 | + | CGC | CpG |
-| lambda  |13 | 14 | - | CGA | CpG |
-
-### Modification levels over the length of the sequencing reads (Mbias)
-
-Visualising the modification levels per cytosine context over the length of the sequencing reads (aka Mbias) can be used as a quality control measure for the success of the experiment. Running `astair mbias` can output both plot and table if [matplotlib](https://matplotlib.org/) is installed and the `--plot` option is set. Otherwise, only a tab delimited file is output, which can be visualised with a tool/package of your choice.
-
-```bash
-astair mbias -i lambda.phage_test_sample_mCtoT.cram --context CpG --read_length 75 --plot -d output_dir/
-```
-In this case the plot doesn't show significant modification biases in the sequencing reads:
-
-![Alt text](https://bitbucket.org/bsblabludwig/astair/raw/88032ca211048cb3a6cd241286d171f5a5d627e5/figures/lambda.phage_test_sample_mCtoT_M-bias_plot.png)
-
-### Base quality analysis
-
-Another useful quality control measure is the per base sequencing quality. `astair phred` command runs on the fastq files and can output both plot and table if [matplotlib](https://matplotlib.org/) is installed and the `--plot` option is set. Otherwise, you can visualise the table yourself with a tool/package of your choice.
-
-```bash
-astair phred --fq1 lambda.phage_test_sample_1.fq.gz --fq2 lambda.phage_test_sample_2.fq.gz --plot -d output_dir/
-```
-
-TAPS data don't show lowering of the base quality of cytosines in the forward read and the guanines in the reverse read as seen in WGBS data (see [TET-Assisted Pyridine Borane (TAPS) sequencing](https://www.nature.com/articles/s41587-019-0041-2)). This is a result of TAPS chemistry, which results in more balanced sequencing libraries:
-
-![Alt text](https://bitbucket.org/bsblabludwig/astair/raw/88032ca211048cb3a6cd241286d171f5a5d627e5/figures/lambda.phage_test_sample_phred_scores_plot.png)
-
-### Separation and analyses of highly variable and highly covered short sequences
-
-In the original TAPS experiment, a synthetically generated spike-in that was highly variable in two known NCNN positions was used to evaluate the modification levels at non-CpG contexts, and the level of bias of 5-hydroxymethyl cytosine versus 5-methyl cytosine positions. `astair separate` can summarise as a `.mods` file the information over these positions, given the strand orientation and optionally it can split the input BAM|CRAM file based on the contexts at these positions. _Separate_ can be a helpful command for very highly covered short sequences with known modified positions (1-based coordinates).
-
-```bash
-astair separate -i /tests/test_data/small_real_taps_synthetic.bam --read_length 80 --modified_positions 51,111 --modified_positions_orientation OT,OB -d output_dir/
-```
-
-As a result we get a `.mods` file containing the following information:
-
-| CHROM | START | END   | CONTEXT | MEAN_MODIFICATION_RATE_PERCENT |  MOD | UNMOD | 
-| ----- | ----- | ----- | ------- | ------------------------------ | ---- | ----- |
-| 5mC_five_prime | 50 | 51 | CHG | 84.836 | 800 | 143 |
-| 5mC_five_prime | 50 | 51 | CHH | 84.873 | 2003 | 357 |
-| 5mC_five_prime | 50 | 51 | CpG | 96.92 | 1762 | 56 |
-| 5mC_five_prime  | 110 | 111 | CHG | 81.787 | 952 | 212 |
-| 5mC_five_prime | 110 | 111 | CHH | 80.476 | 1624 | 394 |
-| 5mC_five_prime  | 110 | 111 | CpG | 88.038 | 1965 | 267 |
-
-### Simulation of modification on WGS to create TAPS or WGBS data
-
-In some cases simulated sequencing reads data is needed for the development of pipelines, tools, and for understanding possible biases in the data. `astair simulate` can introduce TAPS or bisulfite-sequencing type of modifications on a WGS synthetic or real data at desired contexts or as a list of positions.
-
-```bash
-astair simulate -i output_dir/lambda.phage_test_sample_mCtoT.cram -f lambda_phage.fa --context CpG  -ml 100 -l 75 -d output_dir/
-```
-
 # Other useful information
 
 ## Recommendations for data pre-processing
@@ -196,13 +126,13 @@ astair simulate -i output_dir/lambda.phage_test_sample_mCtoT.cram -f lambda_phag
 If pip is not available for some reason, you can simply download the package directly and install it manually:
 
 ```bash
-wget https://bitbucket.org/bsblabludwig/astair/get/v3.10.tar.gz
+wget https://bitbucket.org/bsblabludwig/astair/get/master.tar.gz
 # or if you don't have wget, try
-# curl -O https://bitbucket.org/bsblabludwig/astair/get/v3.10.tar.gz
+# curl -O https://bitbucket.org/bsblabludwig/astair/get/master.tar.gz
 
-tar -xzf v3.10.tar.gz -C astair_3.10 --strip-components=1
+tar -xzf master.tar.gz -C astair_3 --strip-components=1
 
-cd astair_3.10
+cd astair_3
 ```
 
 We would recommend using a virtual environment to avoid issues with globally installed packages, or if you are on a shared system and need to install locally:
