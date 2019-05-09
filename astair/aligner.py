@@ -91,19 +91,19 @@ def check_index(use_bwa, reference, method, output_format):
     check_reference_string_names(reference)
     if (os.path.isfile(reference + '.bwt') == False and method == 'mCtoT') \
             or (os.path.isfile(reference + '.bwameth.c2t') == False and method == 'CtoT'):
-        if os.path.isfile(reference[:-3] + '_no_spaces.fa.gz') == False:
-            if (output_format == 'CRAM' and reference[-3:] == '.gz') or (sys.version[0] == '2' and reference[-3:] == '.gz' ):
+        if os.path.isfile(os.path.splitext(os.path.basename(reference))[0] + '_no_spaces.fa.gz') == False:
+            if (output_format == 'CRAM' and os.path.splitext(os.path.basename(reference))[1] == '.gz') or (sys.version[0] == '2' and os.path.splitext(os.path.basename(reference))[1] == '.gz' ):
                 subprocess.Popen('gunzip {}'.format(reference), shell=True)
-                reference = reference[:-3]
+                reference = os.path.splitext(os.path.basename(reference))[0]
             build_command = '{} index {}'.format(use_bwa, reference)
         else:
             if output_format == 'CRAM' or sys.version[0] == '2':
-                subprocess.Popen('gunzip {}'.format(reference[:-3] + '_no_spaces.fa.gz'), shell=True)
-                build_command = '{} index {}'.format(use_bwa, reference[:-3] + '_no_spaces.fa')
-                reference = reference[:-3] + '_no_spaces.fa'
+                subprocess.Popen('gunzip {}'.format(os.path.splitext(os.path.basename(reference))[0] + '_no_spaces.fa.gz'), shell=True)
+                build_command = '{} index {}'.format(use_bwa, os.path.splitext(os.path.basename(reference))[0] + '_no_spaces.fa')
+                reference = os.path.splitext(os.path.basename(reference))[0] + '_no_spaces.fa'
             else:
-                build_command = '{} index {}'.format(use_bwa, reference[:-3] + '_no_spaces.fa.gz')
-                reference = reference[:-3] + '_no_spaces.fa.gz'
+                build_command = '{} index {}'.format(use_bwa, os.path.splitext(os.path.basename(reference))[0] + '_no_spaces.fa.gz')
+                reference = os.path.splitext(os.path.basename(reference))[0] + '_no_spaces.fa.gz'
         index_fasta = subprocess.Popen(build_command, shell=True)
         index_fasta.wait()
     return reference
@@ -118,8 +118,8 @@ def run_alignment(fq1, fq2, reference, bwa_path, samtools_path, directory, metho
     logs.info("asTair genome aligner started running. {} seconds".format((time_s - time_b).total_seconds()))
     name = os.path.splitext(os.path.basename(fq1))[0]
     if single_end == False  or fq2 != None:
-        name = re.sub('(_R1|_1)', '', name)
-    name = re.sub('.fq', '', name)
+        name = re.sub('(_R1|_1)', '', "_".join(name.split('.')[:-1]))
+    name = "_".join(name.split('.')[:-1])
     directory = os.path.abspath(directory)
     if list(directory)[-1]!="/":
         directory = directory + "/"
