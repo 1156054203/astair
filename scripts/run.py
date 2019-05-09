@@ -11,7 +11,6 @@ import astair.caller as caller
 import astair.finder as finder
 import astair.aligner as aligner
 import astair.simulator as simulator
-import astair.separator as separator
 import astair.filter as filter 
 
 
@@ -46,7 +45,6 @@ cli.add_command(mbias.mbias)
 cli.add_command(finder.find)
 cli.add_command(aligner.align)
 cli.add_command(simulator.simulate)
-cli.add_command(separator.separate)
 cli.add_command(filter.filter)
 
 

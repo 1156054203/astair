@@ -33,7 +33,6 @@ Commands:
   find      Output positions of Cs from fasta file per context.
   mbias     Generate modification per read length information (Mbias).
   phred     Calculate per base (A, C, T, G) Phred scores for each strand.
-  separate  Separate a bam file based on the context at certain positions.
   simulate  Simulate TAPS/BS conversion on top of an existing bam/cram file.
 
   __________________________________About__________________________________
@@ -119,7 +118,7 @@ The header should be mostly self-explanatory. `MOD` and `UNMOD` refer to the num
 1. Do quality control of the sequencing reads and do quality trimming before mapping and dispose of very short reads, using [FastQC](https://www.bioinformatics.babraham.ac.uk/projects/fastqc/), [trimgalore](https://www.bioinformatics.babraham.ac.uk/projects/trim_galore/) or similar tools.
 2. In most cases, it will be best to remove PCR duplicates before running the modification caller, unless your reads are non-randomly fragmented (e.g. enzymatically digested).
 3. Check the fragment (insert) size distribution and decide on an overlap removal method for paired-end reads. The simplest option is the default removal of overlaps handled by `astair call`, which will randomly select one of two overlapping reads. This behaviour can be disabled by the `-sc` option, in case you are using a more sophisticated overlap-clipping tool.
-4.  For speed and convenience we recommend using --per_chromosome option when available in order to run them in parallel or with fewer resources.
+4.  For speed and convenience we recommend using --per_chromosome option if possible in order to run them in parallel.
 
 ## Read our Wiki
 

@@ -96,9 +96,10 @@ class SimulateOutputTest(unittest.TestCase):
         cytosine_modification_finder(current + '/test_data/small_real_taps_lambda_mCtoT.bam', current + '/test_data/lambda_phage.fa', 'CpG', False, False, 13, None, 'mCtoT', 0, 0, True, True, True, False, True, True, 250, None, 1, current + '/test_data/', False, False)
         modification_simulator(current + '/test_data/lambda_phage.fa', 80, current + '/test_data/small_real_taps_lambda_mCtoT.bam', 'mCtoT', 'directional', 'bam', 100,
               None,  1, 'all', (None, None, None),  current + '/test_data/', 0, False, 1, None, 0.3, 0.1, False, True)
-        modification_simulator(current + '/test_data/lambda_phage.fa', 80, current + '/test_data/small_real_taps_lambda_mCtoT.bam', 'mCtoT', 'directional', 'bam', 100,
+        modification_simulator(current + '/test_data/lambda_phage_.fa.gz', 80, current + '/test_data/small_real_taps_lambda_mCtoT.bam', 'mCtoT', 'directional', 'bam', 100,
               current + '/test_data/small_real_taps_lambda_mCtoT_mCtoT_CpG.mods',  1, 'all', (None, None, None),  current + '/test_data/', 0, False, 1, None, 0.3, 0.1, False, False)
-        cytosine_modification_finder(current + '/test_data/small_real_taps_lambda_mCtoT_mCtoT_user_provided_list_all.bam', current + '/test_data/lambda_phage.fa', 'CpG', False, False, 13, None, 'mCtoT', 0, 0, True, True, True, False, True, True, 250, None, 1, current + '/test_data/', False, False)
+        subprocess.Popen('gzip {}'.format(current + '/test_data/lambda_phage_.fa'), shell=True)
+        cytosine_modification_finder(current + '/test_data/small_real_taps_lambda_mCtoT_mCtoT_user_provided_list_all.bam', current + '/test_data/lambda_phage_.fa.gz', 'CpG', False, False, 13, None, 'mCtoT', 0, 0, True, True, True, False, True, True, 250, None, 1, current + '/test_data/', False, False)
         data_generated = list()
         modification_simulator(current + '/test_data/lambda_phage.fa', 80, current + '/test_data/small_real_taps_lambda_mCtoT.bam', 'mCtoT', 'directional', 'bam', 100,
               None,  1, 'all', (None, None, None),  current + '/test_data/', 0, False, 1, None, 0.3, 0.1, False, True)
@@ -109,6 +110,9 @@ class SimulateOutputTest(unittest.TestCase):
         self.assertEqual(data_generated,[('CONTEXT', 'SPECIFIC_CONTEXT', 'MEAN_MODIFICATION_RATE_PERCENT', 'TOTAL_POSITIONS', 'COVERED_POSITIONS', 'MODIFIED', 'UNMODIFIED'), ('CpG', '*', '88.871', '6225', '48', '1693', '212'), ('*', 'CGA', '97.561', '1210', '12', '520', '13'), ('*', 'CGC', '66.418', '1730', '13', '356', '180'), ('*', 'CGG', '97.018', '1847', '13', '488', '15'), ('*', 'CGT', '98.799', '1438', '10', '329', '4')])
         remove = 'rm {}'.format(current + '/test_data/small_real_taps_lambda_mCtoT_mCtoT*')
         subprocess.Popen(remove, shell=True)
+        subprocess.Popen('gzip {}'.format(current + '/test_data/lambda_phage_.fa'), shell=True)
+
+
 
 if __name__ == '__main__':
     unittest.main()
