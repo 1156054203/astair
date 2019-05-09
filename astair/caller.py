@@ -184,9 +184,13 @@ def flags_expectation(modification_information_per_position, position, ignore_or
     return desired_tuples, undesired_tuples, modification, reference
 
         
-def pillup_summary(modification_information_per_position, position, read_counts, mean_mod, mean_unmod, user_defined_context,
+def pileup_summary(modification_information_per_position, position, read_counts, mean_mod, mean_unmod, user_defined_context,
                    header, desired_tuples, undesired_tuples, modification, reference, depth, method, context_sample_counts, ignore_orphans, single_end, compress, data_line):
-    """Gives the modication call rows given strand information."""
+    """Creates the modification output per position in the format:
+    [chrom, start, end, mod_level, mod, unmod, ref, alt, specific_context, context, snv, total_depth] 
+    given the strand information and whether the library is pair-end or single-end. The key structure is read_counts
+    that contains as dictionary items (read flag, base) tuples.
+    Assigns heuristic snv categories of homozygous and not a snv by using the base ratios of the opposite strand."""
     if single_end == True:
         if non_zero_division(read_counts[undesired_tuples[1]], (read_counts[undesired_tuples[0]] + read_counts[undesired_tuples[1]])) < 0.8:
             snp = 'No'
@@ -273,7 +277,7 @@ def clean_pileup(pileups, cycles, modification_information_per_position, mean_mo
             for pileup, seq in zip_longest(reads.pileups, sequences, fillvalue='BLANK'):
                 if pileup != 'BLANK':
                     read_counts[(pileup.alignment.flag, seq.upper())] += 1
-            pillup_summary(modification_information_per_position, position, read_counts, mean_mod, mean_unmod, user_defined_context, header, desired_tuples, undesired_tuples, modification, reference, reads.get_num_aligned(), method, context_sample_counts, ignore_orphans, single_end, compress, data_line)
+            pileup_summary(modification_information_per_position, position, read_counts, mean_mod, mean_unmod, user_defined_context, header, desired_tuples, undesired_tuples, modification, reference, reads.get_num_aligned(), method, context_sample_counts, ignore_orphans, single_end, compress, data_line)
             modification_information_per_position.pop(position)
             cycles += 1
 
