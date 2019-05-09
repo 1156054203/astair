@@ -1,8 +1,10 @@
 import re
+import os 
 import sys
 import pdb
 import gzip
 import logging
+import subprocess
 
 logging.basicConfig(level=logging.DEBUG)
 logs = logging.getLogger(__name__)
@@ -13,8 +15,16 @@ def fasta_splitting_by_sequence(fasta_file, per_chromosome, write):
     fastas = {}
     keys, sequences, sequences_per_chrom = list(), list(), list()
     try:
-        if isinstance(fasta_file, str) and fasta_file[-3:] == '.gz':
+        if isinstance(fasta_file, str) and fasta_file[-3:] == '.gz' and sys.version[0] == '3':
             fasta_handle = gzip.open(fasta_file, 'rt')
+        elif isinstance(fasta_file, str) and fasta_file[-3:] == '.gz' and sys.version[0] == '2':
+            if os.path.isfile(fasta_file[:-3]) == False:
+                file_ = subprocess.Popen('gunzip {}'.format(fasta_file), shell=True)
+                exit_code = file_.wait()
+                if exit_code == 0:
+                    fasta_handle = open(fasta_file[:-3], 'r')
+            else:
+                fasta_handle = open(fasta_file[:-3], 'r')
         else:
             fasta_handle = open(fasta_file, 'r')
         spaces = False
@@ -47,10 +57,13 @@ def fasta_splitting_by_sequence(fasta_file, per_chromosome, write):
                     if chromosome_found == True:
                         sequences_per_chrom.append(fasta_sequence.splitlines()[0])
         if spaces == True and write == 'w':
-            if isinstance(fasta_file, str) and fasta_file[-3:] == '.gz':
+            if isinstance(fasta_file, str) and fasta_file[-3:] == '.gz' and os.path.isfile(fasta_file[:-3]) == False:
                 fasta_handle = gzip.open(fasta_file, 'rt')
             else:
-                fasta_handle = open(fasta_file, 'r')
+                if os.path.isfile(fasta_file[:-3]) == True:
+                    fasta_handle = open(fasta_file[:-3], 'r')
+                else:
+                    fasta_handle = open(fasta_file, 'r')
             data_line = gzip.open(fasta_file[:-3] + '_no_spaces.fa.gz', 'wt')
             for fasta_sequence in fasta_handle.readlines():
                 if re.match(r'^>', fasta_sequence.splitlines()[0]):

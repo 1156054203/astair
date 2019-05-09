@@ -45,14 +45,14 @@ lists = listsParamType()
 @click.command()
 @click.option('input_file', '--input_file', '-i', required=True, help='BAM|CRAM format file containing sequencing reads.')
 @click.option('read_length', '--read_length', '-l', type=int, required=True, help='The read length is needed to separate the reads.')
-@click.option('method', '--method', '-m', required=False, default='mCtoT', type=click.Choice(['CtoT', 'mCtoT']), help='Specify sequencing method, possible options are CtoT (unmodified cytosines are converted to thymines, bisulfite sequencing-like) and mCtoT (modified cytosines are converted to thymines, TAPS-like). (Default mCtoT)')
+@click.option('method', '--method', '-m', required=False, default='mCtoT', type=click.Choice(['CtoT', 'mCtoT']), help='Specify sequencing method, possible options are CtoT (unmodified cytosines are converted to thymines, bisulfite sequencing-like) and mCtoT (modified cytosines are converted to thymines, TAPS-like). (Default mCtoT).')
 @click.option('modified_positions', '--modified_positions', '-mp', type=lists, required=True, help='Provide a list of positions that were modified in one-based coordinates. List positions with commas and no spaces e.g. 51,111.')
 @click.option('modified_positions_orientation', '--modified_positions_orientation', '-mpo', type=lists, required=True, help='Provide a list of additional information for the modified positions with commas and no spaces e.g. OT,OB')
 @click.option('output_bam', '-output_bam', '-sb', required=False, default=False, is_flag=True, help='If given, bam files separated by the context surrounding the positions of interest will be output.')
 @click.option('single_end', '--se', '-se', default=False, is_flag=True, required=False, help='Indicates single-end sequencing reads (Default False).')
 @click.option('directory', '--directory', '-d', required=True, type=str, help='Output directory to save files.')
 def separate(input_file, read_length, method, modified_positions, modified_positions_orientation, output_bam, single_end, directory):
-    """Separates a bam file based on the context at certain positions.
+    """Separate a bam file based on the context at certain positions.
     Suitable for highly variable and covered spike-ins, as it calculates a rough estimate of the modification value at
     few known positions."""
     position_separator(input_file, read_length, method, modified_positions, modified_positions_orientation, output_bam, single_end, directory)

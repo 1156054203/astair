@@ -24,14 +24,14 @@ from astair.simple_fasta_parser import fasta_splitting_by_sequence
 @click.command()
 @click.option('reference', '--reference', '-f', required=True, help='Reference DNA sequence in FASTA format.')
 @click.option('input_file', '--input_file', '-i', required=True, help='BAM|CRAM format file containing sequencing reads.')
-@click.option('method', '--method', '-m', required=False, default='mCtoT', type=click.Choice(['CtoT', 'mCtoT']), help='Specify sequencing method, possible options are CtoT (unmodified cytosines are converted to thymines, bisulfite sequencing-like) and mCtoT (modified cytosines are converted to thymines, TAPS-like).')
+@click.option('method', '--method', '-m', required=False, default='mCtoT', type=click.Choice(['CtoT', 'mCtoT']), help='Specify sequencing method, possible options are CtoT (unmodified cytosines are converted to thymines, bisulfite sequencing-like) and mCtoT (modified cytosines are converted to thymines, TAPS-like). (Default mCtoT).')
 @click.option('bases_noncpg', '--bases_noncpg', default=3, type=int, help='The number of cytosines conversion events in CpH content to consider the read for removal. Default value is 3.')
-@click.option('per_chromosome', '--per_chromosome', '-chr', default=None, type=str, help='When used, it modifies the chromosome given only. (Default None')
+@click.option('per_chromosome', '--per_chromosome', '-chr', default=None, type=str, help='When used, it calculates the modification rates only per the chromosome given. (Default None).')
 @click.option('N_threads', '--N_threads', '-t', default=1, required=True, help='The number of threads to spawn (Default 1).')
 @click.option('single_end', '--se', '-se', default=False, is_flag=True, required=False, help='Indicates single-end sequencing reads (Default False).')
 @click.option('directory', '--directory', '-d', required=True, type=str, help='Output directory to save files.')
 def filter(reference, input_file, method, bases_noncpg, per_chromosome, N_threads, single_end, directory):
-    """Looks for sequencing reads with more than N CpH modifications."""
+    """Look for sequencing reads with more than N CpH modifications."""
     removing_mod_err(reference, input_file, method, bases_noncpg, per_chromosome, N_threads, single_end, directory)
 
 

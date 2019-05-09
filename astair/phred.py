@@ -42,15 +42,15 @@ from astair.statistics_summary import general_statistics_summary
 
 
 @click.command()
-@click.option('fq1', '--fq1', '-1', required=True, help='First in pair (R1) sequencing reads file in fastq.gz format')
-@click.option('fq2', '--fq2', '-2', required=False, help='Second in pair (R2) sequencing reads file in fastq.gz format')
-@click.option('calculation_mode', '--calculation_mode', '-cm', required=False, default='means', type=click.Choice(['means', 'absolute']), help='Gives the mode of computation used for the Phred scores summary, where means runs faster. (Default is means)')
+@click.option('fq1', '--fq1', '-1', required=True, help='First in pair (R1) sequencing reads file in fastq.gz format.')
+@click.option('fq2', '--fq2', '-2', required=False, help='Second in pair (R2) sequencing reads file in fastq.gz format.')
+@click.option('calculation_mode', '--calculation_mode', '-cm', required=False, default='means', type=click.Choice(['means', 'absolute']), help='Gives the mode of computation used for the Phred scores summary, where means runs faster. (Default means)')
 @click.option('single_end', '--se', '-se', default=False, is_flag=True, required=False, help='Indicates single-end sequencing reads (Default False).')
 @click.option('directory', '--directory', '-d', required=True, type=str, help='Output directory to save files.')
-@click.option('sample_size', '--sample_size', '-s', default=10000000, type=int, required=False, help='The number of reads to sample for the analysis. (Default 10 000 000)')
+@click.option('sample_size', '--sample_size', '-s', default=10000000, type=int, required=False, help='The number of reads to sample for the analysis. (Default 10 000 000).')
 @click.option('plot', '--plot', '-p', required=False, is_flag=True, help='Phred scores will be visualised and output as a pdf file. Requires installed matplotlib.')
-@click.option('minimum_score', '--minimum_score', '-q', required=False, default=15, type=int, help='Minimum Phred score used for visualisation only. (Default 15)')
-@click.option('colors', '--colors', '-c', default=['skyblue', 'mediumaquamarine', 'khaki', 'lightcoral'], type=list, required=False, help="List of color values used for visualistion of A, C, G, T, they are given as color1,color2,color3,color4. Accepts valid matplotlib color names, RGB and RGBA hex strings and  single letters denoting color {'b', 'g', 'r', 'c', 'm', 'y', 'k', 'w'}. (Default skyblue,mediumaquamarine,khaki,lightcoral)")
+@click.option('minimum_score', '--minimum_score', '-q', required=False, default=15, type=int, help='Minimum Phred score used for visualisation only. (Default 15).')
+@click.option('colors', '--colors', '-c', default=['skyblue', 'mediumaquamarine', 'khaki', 'lightcoral'], type=list, required=False, help="List of color values used for visualistion of A, C, G, T, they are given as color1,color2,color3,color4. Accepts valid matplotlib color names, RGB and RGBA hex strings and  single letters denoting color {'b', 'g', 'r', 'c', 'm', 'y', 'k', 'w'}. (Default skyblue,mediumaquamarine,khaki,lightcoral).")
 def phred(fq1, fq2, calculation_mode, directory, sample_size, minimum_score, colors, plot, single_end):
     """Calculate per base (A, C, T, G) Phred scores for each strand."""
     Phred_scores_plotting(fq1, fq2, calculation_mode, directory, sample_size, minimum_score, colors, plot, single_end)
@@ -152,16 +152,16 @@ def main_Phred_score_calculation_output(fq1, fq2, sample_size, directory, name, 
     queue = [Queue(), Queue()]
     threads.append(Thread(target=lambda que, arg1, arg2, arg3, arg4, arg5: que.put(Phred_score_value_return(arg1, arg2, arg3, arg4, arg5)),
                           args=(queue[0], fq1, sample_size, calculation_mode, fq1, fq2), ))
-    if single_end == False:
+    if single_end == False or fq2 != None:
         threads.append(Thread(target=lambda que, arg1, arg2, arg3, arg4, arg5: que.put(Phred_score_value_return(arg1, arg2, arg3, arg4, arg5)),
                           args=(queue[1], fq2, sample_size, calculation_mode, fq1, fq2), ))
     threads[0].start()
-    if single_end == False:
+    if single_end == False or fq2 != None:
         threads[1].start()
     for thread in threads:
         thread.join()
     read_values_fq1 = queue[0].get()
-    if single_end == False:
+    if single_end == False or fq2 != None:
         read_values_fq2 = queue[1].get()
     else:
         read_values_fq2 = None
@@ -246,14 +246,14 @@ def Phred_scores_plotting(fq1, fq2, calculation_mode, directory, sample_size, mi
     try:
         file1 = open(fq1, 'r')
         file1.close()
-        if single_end == False:
+        if single_end == False or fq2 != None:
             file2 = open(fq2, 'r')
             file2.close()
     except Exception:
         logs.error('The input fastq files do not exist.', exc_info=True)
         sys.exit(1)
     name = path.splitext(path.basename(fq1))[0]
-    if single_end == False:
+    if single_end == False or fq2 != None:
         name = re.sub('_(R1|1).fq', '', name)
     else:
         name = re.sub('.fq', '', name)
@@ -267,12 +267,12 @@ def Phred_scores_plotting(fq1, fq2, calculation_mode, directory, sample_size, mi
         colors = "".join(colors).split(',')
     read_values_fq1, read_values_fq2 = main_Phred_score_calculation_output(fq1, fq2, sample_size, directory, name, calculation_mode, single_end)
     data_fq1, maxy1 = Phred_values_return(read_values_fq1, 'F', directory, name, calculation_mode, single_end)
-    if single_end == False:
+    if single_end == False  or fq2 != None:
         data_fq2, maxy2 = Phred_values_return(read_values_fq2, 'R', directory, name, calculation_mode, single_end)
     try:
         if plot:
             pyp.figure()
-            if single_end == False:
+            if single_end == False  or fq2 != None:
                 fig, fq = pyp.subplots(1, 2)
                 fig.suptitle('Sequencing base quality', fontsize=14)
                 pyp.subplots_adjust(wspace=0.4)

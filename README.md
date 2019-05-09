@@ -29,11 +29,11 @@ Options:
 Commands:
   align     Align raw reads in fastq format to a reference genome.
   call      Call modified cytosines from a bam or cram file.
-  filter     Looks for sequencing reads with more than N CpH modifications.
-  find      Outputs positions of Cs from fasta file per context.
+  filter    Look for sequencing reads with more than N CpH modifications.
+  find      Output positions of Cs from fasta file per context.
   mbias     Generate modification per read length information (Mbias).
   phred     Calculate per base (A, C, T, G) Phred scores for each strand.
-  separate Separates a bam file based on the context at certain positions.
+  separate  Separate a bam file based on the context at certain positions.
   simulate  Simulate TAPS/BS conversion on top of an existing bam/cram file.
 
   __________________________________About__________________________________
