@@ -32,7 +32,7 @@ class CallOutputTest(unittest.TestCase):
         """Looks for TAPS sequencing reads with more than N CpH modified positions and filters them out with GZIP compressed fasta reference."""
         removing_mod_err(current + '/test_data/lambda_phage_.fa.gz', current + '/test_data/small_real_taps_lambda_mCtoT.bam', 'mCtoT', 3, None, 1, False, current + '/test_data/')
         subprocess.Popen('gzip {}'.format(current + '/test_data/lambda_phage_.fa'), shell=True)
-        cytosine_modification_finder(current + '/test_data/small_real_taps_lambda_mCtoT_high_CpH_filtered.bam', current + '/test_data/lambda_phage_.fa.gz', 'all', False, False, 13, None, 'mCtoT', 0, 0, True, True, True, False, True, True, 250, None, 1, current + '/test_data/', False, False)
+        cytosine_modification_finder(current + '/test_data/small_real_taps_lambda_mCtoT_high_CpH_filtered.bam', current + '/test_data/lambda_phage.fa', 'all', False, False, 13, None, 'mCtoT', 0, 0, True, True, True, False, True, True, 250, None, 1, current + '/test_data/', False, False)
         data_generated = list()
         with open(current + '/test_data/small_real_taps_lambda_mCtoT_high_CpH_filtered_mCtoT_all.stats','r') as call_file:
             mod_reader = csv.reader(call_file, delimiter='\t', lineterminator='\n')
