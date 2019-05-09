@@ -89,21 +89,23 @@ def check_reference_string_names(reference):
 def check_index(use_bwa, reference, method, output_format):
     """Checks if the provided reference is indexed, and creates an index if one is not found."""
     check_reference_string_names(reference)
+    reference_base_name = os.path.splitext(os.path.basename(reference))[0]
+    reference_extension = os.path.splitext(os.path.basename(fasta_file))[1]
     if (os.path.isfile(reference + '.bwt') == False and method == 'mCtoT') \
             or (os.path.isfile(reference + '.bwameth.c2t') == False and method == 'CtoT'):
-        if os.path.isfile(os.path.splitext(os.path.basename(reference))[0] + '_no_spaces.fa.gz') == False:
-            if (output_format == 'CRAM' and os.path.splitext(os.path.basename(reference))[1] == '.gz') or (sys.version[0] == '2' and os.path.splitext(os.path.basename(reference))[1] == '.gz' ):
+        if os.path.isfile(reference_base_name + '_no_spaces.fa.gz') == False:
+            if (output_format == 'CRAM' and reference_extension == '.gz') or (sys.version[0] == '2' and reference_extension == '.gz' ):
                 subprocess.Popen('gunzip {}'.format(reference), shell=True)
-                reference = os.path.splitext(os.path.basename(reference))[0]
+                reference = reference_base_name
             build_command = '{} index {}'.format(use_bwa, reference)
         else:
             if output_format == 'CRAM' or sys.version[0] == '2':
-                subprocess.Popen('gunzip {}'.format(os.path.splitext(os.path.basename(reference))[0] + '_no_spaces.fa.gz'), shell=True)
-                build_command = '{} index {}'.format(use_bwa, os.path.splitext(os.path.basename(reference))[0] + '_no_spaces.fa')
-                reference = os.path.splitext(os.path.basename(reference))[0] + '_no_spaces.fa'
+                subprocess.Popen('gunzip {}'.format(reference_base_name + '_no_spaces.fa.gz'), shell=True)
+                build_command = '{} index {}'.format(use_bwa, reference_base_name + '_no_spaces.fa')
+                reference = reference_base_name + '_no_spaces.fa'
             else:
-                build_command = '{} index {}'.format(use_bwa, os.path.splitext(os.path.basename(reference))[0] + '_no_spaces.fa.gz')
-                reference = os.path.splitext(os.path.basename(reference))[0] + '_no_spaces.fa.gz'
+                build_command = '{} index {}'.format(use_bwa, reference_base_name + '_no_spaces.fa.gz')
+                reference = os.path.splitext(reference_base_name + '_no_spaces.fa.gz')
         index_fasta = subprocess.Popen(build_command, shell=True)
         index_fasta.wait()
     return reference

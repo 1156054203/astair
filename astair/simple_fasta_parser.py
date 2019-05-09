@@ -15,16 +15,19 @@ def fasta_splitting_by_sequence(fasta_file, per_chromosome, write):
     fastas = {}
     keys, sequences, sequences_per_chrom = list(), list(), list()
     try:
-        if isinstance(fasta_file, str) and os.path.splitext(os.path.basename(fasta_file))[1] == '.gz' and sys.version[0] == '3':
+        if isinstance(fasta_file, str):
+            reference_absolute_name = os.path.splitext(os.path.abspath(fasta_file))[0]
+            reference_extension = os.path.splitext(os.path.basename(fasta_file))[1]
+        if isinstance(fasta_file, str) and reference_extension == '.gz' and sys.version[0] == '3':
             fasta_handle = gzip.open(fasta_file, 'rt')
-        elif isinstance(fasta_file, str) and os.path.splitext(os.path.basename(fasta_file))[1] == '.gz' and sys.version[0] == '2':
-            if os.path.isfile(os.path.splitext(os.path.basename(fasta_file))[0]) == False:
+        elif isinstance(fasta_file, str) and reference_extension == '.gz' and sys.version[0] == '2':
+            if os.path.isfile(reference_absolute_name) == False:
                 file_ = subprocess.Popen('gunzip {}'.format(fasta_file), shell=True)
                 exit_code = file_.wait()
                 if exit_code == 0:
-                    fasta_handle = open(os.path.splitext(os.path.abspath(fasta_file))[0], 'r')
+                    fasta_handle = open(reference_absolute_name, 'r')
             else:
-                fasta_handle = open(os.path.splitext(os.path.abspath(fasta_file))[0], 'r')
+                fasta_handle = open(reference_absolute_name, 'r')
         else:
             fasta_handle = open(fasta_file, 'r')
         spaces = False
@@ -57,14 +60,14 @@ def fasta_splitting_by_sequence(fasta_file, per_chromosome, write):
                     if chromosome_found == True:
                         sequences_per_chrom.append(fasta_sequence.splitlines()[0])
         if spaces == True and write == 'w':
-            if isinstance(fasta_file, str) and os.path.splitext(os.path.basename(fasta_file))[1] == '.gz' and os.path.isfile(os.path.splitext(os.path.basename(fasta_file))[0]) == False:
+            if isinstance(fasta_file, str) and reference_extension == '.gz' and os.path.isfile(reference_absolute_name) == False:
                 fasta_handle = gzip.open(fasta_file, 'rt')
             else:
-                if os.path.isfile(os.path.splitext(os.path.basename(fasta_file))[0]) == True:
-                    fasta_handle = open(os.path.splitext(os.path.abspath(fasta_file))[0], 'r')
+                if os.path.isfile(reference_absolute_name) == True:
+                    fasta_handle = open(reference_absolute_name, 'r')
                 else:
                     fasta_handle = open(fasta_file, 'r')
-            data_line = gzip.open(os.path.splitext(os.path.abspath(fasta_file))[0] + '_no_spaces.fa.gz', 'wt')
+            data_line = gzip.open(reference_absolute_name + '_no_spaces.fa.gz', 'wt')
             for fasta_sequence in fasta_handle.readlines():
                 if re.match(r'^>', fasta_sequence.splitlines()[0]):
                         data_line.write('{}\n'.format(fasta_sequence.splitlines()[0].replace(' ', '_')))
