@@ -44,9 +44,9 @@ Commands:
 
 In general, you can use `--help` on all `astair` sub-commands to get detailed instructions on the available options.
 
-(If for some reason `pip` is not an option, [see below](#markdown-header-installing-astair-without-pip) for further ways to install `asTair`.)
+(If for some reason `pip` is not an option, [check our FAQ](https://bitbucket.org/bsblabludwig/astair/wiki/FAQ#markdown-header-installing-astair-without-pip) for further ways to install `asTair`.)
 
-All of the examples in the main part of the current tutorial are based on the assumption that the input sequencing data are __TAPS__  pair-end sequencing reads, however, asTair analyses can be run in single-end mode (`--se`).  Also, asTair enables you to run analyses on __WGBS__ data, which requires a running installation of  [`bwa-meth`](https://github.com/brentp/bwa-meth) for the alignment step. For more information on WGBS analyses you may check the section _Analysis of WGBS data (or other unmodified cytosine to thymine conversion methods)_.
+All of the examples in the main part of the current tutorial are based on the assumption that the input sequencing data are __TAPS__  pair-end sequencing reads, however, asTair analyses can be run in single-end mode (`--se`).  Also, asTair enables you to run analyses on __WGBS__ data, which requires a running installation of  [`bwa-meth`](https://github.com/brentp/bwa-meth) for the alignment step. For more information on WGBS analyses you may check the section [Analysis of WGBS data (or other unmodified cytosine to thymine conversion methods)](#markdown-header-analysis-of-wgbs-data-or-other-unmodified-cytosine-to-thymine-conversion-methods).
 
 ## 1. Align reads
 
@@ -118,53 +118,7 @@ The header should be mostly self-explanatory. `MOD` and `UNMOD` refer to the num
 1. Do quality control of the sequencing reads and do quality trimming before mapping and dispose of very short reads, using [FastQC](https://www.bioinformatics.babraham.ac.uk/projects/fastqc/), [trimgalore](https://www.bioinformatics.babraham.ac.uk/projects/trim_galore/) or similar tools.
 2. In most cases, it will be best to remove PCR duplicates before running the modification caller, unless your reads are non-randomly fragmented (e.g. enzymatically digested).
 3. Check the fragment (insert) size distribution and decide on an overlap removal method for paired-end reads. The simplest option is the default removal of overlaps handled by `astair call`, which will randomly select one of two overlapping reads. This behaviour can be disabled by the `-sc` option, in case you are using a more sophisticated overlap-clipping tool.
-4.  For speed and convenience we recommend using --per_chromosome option if possible in order to run them in parallel.
-
-## Read our Wiki
-
-### More information on asTair [tools](https://bitbucket.org/bsblabludwig/astair/wiki/Home)
-
-### asTair [FAQ](https://bitbucket.org/bsblabludwig/astair/wiki/FAQ) 
-
-
-## Installing asTair without `pip`
-
-If pip is not available for some reason, you can simply download the package directly and install it manually:
-
-```bash
-wget https://bitbucket.org/bsblabludwig/astair/get/master.tar.gz
-# or if you don't have wget, try
-# curl -O https://bitbucket.org/bsblabludwig/astair/get/master.tar.gz
-
-tar -xzf master.tar.gz -C astair_3 --strip-components=1
-
-cd astair_3
-```
-
-We would recommend using a virtual environment to avoid issues with globally installed packages, or if you are on a shared system and need to install locally:
-
-```bash
-virtualenv venv
-
-# Activate the environment
-source venv/bin/activate
-```
-
-To install, execute:
-
-```bash
-python setup.py install
-# or, if you want to install as a user, but without using a virtual environment:
-# python setup.py install --user
-```
-
-Now, you can perform all analysis and processing steps described [above](#markdown-header-basic-usage).
-
-If you were using a virtual environment, you can deactivate the environment after you're finished using astair by calling:
-
-```bash
-deactivate
-```
+4.  For speed and convenience we recommend using the `--per_chromosome` option, if possible, in order to run multiple processes in parallel. This also reduces the memory requirement when asTair is run on a desktop machine.
 
 ## Analysis of WGBS data (or other unmodified cytosine to thymine conversion methods)
 
@@ -179,14 +133,11 @@ You can now use `astair call` with `--method CtoT` for the modifcation calling:
 ```bash
 astair call -i output_dir/lambda.phage_test_sample_BS_CtoT.cram -f lambda_phage.fa --method CtoT --context CpG --minimum_base_quality 13 -d output_dir/
 ```
+# Further information
 
-### Removal of highly non-CpG modifications per read for WGBS data
+- [More information on other asTair tools](https://bitbucket.org/bsblabludwig/astair/wiki/Home)
+- [asTair FAQ](https://bitbucket.org/bsblabludwig/astair/wiki/FAQ) 
 
-In some cases multiple non-CpG modification events per read are viewed as a result of incomplete bisulfite conversion. `astair filter` removes such reads:
-
-```bash
-astair filter -i tests/test_data/small_real_wgbs_lambda_CtoT.bam -f lambda_phage.fa --method CtoT -d output_dir/
-```
 # License
 
 This software is made available under the terms of the [GNU General Public License v3](http://www.gnu.org/licenses/gpl-3.0.html).
