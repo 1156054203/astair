@@ -22,7 +22,7 @@ class SequenceSearchOutputTest(unittest.TestCase):
         data_context = {}
         context_total_counts = defaultdict(int)
         contexts, all_keys = mod_caller.sequence_context_set_creation('CHH', None)
-        context.ahocorasick_search('CHH', contexts, 'AACTTCATCACT', 'test_string', None, data_context, context_total_counts, None)
+        context.ahocorasick_search('CHH', contexts, 'AACTTCATCACT', 'test_string', None, data_context, context_total_counts, None, None)
         self.assertEqual(data_context, {('test_string', 2, 3): ('CTT', 'CHH', 'T', 'C'),
                                         ('test_string', 5, 6): ('CAT', 'CHH', 'T', 'C'),
                                         ('test_string', 8, 9): ('CAC', 'CHH', 'T', 'C')})
@@ -32,7 +32,7 @@ class SequenceSearchOutputTest(unittest.TestCase):
         data_context = {}
         context_total_counts = defaultdict(int)
         contexts, all_keys = mod_caller.sequence_context_set_creation('CHH', None)
-        context.ahocorasick_search('CHHb', contexts, 'AAGGCTTTGccc', 'test_string', None, data_context, context_total_counts, None)
+        context.ahocorasick_search('CHHb', contexts, 'AAGGCTTTGccc', 'test_string', None, data_context, context_total_counts, None, None)
         self.assertEqual(data_context, {('test_string', 2, 3): ('CTT', 'CHH', 'A', 'G'),
                                         ('test_string', 3, 4): ('CCT', 'CHH', 'A', 'G'),
                                         ('test_string', 8, 9): ('CAA', 'CHH', 'A', 'G')})
@@ -42,7 +42,7 @@ class SequenceSearchOutputTest(unittest.TestCase):
         data_context = {}
         context_total_counts = defaultdict(int)
         contexts, all_keys = mod_caller.sequence_context_set_creation('CHG', None)
-        context.ahocorasick_search('CHG', contexts, 'AACTTCAGCACT', 'test_string', None, data_context, context_total_counts, None)
+        context.ahocorasick_search('CHG', contexts, 'AACTTCAGCACT', 'test_string', None, data_context, context_total_counts, None, None)
         self.assertEqual(data_context, {('test_string', 5, 6): ('CAG', 'CHG', 'T', 'C')})
 
     def test_ahocorasick_search_CHG_bottom(self):
@@ -50,7 +50,7 @@ class SequenceSearchOutputTest(unittest.TestCase):
         data_context = {}
         context_total_counts = defaultdict(int)
         contexts, all_keys = mod_caller.sequence_context_set_creation('CHG', None)
-        context.ahocorasick_search('CHGb', contexts, 'AACTTCAGCACT', 'test_string', None, data_context, context_total_counts, None)
+        context.ahocorasick_search('CHGb', contexts, 'AACTTCAGCACT', 'test_string', None, data_context, context_total_counts, None, None)
         self.assertEqual(data_context, {('test_string', 7, 8): ('CTG', 'CHG', 'A', 'G')})
 
     def test_ahocorasick_search_CpG(self):
@@ -58,8 +58,8 @@ class SequenceSearchOutputTest(unittest.TestCase):
         data_context = {}
         context_total_counts = defaultdict(int)
         contexts, all_keys = mod_caller.sequence_context_set_creation('CpG', None)
-        context.ahocorasick_search('CG', contexts, 'AAGCGTTTGccc', 'test_string', None, data_context, context_total_counts, None)
-        context.ahocorasick_search('CGb', contexts, 'AAGCGTTTGccc', 'test_string', None, data_context, context_total_counts, None)
+        context.ahocorasick_search('CG', contexts, 'AAGCGTTTGccc', 'test_string', None, data_context, context_total_counts, None, None)
+        context.ahocorasick_search('CGb', contexts, 'AAGCGTTTGccc', 'test_string', None, data_context, context_total_counts, None, None)
         self.assertEqual(data_context, {('test_string', 3, 4): ('CGT', 'CpG', 'T', 'C'), ('test_string', 4, 5): ('CGC', 'CpG', 'A', 'G')})
         
     def test_ahocorasick_search_user_short(self):
@@ -67,7 +67,7 @@ class SequenceSearchOutputTest(unittest.TestCase):
         data_context = {}
         context_total_counts = defaultdict(int)
         contexts, all_keys = mod_caller.sequence_context_set_creation('CpG', 'AAcTG')
-        context.ahocorasick_search('user', contexts, 'AAcTGCGTTTGcccTTGAC', 'test_string', 'AAcTG', data_context, context_total_counts, None)
+        context.ahocorasick_search('user', contexts, 'AAcTGCGTTTGcccTTGAC', 'test_string', 'AAcTG', data_context, context_total_counts, None, None)
         self.assertEqual(data_context, {('test_string', 2, 3): ('AAcTG', 'user defined context', 'T', 'C'), ('test_string', 16, 17): ('AAcTG', 'user defined context', 'A', 'G')})
         
     def test_ahocorasick_search_user_long(self):
@@ -75,7 +75,7 @@ class SequenceSearchOutputTest(unittest.TestCase):
         data_context = {}
         context_total_counts = defaultdict(int)
         contexts, all_keys = mod_caller.sequence_context_set_creation('CpG', 'AATTTCCCGAcgt')
-        context.ahocorasick_search('user', contexts, 'AATTTCCCGAcgtAAcTGTTaaagggcTgcACGTTTGcccTTGAC', 'test_string', 'AATTTCCCGAcgt', data_context, context_total_counts, None)
+        context.ahocorasick_search('user', contexts, 'AATTTCCCGAcgtAAcTGTTaaagggcTgcACGTTTGcccTTGAC', 'test_string', 'AATTTCCCGAcgt', data_context, context_total_counts, None, None)
         self.assertEqual(data_context, {('test_string', 5, 6): ('AATTTCCCGAcgt', 'user defined context', 'T', 'C'), ('test_string', 28, 29): ('AATTTCCCGAcgt', 'user defined context', 'A', 'G')})
         
     def test_ahocorasick_search_user_none(self):
@@ -84,7 +84,7 @@ class SequenceSearchOutputTest(unittest.TestCase):
         data_context = {}
         context_total_counts = defaultdict(int)
         contexts, all_keys = mod_caller.sequence_context_set_creation('CpG', 'AATTT')
-        context.ahocorasick_search('user', contexts, 'AAcTGCGTTTGcccTTGAC', 'test_string', 'AATTT', data_context, context_total_counts, None)
+        context.ahocorasick_search('user', contexts, 'AAcTGCGTTTGcccTTGAC', 'test_string', 'AATTT', data_context, context_total_counts, None, None)
         self.assertEqual(data_context, {})
 
 if __name__ == '__main__':
