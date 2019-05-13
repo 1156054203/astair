@@ -81,14 +81,9 @@ def which_path(bwa_path, samtools_path, method):
     return use_bwa, use_samtools
 
 
-def check_reference_string_names(reference):
-    """Checks whether there are spaces in the reference names in the fasta file. In case such spaces exist, they will be replaced with underscores before building the index."""
-    fasta_splitting_by_sequence(reference, None, 'w')
-
-
 def check_index(use_bwa, reference, method, output_format):
-    """Checks if the provided reference is indexed, and creates an index if one is not found."""
-    check_reference_string_names(reference)
+    """Checks whether there are spaces in the reference names in the fasta file. In case such spaces exist, they will be replaced with underscores before building the index. Otherwise, checks if the provided reference is indexed, and creates an index if one is not found."""
+    fasta_splitting_by_sequence(reference, None, 'w')
     reference_base_name = os.path.splitext(os.path.basename(reference))[0]
     reference_extension = os.path.splitext(os.path.basename(fasta_file))[1]
     if (os.path.isfile(reference + '.bwt') == False and method == 'mCtoT') \
