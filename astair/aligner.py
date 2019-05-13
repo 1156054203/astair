@@ -12,7 +12,7 @@ import subprocess
 from datetime import datetime
 from distutils.spawn import find_executable
 
-from simple_fasta_parser import fasta_splitting_by_sequence
+from astair.simple_fasta_parser import fasta_splitting_by_sequence
 
 
 @click.command()
