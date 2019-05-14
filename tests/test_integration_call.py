@@ -38,7 +38,8 @@ class CallOutputTest(unittest.TestCase):
         self.assertEqual(data_generated[:-1], [('CONTEXT', 'SPECIFIC_CONTEXT', 'MEAN_MODIFICATION_RATE_PERCENT', 'TOTAL_POSITIONS', 'COVERED_POSITIONS', 'MODIFIED', 'UNMODIFIED'), ('CpG', '*', '63.177', '6225', '46', '1961', '1143'), ('*', 'CGA', '53.409', '1210', '12', '423', '369'), ('*', 'CGC', '97.222', '1730', '11', '595', '17'), ('*', 'CGG', '53.556', '1847', '13', '512', '444'), ('*', 'CGT', '57.93', '1438', '10', '431', '313'), ('CHG', '*', '0.129', '6451', '44', '5', '3885'), ('*', 'CAG', '0.072', '2302', '15', '1', '1388'), ('*', 'CCG', '0.099', '1847', '13', '1', '1005'), ('*', 'CTG', '0.201', '2302', '16', '3', '1492'), ('CHH', '*', '25.366', '11503', '81', '1663', '4893'), ('*', 'CTT', '18.301', '1349', '15', '209', '933'), ('*', 'CAT', '29.12', '1802', '14', '341', '830'), ('*', 'CCT', '29.799', '1182', '14', '326', '768'), ('*', 'CTA', '0.0', '501', '1', '0', '20'), ('*', 'CAA', '41.735', '1432', '7', '255', '356'), ('*', 'CCA', '31.498', '1610', '8', '246', '535'), ('*', 'CTC', '8.27', '1116', '10', '65', '721'), ('*', 'CAC', '41.093', '1474', '5', '203', '291'), ('*', 'CCC', '3.939', '1037', '7', '18', '439')])
         remove = 'rm {}'.format(current + '/test_data/small_lambda_mCtoT_all.*')
         subprocess.Popen(remove, shell=True)
-        subprocess.Popen('gzip {}'.format(current + '/test_data/lambda_phage_.fa'), shell=True)
+        if path.isfile(current + '/test_data/lambda_phage_.fa'):
+            subprocess.Popen('gzip {}'.format(current + '/test_data/lambda_phage_.fa'), shell=True)
         
         
     def test_call_default_taps_SE(self):
