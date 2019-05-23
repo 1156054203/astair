@@ -48,7 +48,7 @@ from astair.simple_fasta_parser import fasta_splitting_by_sequence
 @click.option('minimum_mapping_quality', '--minimum_mapping_quality', '-mq', required=False, type=int, default=0, help='Set the minimum mapping quality for a read to be used in the pileup (Default 0).')
 @click.option('adjust_acapq_threshold', '--adjust_capq_threshold', '-amq', required=False, type=int, default=0, help='Used to adjust the mapping quality with default 0 for no adjustment and a recommended value for adjustment 50. (Default 0).')
 @click.option('mark_matches', '--mark_matches', '-mm', required=False, default=True, type=bool, help='Output bases matching the reference per strand (Default True).')
-@click.option('mark_ends', '--mark_ends', '-me', required=False, default=True, type=bool, help='Marks head and tail bases in the read (Default True).')
+@click.option('mark_ends', '--mark_ends', '-me', required=False, default=False, type=bool, help='Marks head and tail bases in the read (Default True).')
 @click.option('add_indels', '--add_indels', '-ai', required=False, default=True, type=bool, help='Adds inserted bases and Ns for base skipped from the reference (Default True).')
 @click.option('redo_baq', '--redo_baq', '-rbq', required=False, default=False, type=bool, help='Re-calculates per-Base Alignment Qualities ignoring existing base qualities (Default False).')
 @click.option('compute_baq', '--compute_baq', '-cbq', required=False, default=True, type=bool, help='Performs re-alignment computing of per-Base Alignment Qualities (Default True).')
@@ -77,18 +77,11 @@ def modification_calls_writer(data_mods, compress, data_line, header=False):
         if compress == False:
             if header:
                 data_line.writerow(["CHROM", "START", "END", "MOD_LEVEL", "MOD", "UNMOD", "REF", "ALT", "SPECIFIC_CONTEXT", "CONTEXT", 'SNV', 'TOTAL_DEPTH'])
-                data_line.writerow(data_mods)
-            else:
-                data_line.writerow(data_mods)
+            data_line.writerow(data_mods)
         else:
             if header:
                 data_line.write('{}\t{}\t{}\t{}\t{}\t{}\t{}\t{}\t{}\t{}\t{}\t{}\n'.format('CHROM', 'START', 'END', 'MOD_LEVEL', 'MOD', 'UNMOD', 'REF', 'ALT', 'SPECIFIC_CONTEXT', 'CONTEXT', 'SNV', 'TOTAL_DEPTH'))
-                data_line.write(
-                    '{}\t{}\t{}\t{}\t{}\t{}\t{}\t{}\t{}\t{}\t{}\t{}\n'.format(data_mods[0], data_mods[1], data_mods[2], data_mods[3],
-                                                                 data_mods[4], data_mods[5], data_mods[6], data_mods[7],
-                                                                 data_mods[8], data_mods[9], data_mods[10], data_mods[11]))
-            else:
-                data_line.write(
+            data_line.write(
                     '{}\t{}\t{}\t{}\t{}\t{}\t{}\t{}\t{}\t{}\t{}\t{}\n'.format(data_mods[0], data_mods[1], data_mods[2], data_mods[3],
                                                                  data_mods[4], data_mods[5], data_mods[6], data_mods[7],
                                                                  data_mods[8], data_mods[9], data_mods[10], data_mods[11]))
