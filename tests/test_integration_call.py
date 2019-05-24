@@ -25,6 +25,19 @@ class CallOutputTest(unittest.TestCase):
         remove = 'rm {}'.format(current + '/test_data/small_lambda_mCtoT_all.*')
         subprocess.Popen(remove, shell=True)
         
+    def test_call_taps_mark_ends(self):
+        """Looks for TAPS modified cytosine positions and compares their modification level with
+        the expected one by context for a sample with mark_ends issue."""
+        cytosine_modification_finder(current + '/test_data/small_real_taps_chr10:20000-60000_pos.bam', current + '/test_data/hg38_chr10_20000-60000.fa', 'all', False, False, 13, None, 'mCtoT', 0, 0, True, False, True, True, 250, None, 1, current + '/test_data/', False, False)
+        data_generated = list()
+        with open(current + '/test_data/small_real_taps_chr10:20000-60000_pos_mCtoT_all.stats','r') as call_file:
+            mod_reader = csv.reader(call_file, delimiter='\t', lineterminator='\n')
+            for row in mod_reader:
+                data_generated.append(tuple((row)))
+        self.assertEqual(data_generated[:20], [('CONTEXT', 'SPECIFIC_CONTEXT', 'MEAN_MODIFICATION_RATE_PERCENT', 'TOTAL_POSITIONS', 'COVERED_POSITIONS', 'MODIFIED', 'UNMODIFIED'), ('CpG', '*', '59.47', '804', '567', '1727', '1177'), ('*', 'CGA', '52.542', '170', '115', '341', '308'), ('*', 'CGC', '74.0', '191', '135', '444', '156'), ('*', 'CGG', '65.306', '233', '169', '512', '272'), ('*', 'CGT', '49.369', '210', '148', '430', '441'), ('CHG', '*', '0.174', '3583', '2464', '32', '18319'), ('*', 'CAG', '0.205', '1675', '1147', '18', '8760'), ('*', 'CCG', '0.38', '233', '170', '3', '787'), ('*', 'CTG', '0.125', '1675', '1147', '11', '8772'), ('CHH', '*', '0.174', '12229', '7772', '104', '59709'), ('*', 'CTT', '0.204', '1503', '900', '15', '7336'), ('*', 'CAT', '0.221', '1521', '878', '15', '6766'), ('*', 'CCT', '0.092', '1398', '966', '7', '7561'), ('*', 'CTA', '0.046', '952', '550', '2', '4330'), ('*', 'CAA', '0.027', '1626', '938', '2', '7312'), ('*', 'CCA', '0.237', '1606', '1073', '19', '8009'), ('*', 'CTC', '0.214', '1253', '843', '14', '6515'), ('*', 'CAC', '0.314', '1176', '748', '18', '5714'), ('*', 'CCC', '0.194', '1194', '876', '12', '6166')])
+        remove = 'rm {}'.format(current + '/test_data/small_real_taps_chr10:20000-60000_pos_mCtoT_all.*')
+        subprocess.Popen(remove, shell=True)     
+        
     
     def test_call_default_taps_gzip(self):
         """Looks for TAPS modified cytosine positions and compares their modification level with
