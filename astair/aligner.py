@@ -115,8 +115,9 @@ def run_alignment(fq1, fq2, reference, bwa_path, samtools_path, directory, metho
     logs.info("asTair genome aligner started running. {} seconds".format((time_s - time_b).total_seconds()))
     name = os.path.splitext(os.path.basename(fq1))[0]
     if single_end == False  or fq2 != None:
-        name = re.sub('(_R1|_1)', '', "_".join(name.split('.')[:-1]))
-    name = "_".join(name.split('.')[:-1])
+        name = re.sub('(_R1|_1)', '', name)
+    if  os.path.splitext(os.path.basename(fq1))[1] == 'gz':
+        name = "_".join(name.split('.')[:-1])
     directory = os.path.abspath(directory)
     if list(directory)[-1]!="/":
         directory = directory + "/"
