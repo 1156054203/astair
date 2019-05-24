@@ -48,7 +48,6 @@ from astair.simple_fasta_parser import fasta_splitting_by_sequence
 @click.option('minimum_mapping_quality', '--minimum_mapping_quality', '-mq', required=False, type=int, default=0, help='Set the minimum mapping quality for a read to be used in the pileup (Default 0).')
 @click.option('adjust_acapq_threshold', '--adjust_capq_threshold', '-amq', required=False, type=int, default=0, help='Used to adjust the mapping quality with default 0 for no adjustment and a recommended value for adjustment 50. (Default 0).')
 @click.option('mark_matches', '--mark_matches', '-mm', required=False, default=True, type=bool, help='Output bases matching the reference per strand (Default True).')
-@click.option('mark_ends', '--mark_ends', '-me', required=False, default=False, type=bool, help='Marks head and tail bases in the read (Default True).')
 @click.option('add_indels', '--add_indels', '-ai', required=False, default=True, type=bool, help='Adds inserted bases and Ns for base skipped from the reference (Default True).')
 @click.option('redo_baq', '--redo_baq', '-rbq', required=False, default=False, type=bool, help='Re-calculates per-Base Alignment Qualities ignoring existing base qualities (Default False).')
 @click.option('compute_baq', '--compute_baq', '-cbq', required=False, default=True, type=bool, help='Performs re-alignment computing of per-Base Alignment Qualities (Default True).')
@@ -58,9 +57,9 @@ from astair.simple_fasta_parser import fasta_splitting_by_sequence
 @click.option('N_threads', '--N_threads', '-t', default=1, required=True, help='The number of threads to spawn (Default 1).')
 @click.option('compress', '--gz', '-z', default=False, is_flag=True, required=False, help='Indicates whether the mods file output will be compressed with gzip (Default False).')
 @click.option('directory', '--directory', '-d', required=True, type=str, help='Output directory to save files.')
-def call(input_file, reference, context, zero_coverage, skip_clip_overlap, minimum_base_quality, user_defined_context, method, minimum_mapping_quality, adjust_acapq_threshold,mark_matches, mark_ends, add_indels, redo_baq, compute_baq, ignore_orphans, max_depth,per_chromosome, N_threads, directory, compress, single_end):
+def call(input_file, reference, context, zero_coverage, skip_clip_overlap, minimum_base_quality, user_defined_context, method, minimum_mapping_quality, adjust_acapq_threshold,mark_matches, add_indels, redo_baq, compute_baq, ignore_orphans, max_depth,per_chromosome, N_threads, directory, compress, single_end):
         """Call modified cytosines from a bam or cram file. The output consists of two files, one containing modification counts per nucleotide, the other providing genome-wide statistics per context."""
-        cytosine_modification_finder(input_file, reference, context, zero_coverage, skip_clip_overlap, minimum_base_quality, user_defined_context, method, minimum_mapping_quality, adjust_acapq_threshold,mark_matches, mark_ends, add_indels, redo_baq, compute_baq, ignore_orphans, max_depth, per_chromosome, N_threads, directory, compress, single_end)
+        cytosine_modification_finder(input_file, reference, context, zero_coverage, skip_clip_overlap, minimum_base_quality, user_defined_context, method, minimum_mapping_quality, adjust_acapq_threshold,mark_matches, add_indels, redo_baq, compute_baq, ignore_orphans, max_depth, per_chromosome, N_threads, directory, compress, single_end)
 
 
 warnings.simplefilter(action='ignore', category=FutureWarning)
@@ -251,7 +250,7 @@ def pileup_summary(modification_information_per_position, position, read_counts,
 
 
 def clean_pileup(pileups, cycles, modification_information_per_position, mean_mod, mean_unmod, user_defined_context, file_name, method,
-                 mark_matches, mark_ends, add_indels, context_sample_counts, ignore_orphans, single_end, compress, data_line):
+                 mark_matches, add_indels, context_sample_counts, ignore_orphans, single_end, compress, data_line):
     """Takes reads from the piled-up region and calculates modification levels."""
     for reads in pileups:
         if cycles == 0:
@@ -263,19 +262,18 @@ def clean_pileup(pileups, cycles, modification_information_per_position, mean_mo
             desired_tuples, undesired_tuples, modification, reference = flags_expectation(modification_information_per_position, position, ignore_orphans, single_end)
             read_counts = defaultdict(int)
             try:
-                sequences = reads.get_query_sequences(mark_matches=mark_matches, mark_ends=mark_ends, add_indels=add_indels)
+                sequences = reads.get_query_sequences(mark_matches=mark_matches, mark_ends = False, add_indels=add_indels)
             except AssertionError:
                 logs.exception("Failed getting query sequences (AssertionError, pysam). Please decrease the max_depth parameter.")
                 continue
             for pileup, seq in zip_longest(reads.pileups, sequences, fillvalue='BLANK'):
-                if pileup != 'BLANK':
-                    read_counts[(pileup.alignment.flag, seq.upper())] += 1
+                read_counts[(pileup.alignment.flag, seq.upper())] += 1
             pileup_summary(modification_information_per_position, position, read_counts, mean_mod, mean_unmod, user_defined_context, header, desired_tuples, undesired_tuples, modification, reference, reads.get_num_aligned(), method, context_sample_counts, ignore_orphans, single_end, compress, data_line)
             modification_information_per_position.pop(position)
             cycles += 1
 
 def cytosine_modification_finder(input_file, reference, context, zero_coverage, skip_clip_overlap, minimum_base_quality, user_defined_context, method,
-                                 minimum_mapping_quality, adjust_acapq_threshold, mark_matches, mark_ends, add_indels, redo_baq, compute_baq, ignore_orphans,
+                                 minimum_mapping_quality, adjust_acapq_threshold, mark_matches,  add_indels, redo_baq, compute_baq, ignore_orphans,
                                  max_depth, per_chromosome, N_threads, directory, compress, single_end):
     """Searches for cytosine modification positions in the desired contexts and calculates the modificaton levels."""
     time_s = datetime.now()
@@ -328,7 +326,7 @@ def cytosine_modification_finder(input_file, reference, context, zero_coverage, 
                                        max_depth=max_depth, redo_baq=redo_baq, ignore_orphans=ignore_orphans, compute_baq=compute_baq,
                                        min_mapping_quality=minimum_mapping_quality, adjust_acapq_threshold=adjust_acapq_threshold)
                 clean_pileup(pileups, i, modification_information_per_position, mean_mod, mean_unmod, user_defined_context, file_name, method,
-                             mark_matches, mark_ends, add_indels, context_sample_counts, ignore_orphans, single_end, compress, data_line)
+                             mark_matches, add_indels, context_sample_counts, ignore_orphans, single_end, compress, data_line)
         else:
             time_m = datetime.now()
             logs.info("Starting modification calling on {} chromosome (sequence). {} seconds".format(keys, (time_m - time_b).total_seconds()))
@@ -337,7 +335,7 @@ def cytosine_modification_finder(input_file, reference, context, zero_coverage, 
                                    max_depth=max_depth, redo_baq=redo_baq, ignore_orphans=ignore_orphans, compute_baq=compute_baq,
                                    min_mapping_quality=minimum_mapping_quality, adjust_acapq_threshold=adjust_acapq_threshold)
             clean_pileup(pileups, cycles, modification_information_per_position, mean_mod, mean_unmod, user_defined_context, file_name, method,
-                         mark_matches, mark_ends, add_indels, context_sample_counts, ignore_orphans, single_end, compress, data_line)
+                         mark_matches, add_indels, context_sample_counts, ignore_orphans, single_end, compress, data_line)
         if zero_coverage:
             for position in modification_information_per_position.keys():
                 if modification_information_per_position[position][3] == 'C':
