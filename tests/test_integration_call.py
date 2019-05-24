@@ -15,7 +15,7 @@ class CallOutputTest(unittest.TestCase):
     def test_call_default_taps(self):
         """Looks for TAPS modified cytosine positions and compares their modification level with
         the expected one by context."""
-        cytosine_modification_finder(current + '/test_data/small_lambda.bam', current + '/test_data/lambda_phage.fa', 'all', False, False, 13, None, 'mCtoT', 0, 0, True, True, False, True, True, 250, None, 1, current + '/test_data/', False, False)
+        cytosine_modification_finder(current + '/test_data/small_lambda.bam', current + '/test_data/lambda_phage.fa', 'all', False, False, 13, None, 'mCtoT', 0, 0, True, False, True, True, 250, None, 1, current + '/test_data/', False, False)
         data_generated = list()
         with open(current + '/test_data/small_lambda_mCtoT_all.stats','r') as call_file:
             mod_reader = csv.reader(call_file, delimiter='\t', lineterminator='\n')
@@ -29,7 +29,7 @@ class CallOutputTest(unittest.TestCase):
     def test_call_default_taps_gzip(self):
         """Looks for TAPS modified cytosine positions and compares their modification level with
         the expected one by context with GZIP compressed fasta reference."""
-        cytosine_modification_finder(current + '/test_data/small_lambda.bam', current + '/test_data/lambda_phage_.fa.gz', 'all', False, False, 13, None, 'mCtoT', 0, 0, True, True, False, True, True, 250, None, 1, current + '/test_data/', False, False)
+        cytosine_modification_finder(current + '/test_data/small_lambda.bam', current + '/test_data/lambda_phage_.fa.gz', 'all', False, False, 13, None, 'mCtoT', 0, 0, True, False, True, True, 250, None, 1, current + '/test_data/', False, False)
         data_generated = list()
         with open(current + '/test_data/small_lambda_mCtoT_all.stats','r') as call_file:
             mod_reader = csv.reader(call_file, delimiter='\t', lineterminator='\n')
@@ -45,7 +45,7 @@ class CallOutputTest(unittest.TestCase):
     def test_call_default_taps_SE(self):
         """Looks for TAPS modified cytosine positions and compares their modification level with
         the expected one by context."""
-        cytosine_modification_finder(current + '/test_data/small_real_taps_lambda_mCtoT_SE.bam', current + '/test_data/lambda_phage.fa', 'all', False, False, 13, None, 'mCtoT', 0, 0, True, True, False, True, True, 250, None, 1, current + '/test_data/', False, True)
+        cytosine_modification_finder(current + '/test_data/small_real_taps_lambda_mCtoT_SE.bam', current + '/test_data/lambda_phage.fa', 'all', False, False, 13, None, 'mCtoT', 0, 0, True, False, True, True, 250, None, 1, current + '/test_data/', False, True)
         data_generated = list()
         with open(current + '/test_data/small_real_taps_lambda_mCtoT_SE_mCtoT_all.stats','r') as call_file:
             mod_reader = csv.reader(call_file, delimiter='\t', lineterminator='\n')
@@ -60,7 +60,7 @@ class CallOutputTest(unittest.TestCase):
     def test_call_default_wgbs(self):
         """Looks for WGBS modified cytosine positions and compares their modification level with
         the expected one by context."""
-        cytosine_modification_finder(current + '/test_data/small_lambda.bam', current + '/test_data/lambda_phage.fa', 'all', False, False, 13, None, 'CtoT', 0, 0, True, True, False, True, True, 250, None, 1, current + '/test_data/', False, False)
+        cytosine_modification_finder(current + '/test_data/small_lambda.bam', current + '/test_data/lambda_phage.fa', 'all', False, False, 13, None, 'CtoT', 0, 0, True, False, True, True, 250, None, 1, current + '/test_data/', False, False)
         data_generated = list()
         with open(current + '/test_data/small_lambda_CtoT_all.stats','r') as call_file:
             mod_reader = csv.reader(call_file, delimiter='\t', lineterminator='\n')
