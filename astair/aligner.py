@@ -81,26 +81,29 @@ def which_path(bwa_path, samtools_path, method):
     return use_bwa, use_samtools
 
 
-def check_index(use_bwa, reference, method, output_format):
-    """Checks whether there are spaces in the reference names in the fasta file. In case such spaces exist, they will be replaced with underscores before building the index. Otherwise, checks if the provided reference is indexed, and creates an index if one is not found."""
+def check_reference_string_names(reference):
+    """Checks whether there are spaces in the reference names in the fasta file. In case such spaces exist, they will be replaced with underscores before building the index."""
     fasta_splitting_by_sequence(reference, None, 'w')
-    reference_base_name = os.path.splitext(os.path.basename(reference))[0]
-    reference_extension = os.path.splitext(os.path.basename(reference))[1]
+
+
+def check_index(use_bwa, reference, method, output_format):
+    """Checks if the provided reference is indexed, and creates an index if one is not found."""
+    check_reference_string_names(reference)
     if (os.path.isfile(reference + '.bwt') == False and method == 'mCtoT') \
             or (os.path.isfile(reference + '.bwameth.c2t') == False and method == 'CtoT'):
-        if os.path.isfile(reference_base_name + '_no_spaces.fa.gz') == False:
-            if (output_format == 'CRAM' and reference_extension == '.gz') or (sys.version[0] == '2' and reference_extension == '.gz' ):
+        if os.path.isfile(os.path.splitext(os.path.basename(reference))[0] + '_no_spaces.fa.gz') == False:
+            if (output_format == 'CRAM' and os.path.splitext(os.path.basename(reference))[1] == '.gz') or (sys.version[0] == '2' and os.path.splitext(os.path.basename(reference))[1] == '.gz' ):
                 subprocess.Popen('gunzip {}'.format(reference), shell=True)
-                reference = reference_base_name
+                reference = os.path.splitext(os.path.basename(reference))[0]
             build_command = '{} index {}'.format(use_bwa, reference)
         else:
             if output_format == 'CRAM' or sys.version[0] == '2':
-                subprocess.Popen('gunzip {}'.format(reference_base_name + '_no_spaces.fa.gz'), shell=True)
-                build_command = '{} index {}'.format(use_bwa, reference_base_name + '_no_spaces.fa')
-                reference = reference_base_name + '_no_spaces.fa'
+                subprocess.Popen('gunzip {}'.format(os.path.splitext(os.path.basename(reference))[0] + '_no_spaces.fa.gz'), shell=True)
+                build_command = '{} index {}'.format(use_bwa, os.path.splitext(os.path.basename(reference))[0] + '_no_spaces.fa')
+                reference = os.path.splitext(os.path.basename(reference))[0] + '_no_spaces.fa'
             else:
-                build_command = '{} index {}'.format(use_bwa, reference_base_name + '_no_spaces.fa.gz')
-                reference = os.path.splitext(reference_base_name + '_no_spaces.fa.gz')
+                build_command = '{} index {}'.format(use_bwa, os.path.splitext(os.path.basename(reference))[0] + '_no_spaces.fa.gz')
+                reference = os.path.splitext(os.path.basename(reference))[0] + '_no_spaces.fa.gz'
         index_fasta = subprocess.Popen(build_command, shell=True)
         index_fasta.wait()
     return reference
@@ -116,7 +119,7 @@ def run_alignment(fq1, fq2, reference, bwa_path, samtools_path, directory, metho
     name = os.path.splitext(os.path.basename(fq1))[0]
     if single_end == False  or fq2 != None:
         name = re.sub('(_R1|_1)', '', name)
-    if  os.path.splitext(os.path.basename(fq1))[1] == 'gz':
+    if  os.path.splitext(os.path.basename(fq1))[1] == '.gz':
         name = "_".join(name.split('.')[:-1])
     directory = os.path.abspath(directory)
     if list(directory)[-1]!="/":
@@ -183,3 +186,4 @@ def run_alignment(fq1, fq2, reference, bwa_path, samtools_path, directory, metho
 
 if __name__ == '__main__':
     align()
+

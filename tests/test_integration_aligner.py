@@ -29,10 +29,10 @@ class AlignFastaOutputTest(unittest.TestCase):
         bwa = mock_open(read_data = current + '/test_data/bwa').return_value
         bwa = 'bwa_'
         samtools = 'samtools_'
-        run_alignment(current + '/test_data/small_real_taps_lambda_1.fq.gz', current + '/test_data/small_real_taps_lambda_2.fq.gz', current + '/test_data/lambda_phage.fa', bwa, samtools, current + '/test_data/', 'mCtoT', 'BAM', 1, False, 1, 19, 100, 100, 1.5, 20, 500, 0.5, 0, 50, False, False, 1, 4, [6,6], [1,1], [5,5], 17, 'null', False)
+        run_alignment(current + '/test_data/small_lambda_synth_taps_lambda_1.fq.gz', current + '/test_data/small_lambda_synth_taps_lambda_2.fq.gz', current + '/test_data/lambda_phage.fa', bwa, samtools, current + '/test_data/', 'mCtoT', 'BAM', 1, False, 1, 19, 100, 100, 1.5, 20, 500, 0.5, 0, 50, False, False, 1, 4, [6,6], [1,1], [5,5], 17, 'null', False)
         self.assertEqual(bwa, 'bwa_')
         self.assertEqual(samtools, 'samtools_')
-        remove = 'rm {}'.format(current + '/test_data/small_real_taps_lambda.fq_mCtoT.bam')
+        remove = 'rm {}'.format(current + '/test_data/small_lambda_synth_taps_lambda_mCtoT.bam')
         subprocess.Popen(remove, shell=True)
         
         
@@ -43,10 +43,10 @@ class AlignFastaOutputTest(unittest.TestCase):
         bwa = mock_open(read_data = current + '/test_data/bwa').return_value
         bwa = 'bwa_'
         samtools = 'samtools_'
-        run_alignment(current + '/test_data/small_real_taps_lambda_1.fq.gz', '', current + '/test_data/lambda_phage.fa', bwa, samtools, current + '/test_data/', 'mCtoT', 'BAM', 1, False, 1, 19, 100, 100, 1.5, 20, 500, 0.5, 0, 50, False, False, 1, 4, [6,6], [1,1], [5,5], 17, 'null', True)
+        run_alignment(current + '/test_data/small_lambda_synth_taps_lambda_1.fq.gz', '', current + '/test_data/lambda_phage.fa', bwa, samtools, current + '/test_data/', 'mCtoT', 'BAM', 1, False, 1, 19, 100, 100, 1.5, 20, 500, 0.5, 0, 50, False, False, 1, 4, [6,6], [1,1], [5,5], 17, 'null', True)
         self.assertEqual(bwa, 'bwa_')
         self.assertEqual(samtools, 'samtools_')
-        remove = 'rm {}'.format(current + '/test_data/small_real_taps_lambda.fq_mCtoT.bam')
+        remove = 'rm {}'.format(current + '/test_data/small_lambda_synth_taps_lambda_mCtoT.bam')
         subprocess.Popen(remove, shell=True)
         
         
@@ -57,10 +57,10 @@ class AlignFastaOutputTest(unittest.TestCase):
         bwa = mock_open(read_data = current + '/test_data/bwameth.py').return_value
         bwa = 'bwameth.py_'
         samtools = 'samtools_'
-        run_alignment(current + '/test_data/small_real_wgbs_lambda_1.fq.gz', current + '/test_data/small_real_wgbs_lambda_2.fq.gz', current + '/test_data/lambda_phage.fa', bwa, samtools, current + '/test_data/', 'CtoT', 'BAM', 1, False, 1, 19, 100, 100, 1.5, 20, 500, 0.5, 0, 50, False, False, 1, 4, [6,6], [1,1], [5,5], 17, 'null', False)
+        run_alignment(current + '/test_data/small_lambda_synth_wgbs_lambda_1.fq.gz', current + '/test_data/small_lambda_synth_wgbs_lambda_2.fq.gz', current + '/test_data/lambda_phage.fa', bwa, samtools, current + '/test_data/', 'CtoT', 'BAM', 1, False, 1, 19, 100, 100, 1.5, 20, 500, 0.5, 0, 50, False, False, 1, 4, [6,6], [1,1], [5,5], 17, 'null', False)
         self.assertEqual(bwa, 'bwameth.py_')
         self.assertEqual(samtools, 'samtools_')
-        remove = 'rm {}'.format(current + '/test_data/small_real_wgbs_lambda.fq_CtoT.bam')
+        remove = 'rm {}'.format(current + '/test_data/small_lambda_synth_wgbs_lambda_CtoT.bam')
         subprocess.Popen(remove, shell=True)
         
         
