@@ -26,6 +26,8 @@ def fasta_splitting_by_sequence(fasta_file, per_chromosome, write):
                     exit_code = file_.wait()
                     if exit_code == 0:
                         fasta_handle = open(reference_absolute_name, 'r')
+                else:
+                    fasta_handle = open(reference_absolute_name, 'r')
             else:
                 fasta_handle = open(fasta_file, 'r')
         else:
