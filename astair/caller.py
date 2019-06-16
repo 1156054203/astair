@@ -40,7 +40,7 @@ from astair.simple_fasta_parser import fasta_splitting_by_sequence
 @click.option('zero_coverage', '--zero_coverage', '-z', default=False, is_flag=True, help='When set to True, outputs positions not covered in the bam file. Uncovering zero coverage positions takes longer time than using the default option.')
 @click.option('context', '--context', '-co', required=False, default='all',  type=click.Choice(['all', 'CpG', 'CHG', 'CHH']), help='Explains which cytosine sequence contexts are to be expected in the output file. Default behaviour is all, which includes CpG, CHG, CHH contexts and their sub-contexts for downstream filtering and analysis. (Default all).')
 @click.option('user_defined_context', '--user_defined_context', '-uc', required=False, type=str, help='At least two-letter contexts other than CG, CHH and CHG to be evaluated, will return the genomic coordinates for the first cytosine in the string.')
-# @click.option('library', '--library', '-l', required=False, default = 'directional',  type=click.Choice(['directional', 'rr', 'ptat']), help='Provides information for the library preparation protocol (rr is reduced representation and ptat is post-method adapter-tagging).')
+@click.option('library', '--library', '-li', required=False, default = 'directional',  type=click.Choice(['directional', 'reverse']), help='Provides information for the library preparation protocol (Default directional).')
 @click.option('method', '--method', '-m', required=False, default = 'mCtoT', type=click.Choice(['CtoT', 'mCtoT']), help='Specify sequencing method, possible options are CtoT (unmodified cytosines are converted to thymines, bisulfite sequencing-like) and mCtoT (modified cytosines are converted to thymines, TAPS-like). (Default mCtoT).')
 @click.option('skip_clip_overlap', '--skip_clip_overlap', '-sc', required=False, default=False, type=bool, help='Skipping the random removal of overlapping bases between pair-end reads. Not recommended for pair-end libraries, unless the overlaps are removed prior to calling. (Default False)')
 @click.option('single_end', '--se', '-se', default=False, is_flag=True, required=False, help='Indicates single-end sequencing reads (Default False).')
@@ -56,9 +56,9 @@ from astair.simple_fasta_parser import fasta_splitting_by_sequence
 @click.option('N_threads', '--N_threads', '-t', default=1, required=True, help='The number of threads to spawn (Default 1).')
 @click.option('compress', '--gz', '-z', default=False, is_flag=True, required=False, help='Indicates whether the mods file output will be compressed with gzip (Default False).')
 @click.option('directory', '--directory', '-d', required=True, type=str, help='Output directory to save files.')
-def call(input_file, reference, context, zero_coverage, skip_clip_overlap, minimum_base_quality, user_defined_context, method, minimum_mapping_quality, adjust_acapq_threshold, add_indels, redo_baq, compute_baq, ignore_orphans, max_depth,per_chromosome, N_threads, directory, compress, single_end):
+def call(input_file, reference, context, zero_coverage, skip_clip_overlap, minimum_base_quality, user_defined_context, library,  method, minimum_mapping_quality, adjust_acapq_threshold, add_indels, redo_baq, compute_baq, ignore_orphans, max_depth,per_chromosome, N_threads, directory, compress, single_end):
         """Call modified cytosines from a bam or cram file. The output consists of two files, one containing modification counts per nucleotide, the other providing genome-wide statistics per context."""
-        cytosine_modification_finder(input_file, reference, context, zero_coverage, skip_clip_overlap, minimum_base_quality, user_defined_context, method, minimum_mapping_quality, adjust_acapq_threshold, add_indels, redo_baq, compute_baq, ignore_orphans, max_depth, per_chromosome, N_threads, directory, compress, single_end)
+        cytosine_modification_finder(input_file, reference, context, zero_coverage, skip_clip_overlap, minimum_base_quality, user_defined_context, library,  method, minimum_mapping_quality, adjust_acapq_threshold, add_indels, redo_baq, compute_baq, ignore_orphans, max_depth, per_chromosome, N_threads, directory, compress, single_end)
 
 
 warnings.simplefilter(action='ignore', category=FutureWarning)
@@ -142,37 +142,29 @@ def final_statistics_output(mean_mod, mean_unmod, user_defined_context, file_nam
         logs.error('asTair cannot write to statistics summary file.', exc_info=True)
 
 
-def flags_expectation(modification_information_per_position, position, ignore_orphans, single_end):
+def flags_expectation(modification_information_per_position, position, modification, reference, ignore_orphans, single_end):
     """Gives the expected flag-base couples, the reference and the modified base."""
     if single_end == True:
-        if modification_information_per_position[position][3] == 'C':
+        if reference == 'C':
             desired_tuples = [(0, 'C'), (0, 'T')]
             undesired_tuples = [(16, 'C'), (16, 'T')]
-            modification = 'T'
-            reference = 'C'
-        elif modification_information_per_position[position][3] == 'G':
+        elif reference == 'G':
             desired_tuples = [(16, 'G'), (16, 'A')]
             undesired_tuples = [(0, 'G'), (0, 'A')]
-            modification = 'A'
-            reference = 'G'
     else:
-        if modification_information_per_position[position][3] == 'C':
+        if reference == 'C':
             desired_tuples = [(147, 'C'), (99, 'C'), (147, 'T'), (99, 'T')]
             undesired_tuples = [(163, 'C'), (83, 'C'), (163, 'T'), (83, 'T')]
-            modification = 'T'
-            reference = 'C'
             if ignore_orphans == False:
                 desired_tuples.extend([(145, 'C'), (97, 'C'), (145, 'T'), (97, 'T')])
                 undesired_tuples.extend([(161, 'C'), (81, 'C'), (161, 'T'), (81, 'T')])
-        elif modification_information_per_position[position][3] == 'G':
+        elif reference == 'G':
             desired_tuples = [(163, 'G'), (83, 'G'), (163, 'A'), (83, 'A')]
             undesired_tuples = [(147, 'G'), (99, 'G'), (147, 'A'), (99, 'A')]
-            modification = 'A'
-            reference = 'G'
             if ignore_orphans == False:
                 desired_tuples.extend([(161, 'G'), (81, 'G'), (161, 'A'), (81, 'A')])
                 undesired_tuples.extend([(145, 'G'), (97, 'G'), (145, 'A'), (97, 'A')])
-    return desired_tuples, undesired_tuples, modification, reference
+    return desired_tuples, undesired_tuples
 
         
 def pileup_summary(modification_information_per_position, position, read_counts, mean_mod, mean_unmod, user_defined_context,
@@ -249,7 +241,7 @@ def pileup_summary(modification_information_per_position, position, read_counts,
 
 
 def clean_pileup(pileups, cycles, modification_information_per_position, mean_mod, mean_unmod, user_defined_context, file_name, method,
-                 add_indels, context_sample_counts, ignore_orphans, single_end, compress, data_line):
+                 add_indels, context_sample_counts, ignore_orphans, single_end, compress, data_line, library):
     """Takes reads from the piled-up region and calculates modification levels."""
     for reads in pileups:
         if cycles == 0:
@@ -258,7 +250,21 @@ def clean_pileup(pileups, cycles, modification_information_per_position, mean_mo
             header = False
         if (reads.reference_name, reads.pos, reads.pos + 1) in modification_information_per_position:
             position = (reads.reference_name, reads.pos, reads.pos + 1)
-            desired_tuples, undesired_tuples, modification, reference = flags_expectation(modification_information_per_position, position, ignore_orphans, single_end)
+            if library == 'directional':
+                if modification_information_per_position[position][3] == 'C':
+                    modification = 'T'
+                    reference = 'C'
+                elif modification_information_per_position[position][3] == 'G':
+                    modification = 'A'
+                    reference = 'G'
+            elif library == 'reverse':
+                if modification_information_per_position[position][3] == 'C':
+                    modification = 'A'
+                    reference = 'G'
+                elif modification_information_per_position[position][3] == 'G':
+                    modification = 'T'
+                    reference = 'C'
+            desired_tuples, undesired_tuples = flags_expectation(modification_information_per_position, position, modification, reference, ignore_orphans, single_end)
             read_counts = defaultdict(int)
             try:
                 sequences = reads.get_query_sequences(mark_matches=False, mark_ends = False, add_indels=add_indels)
@@ -271,7 +277,7 @@ def clean_pileup(pileups, cycles, modification_information_per_position, mean_mo
             modification_information_per_position.pop(position)
             cycles += 1
 
-def cytosine_modification_finder(input_file, reference, context, zero_coverage, skip_clip_overlap, minimum_base_quality, user_defined_context, method,
+def cytosine_modification_finder(input_file, reference, context, zero_coverage, skip_clip_overlap, minimum_base_quality, user_defined_context, library, method,
                                  minimum_mapping_quality, adjust_acapq_threshold, add_indels, redo_baq, compute_baq, ignore_orphans,
                                  max_depth, per_chromosome, N_threads, directory, compress, single_end):
     """Searches for cytosine modification positions in the desired contexts and calculates the modificaton levels."""
@@ -325,7 +331,7 @@ def cytosine_modification_finder(input_file, reference, context, zero_coverage, 
                                        max_depth=max_depth, redo_baq=redo_baq, ignore_orphans=ignore_orphans, compute_baq=compute_baq,
                                        min_mapping_quality=minimum_mapping_quality, adjust_acapq_threshold=adjust_acapq_threshold)
                 clean_pileup(pileups, i, modification_information_per_position, mean_mod, mean_unmod, user_defined_context, file_name, method,
-                             add_indels, context_sample_counts, ignore_orphans, single_end, compress, data_line)
+                             add_indels, context_sample_counts, ignore_orphans, single_end, compress, data_line, library)
         else:
             time_m = datetime.now()
             logs.info("Starting modification calling on {} chromosome (sequence). {} seconds".format(keys, (time_m - time_b).total_seconds()))
@@ -334,7 +340,7 @@ def cytosine_modification_finder(input_file, reference, context, zero_coverage, 
                                    max_depth=max_depth, redo_baq=redo_baq, ignore_orphans=ignore_orphans, compute_baq=compute_baq,
                                    min_mapping_quality=minimum_mapping_quality, adjust_acapq_threshold=adjust_acapq_threshold)
             clean_pileup(pileups, cycles, modification_information_per_position, mean_mod, mean_unmod, user_defined_context, file_name, method,
-                         add_indels, context_sample_counts, ignore_orphans, single_end, compress, data_line)
+                         add_indels, context_sample_counts, ignore_orphans, single_end, compress, data_line, library)
         if zero_coverage:
             for position in modification_information_per_position.keys():
                 if modification_information_per_position[position][3] == 'C':
