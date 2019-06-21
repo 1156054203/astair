@@ -142,28 +142,50 @@ def final_statistics_output(mean_mod, mean_unmod, user_defined_context, file_nam
         logs.error('asTair cannot write to statistics summary file.', exc_info=True)
 
 
-def flags_expectation(modification_information_per_position, position, modification, reference, ignore_orphans, single_end):
+def flags_expectation(modification_information_per_position, position, modification, reference, ignore_orphans, single_end, library):
     """Gives the expected flag-base couples, the reference and the modified base."""
-    if single_end == True:
-        if reference == 'C':
-            desired_tuples = [(0, 'C'), (0, 'T')]
-            undesired_tuples = [(16, 'C'), (16, 'T')]
-        elif reference == 'G':
-            desired_tuples = [(16, 'G'), (16, 'A')]
-            undesired_tuples = [(0, 'G'), (0, 'A')]
-    else:
-        if reference == 'C':
-            desired_tuples = [(147, 'C'), (99, 'C'), (147, 'T'), (99, 'T')]
-            undesired_tuples = [(163, 'C'), (83, 'C'), (163, 'T'), (83, 'T')]
-            if ignore_orphans == False:
-                desired_tuples.extend([(145, 'C'), (97, 'C'), (145, 'T'), (97, 'T')])
-                undesired_tuples.extend([(161, 'C'), (81, 'C'), (161, 'T'), (81, 'T')])
-        elif reference == 'G':
-            desired_tuples = [(163, 'G'), (83, 'G'), (163, 'A'), (83, 'A')]
-            undesired_tuples = [(147, 'G'), (99, 'G'), (147, 'A'), (99, 'A')]
-            if ignore_orphans == False:
-                desired_tuples.extend([(161, 'G'), (81, 'G'), (161, 'A'), (81, 'A')])
-                undesired_tuples.extend([(145, 'G'), (97, 'G'), (145, 'A'), (97, 'A')])
+    if library == 'directional':
+        if single_end == True:
+            if reference == 'C':
+                desired_tuples = [(0, 'C'), (0, 'T')]
+                undesired_tuples = [(16, 'C'), (16, 'T')]
+            elif reference == 'G':
+                desired_tuples = [(16, 'G'), (16, 'A')]
+                undesired_tuples = [(0, 'G'), (0, 'A')]
+        else:
+            if reference == 'C':
+                desired_tuples = [(147, 'C'), (99, 'C'), (147, 'T'), (99, 'T')]
+                undesired_tuples = [(163, 'C'), (83, 'C'), (163, 'T'), (83, 'T')]
+                if ignore_orphans == False:
+                    desired_tuples.extend([(145, 'C'), (97, 'C'), (145, 'T'), (97, 'T')])
+                    undesired_tuples.extend([(161, 'C'), (81, 'C'), (161, 'T'), (81, 'T')])
+            elif reference == 'G':
+                desired_tuples = [(163, 'G'), (83, 'G'), (163, 'A'), (83, 'A')]
+                undesired_tuples = [(147, 'G'), (99, 'G'), (147, 'A'), (99, 'A')]
+                if ignore_orphans == False:
+                    desired_tuples.extend([(161, 'G'), (81, 'G'), (161, 'A'), (81, 'A')])
+                    undesired_tuples.extend([(145, 'G'), (97, 'G'), (145, 'A'), (97, 'A')])
+    elif library == 'reverse':
+        if single_end == True:
+            if reference == 'C':
+                desired_tuples = [(0, 'C'), (0, 'T')]
+                undesired_tuples = [(16, 'C'), (16, 'T')]
+            elif reference == 'G':
+                desired_tuples = [(16, 'G'), (16, 'A')]
+                undesired_tuples = [(0, 'G'), (0, 'A')]
+        else:
+            if reference == 'C':
+                undesired_tuples = [(147, 'C'), (99, 'C'), (147, 'T'), (99, 'T')]
+                desired_tuples = [(163, 'C'), (83, 'C'), (163, 'T'), (83, 'T')]
+                if ignore_orphans == False:
+                    undesired_tuples.extend([(145, 'C'), (97, 'C'), (145, 'T'), (97, 'T')])
+                    desired_tuples.extend([(161, 'C'), (81, 'C'), (161, 'T'), (81, 'T')])
+            elif reference == 'G':
+                undesired_tuples = [(163, 'G'), (83, 'G'), (163, 'A'), (83, 'A')]
+                desired_tuples = [(147, 'G'), (99, 'G'), (147, 'A'), (99, 'A')]
+                if ignore_orphans == False:
+                    undesired_tuples.extend([(161, 'G'), (81, 'G'), (161, 'A'), (81, 'A')])
+                    desired_tuples.extend([(145, 'G'), (97, 'G'), (145, 'A'), (97, 'A')])
     return desired_tuples, undesired_tuples
 
         
@@ -250,21 +272,13 @@ def clean_pileup(pileups, cycles, modification_information_per_position, mean_mo
             header = False
         if (reads.reference_name, reads.pos, reads.pos + 1) in modification_information_per_position:
             position = (reads.reference_name, reads.pos, reads.pos + 1)
-            if library == 'directional':
-                if modification_information_per_position[position][3] == 'C':
-                    modification = 'T'
-                    reference = 'C'
-                elif modification_information_per_position[position][3] == 'G':
-                    modification = 'A'
-                    reference = 'G'
-            elif library == 'reverse':
-                if modification_information_per_position[position][3] == 'C':
-                    modification = 'A'
-                    reference = 'G'
-                elif modification_information_per_position[position][3] == 'G':
-                    modification = 'T'
-                    reference = 'C'
-            desired_tuples, undesired_tuples = flags_expectation(modification_information_per_position, position, modification, reference, ignore_orphans, single_end)
+            if modification_information_per_position[position][3] == 'C':
+                modification = 'T'
+                reference = 'C'
+            elif modification_information_per_position[position][3] == 'G':
+                modification = 'A'
+                reference = 'G'
+            desired_tuples, undesired_tuples = flags_expectation(modification_information_per_position, position, modification, reference, ignore_orphans, single_end, library)
             read_counts = defaultdict(int)
             try:
                 sequences = reads.get_query_sequences(mark_matches=False, mark_ends = False, add_indels=add_indels)
@@ -369,5 +383,4 @@ def cytosine_modification_finder(input_file, reference, context, zero_coverage, 
 
 if __name__ == '__main__':
     call()
-
 
