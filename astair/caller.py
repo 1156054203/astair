@@ -37,7 +37,7 @@ from astair.simple_fasta_parser import fasta_splitting_by_sequence
 @click.option('input_file', '--input_file', '-i', required=True, help='BAM|CRAM format file containing sequencing reads.')
 # @click.option('control_file', '--control_file', '-c', required=False, help='BAM format file containing sequencing reads of a matched control.')
 @click.option('reference', '--reference', '-f', required=True, help='Reference DNA sequence in FASTA format used for aligning of the sequencing reads and for pileup.')
-@click.option('zero_coverage', '--zero_coverage', '-z', default=False, is_flag=True, help='When set to True, outputs positions not covered in the bam file. Uncovering zero coverage positions takes longer time than using the default option.')
+@click.option('zero_coverage', '--zero_coverage', '-zc', default=False, is_flag=True, help='When set to True, outputs positions not covered in the bam file. Uncovering zero coverage positions takes longer time than using the default option.')
 @click.option('context', '--context', '-co', required=False, default='all',  type=click.Choice(['all', 'CpG', 'CHG', 'CHH']), help='Explains which cytosine sequence contexts are to be expected in the output file. Default behaviour is all, which includes CpG, CHG, CHH contexts and their sub-contexts for downstream filtering and analysis. (Default all).')
 @click.option('user_defined_context', '--user_defined_context', '-uc', required=False, type=str, help='At least two-letter contexts other than CG, CHH and CHG to be evaluated, will return the genomic coordinates for the first cytosine in the string.')
 @click.option('library', '--library', '-li', required=False, default = 'directional',  type=click.Choice(['directional', 'reverse']), help='Provides information for the library preparation protocol (Default directional).')
@@ -74,11 +74,11 @@ def modification_calls_writer(data_mods, compress, data_line, header=False):
     try:
         if compress == False:
             if header:
-                data_line.writerow(["CHROM", "START", "END", "MOD_LEVEL", "MOD", "UNMOD", "REF", "ALT", "SPECIFIC_CONTEXT", "CONTEXT", 'SNV', 'TOTAL_DEPTH'])
+                data_line.writerow(["#CHROM", "START", "END", "MOD_LEVEL", "MOD", "UNMOD", "REF", "ALT", "SPECIFIC_CONTEXT", "CONTEXT", 'SNV', 'TOTAL_DEPTH'])
             data_line.writerow(data_mods)
         else:
             if header:
-                data_line.write('{}\t{}\t{}\t{}\t{}\t{}\t{}\t{}\t{}\t{}\t{}\t{}\n'.format('CHROM', 'START', 'END', 'MOD_LEVEL', 'MOD', 'UNMOD', 'REF', 'ALT', 'SPECIFIC_CONTEXT', 'CONTEXT', 'SNV', 'TOTAL_DEPTH'))
+                data_line.write('{}\t{}\t{}\t{}\t{}\t{}\t{}\t{}\t{}\t{}\t{}\t{}\n'.format('#CHROM', 'START', 'END', 'MOD_LEVEL', 'MOD', 'UNMOD', 'REF', 'ALT', 'SPECIFIC_CONTEXT', 'CONTEXT', 'SNV', 'TOTAL_DEPTH'))
             data_line.write(
                     '{}\t{}\t{}\t{}\t{}\t{}\t{}\t{}\t{}\t{}\t{}\t{}\n'.format(data_mods[0], data_mods[1], data_mods[2], data_mods[3],
                                                                  data_mods[4], data_mods[5], data_mods[6], data_mods[7],

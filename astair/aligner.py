@@ -146,6 +146,7 @@ def run_alignment(fq1, fq2, reference, bwa_path, samtools_path, directory, metho
         sys.exit(1)
     if keep_unmapped:
         aligned_string = ''
+        minimum_mapping_quality = 0
     else:
         aligned_string = '-F 4 '
     use_bwa, use_samtools = which_path(bwa_path, samtools_path, method)
