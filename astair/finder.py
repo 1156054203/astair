@@ -44,9 +44,9 @@ def find(reference, context, user_defined_context, per_chromosome, compress, dir
     find_contexts(reference, context, user_defined_context, per_chromosome, compress, directory)
 
 
-
-warnings.simplefilter(action='ignore', category=FutureWarning)
 warnings.simplefilter(action='ignore', category=UserWarning)
+warnings.simplefilter(action='ignore', category=FutureWarning)
+warnings.simplefilter(action='ignore', category=RuntimeWarning)
 
 # logging.basicConfig(level=logging.DEBUG)
 logs = logging.getLogger(__name__)
@@ -61,7 +61,7 @@ def bed_like_context_writer(header, data_line, cytosine_contexts, compress):
     sorted_keys.sort()
     if compress == True:
         if header:
-            data_line.write('{}\t{}\t{}\t{}\t{}\n'.format("CHROM", "START", "END", "STRAND", "SPECIFIC_CONTEXT", "CONTEXT"))
+            data_line.write('{}\t{}\t{}\t{}\t{}\n'.format("#CHROM", "START", "END", "STRAND", "SPECIFIC_CONTEXT", "CONTEXT"))
             for line in sorted_keys:
                 data_line.write('{}\t{}\t{}\t{}\t{}\n'.format(line[0], line[1], line[2], line[3], cytosine_contexts[line][0], cytosine_contexts[line][1]))
         else:
@@ -69,7 +69,7 @@ def bed_like_context_writer(header, data_line, cytosine_contexts, compress):
                 data_line.write('{}\t{}\t{}\t{}\t{}\n'.format(line[0], line[1], line[2], line[3], cytosine_contexts[line][0], cytosine_contexts[line][1]))
     else:
         if header == True:
-            data_line.writerow(["CHROM", "START", "END", "STRAND", "SPECIFIC_CONTEXT", "CONTEXT"])
+            data_line.writerow(["#CHROM", "START", "END", "STRAND", "SPECIFIC_CONTEXT", "CONTEXT"])
             for line in sorted_keys:
                 data_line.writerow([line[0], line[1], line[2], line[3], cytosine_contexts[line][0], cytosine_contexts[line][1]])
         else:
@@ -90,7 +90,7 @@ def find_contexts(reference, context, user_defined_context, per_chromosome, comp
         raise Exception("The output directory does not exist.")
         sys.exit(1)
     try:
-        keys, fastas = fasta_splitting_by_sequence(reference, per_chromosome, None)
+        keys, fastas = fasta_splitting_by_sequence(reference, per_chromosome, None, False, 'all')
     except Exception:
         sys.exit(1)
     if compress == False:
@@ -112,18 +112,14 @@ def find_contexts(reference, context, user_defined_context, per_chromosome, comp
         contexts, all_keys = sequence_context_set_creation(context, user_defined_context)
         cycles = 0
         context_total_counts, context_sample_counts = defaultdict(int), defaultdict(int)
-        if per_chromosome == None:
-            for i in range(0, len(keys)):
-                time_m = datetime.now()
-                logs.info("Looking for cytosine positions on {} chromosome (sequence). {} seconds".format(keys[i], (time_m - time_b).total_seconds()))
-                cytosine_contexts = context_sequence_search(contexts, all_keys, fastas, keys[i], user_defined_context, context_total_counts, None, 'include')
-                if i == 0:
-                    bed_like_context_writer(True, write_fasta, cytosine_contexts, compress)
-                else:
-                    bed_like_context_writer(False, write_fasta, cytosine_contexts, compress)
-        else:
-            cytosine_contexts = context_sequence_search(contexts, all_keys, fastas, keys, user_defined_context, context_total_counts, None, 'include')
-            bed_like_context_writer(True, write_fasta, cytosine_contexts, compress)
+        for i in range(0, len(keys)):
+            time_m = datetime.now()
+            logs.info("Looking for cytosine positions on {} chromosome (sequence). {} seconds".format(keys[i], (time_m - time_b).total_seconds()))
+            cytosine_contexts = context_sequence_search(contexts, all_keys, fastas, keys[i], user_defined_context, context_total_counts, None, 'include')
+            if i == 0:
+                bed_like_context_writer(True, write_fasta, cytosine_contexts, compress)
+            else:
+                bed_like_context_writer(False, write_fasta, cytosine_contexts, compress)
         if compress == True:
            write_fasta.close()
         else:

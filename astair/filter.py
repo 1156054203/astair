@@ -35,9 +35,9 @@ def filter(reference, input_file, method, bases_noncpg, per_chromosome, N_thread
     removing_mod_err(reference, input_file, method, bases_noncpg, per_chromosome, N_threads, single_end, directory)
 
 
-
-warnings.simplefilter(action='ignore', category=FutureWarning)
 warnings.simplefilter(action='ignore', category=UserWarning)
+warnings.simplefilter(action='ignore', category=FutureWarning)
+warnings.simplefilter(action='ignore', category=RuntimeWarning)
 
 # logging.basicConfig(level=logging.DEBUG)
 logs = logging.getLogger(__name__)
@@ -86,7 +86,7 @@ def removing_mod_err(reference, input_file, method, bases_noncpg, per_chromosome
         inbam = bam_file_opener(input_file, None, N_threads)
     except Exception:
         sys.exit(1)
-    keys, fastas = fasta_splitting_by_sequence(reference, per_chromosome, None)
+    keys, fastas = fasta_splitting_by_sequence(reference, per_chromosome, None, False, 'all')
     outbam3T = pysam.AlignmentFile(directory+name+"_high_CpH_filtered" + ".bam", "wb", template=inbam)
     removed3T = pysam.AlignmentFile(directory+name+"_high_CpH_removed" + ".bam", "wb", template=inbam)
     if single_end == False:

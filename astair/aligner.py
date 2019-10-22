@@ -60,21 +60,23 @@ from astair.simple_fasta_parser import fasta_splitting_by_sequence
 @click.option('clip_supplementary',  '--clip_supplementary', '-cs', default=False, is_flag=True,  required=False, help='Enables soft clipping on supplementary alignments, see BWA manual.')   
 @click.option('mark_splitted',  '--mark_splitted', '-ms', default=False, is_flag=True,  required=False, help='Labels short split reads as secondary, see BWA manual.')                                                               
 @click.option('reads_distribution', '--reads_distribution', '-rd', default=None, required=False, help='Specifies the mean, standard deviation (10 percent of the mean if absent), max (4 sigma from the mean if absent) and min of the insert size distribution for FR orientation, see BWA manual. Must be provided as FLOAT,FLOAT,INT,INT (Default reads distribution metrics are inferred from the data).')
+@click.option('add_underscores', '--add_underscores', '-au', default=False, is_flag=True, required=False, help='Indicates outputting a new reference fasta file with added underscores in the sequence names that is afterwards used for calling. (Default False).')
 
 
 #smart_pairing, read_group, header_string, include_alt, split_alignment, supplementary_mapq, minimum_score, alternative_score, all_alignments, fasta_comment, fasta_header, clip_supplementary, mark_splitted, reads_distribution
 
 def align(fq1, fq2, reference, bwa_path, samtools_path, directory, method, output_format, minimum_mapping_quality, keep_unmapped, N_threads, minimum_seed_length, band_width, dropoff,
                  internal_seeds, reseeding_occurence, N_skip_seeds, drop_chains, discard_chains, N_mate_rescues, skip_mate_rescue, skip_pairing, match_score, mismatch_penalty,
-                 gap_open_penalty, gap_extension_penalty, end_clipping_penalty, unpaired_penalty, read_type, single_end, smart_pairing, read_group, header_string, include_alt, split_alignment, supplementary_mapq, minimum_score, alternative_score, all_alignments, fasta_comment, fasta_header, clip_supplementary, mark_splitted, reads_distribution):
+                 gap_open_penalty, gap_extension_penalty, end_clipping_penalty, unpaired_penalty, read_type, single_end, smart_pairing, read_group, header_string, include_alt, split_alignment, supplementary_mapq, minimum_score, alternative_score, all_alignments, fasta_comment, fasta_header, clip_supplementary, mark_splitted, reads_distribution, add_underscores):
     """Align raw reads in fastq format to a reference genome. bwa is required to align TAPS reads, and bwa-meth fif you plan to process BS-seq data."""
     run_alignment(fq1, fq2, reference, bwa_path, samtools_path, directory, method, output_format, minimum_mapping_quality, keep_unmapped, N_threads, minimum_seed_length, band_width, dropoff,
                  internal_seeds, reseeding_occurence, N_skip_seeds, drop_chains, discard_chains, N_mate_rescues, skip_mate_rescue, skip_pairing, match_score, mismatch_penalty,
-                 gap_open_penalty, gap_extension_penalty, end_clipping_penalty, unpaired_penalty, read_type, single_end, smart_pairing, read_group, header_string, include_alt, split_alignment, supplementary_mapq, minimum_score, alternative_score, all_alignments, fasta_comment, fasta_header, clip_supplementary, mark_splitted, reads_distribution)
+                 gap_open_penalty, gap_extension_penalty, end_clipping_penalty, unpaired_penalty, read_type, single_end, smart_pairing, read_group, header_string, include_alt, split_alignment, supplementary_mapq, minimum_score, alternative_score, all_alignments, fasta_comment, fasta_header, clip_supplementary, mark_splitted, reads_distribution, add_underscores)
 
 
-warnings.simplefilter(action='ignore', category=FutureWarning)
 warnings.simplefilter(action='ignore', category=UserWarning)
+warnings.simplefilter(action='ignore', category=FutureWarning)
+warnings.simplefilter(action='ignore', category=RuntimeWarning)
 
 #logging.basicConfig(level=logging.DEBUG)
 logs = logging.getLogger(__name__)
@@ -99,9 +101,9 @@ def which_path(bwa_path, samtools_path, method):
     return use_bwa, use_samtools
 
 
-def check_index(use_bwa, reference, method, output_format):
+def check_index(use_bwa, reference, method, output_format, add_underscores):
     """Checks whether there are spaces in the reference names in the fasta file. In case such spaces exist, they will be replaced with underscores before building the index. Otherwise, checks if the provided reference is indexed, and creates an index if one is not found."""
-    fasta_splitting_by_sequence(reference, None, 'w')
+    fasta_splitting_by_sequence(reference, None, 'last', add_underscores, 'all')
     reference_base_name = os.path.splitext(os.path.basename(reference))[0]
     reference_extension = os.path.splitext(os.path.basename(reference))[1]
     if (os.path.isfile(reference + '.bwt') == False and method == 'mCtoT') \
@@ -128,7 +130,7 @@ def check_index(use_bwa, reference, method, output_format):
 
 def run_alignment(fq1, fq2, reference, bwa_path, samtools_path, directory, method, output_format, minimum_mapping_quality, keep_unmapped, N_threads, minimum_seed_length, band_width, dropoff,
                  internal_seeds, reseeding_occurence, N_skip_seeds, drop_chains, discard_chains, N_mate_rescues, skip_mate_rescue, skip_pairing, match_score, mismatch_penalty,
-                 gap_open_penalty, gap_extension_penalty, end_clipping_penalty, unpaired_penalty, read_type, single_end, smart_pairing, read_group, header_string, include_alt, split_alignment, supplementary_mapq, minimum_score, alternative_score, all_alignments, fasta_comment, fasta_header, clip_supplementary, mark_splitted, reads_distribution):
+                 gap_open_penalty, gap_extension_penalty, end_clipping_penalty, unpaired_penalty, read_type, single_end, smart_pairing, read_group, header_string, include_alt, split_alignment, supplementary_mapq, minimum_score, alternative_score, all_alignments, fasta_comment, fasta_header, clip_supplementary, mark_splitted, reads_distribution, add_underscores):
     """Aligns the provided pair-end reads to the reference according to the method specified.
     Outputs a sorted and indexed file."""
     time_s = datetime.now()
@@ -150,7 +152,7 @@ def run_alignment(fq1, fq2, reference, bwa_path, samtools_path, directory, metho
     else:
         aligned_string = '-F 4 '
     use_bwa, use_samtools = which_path(bwa_path, samtools_path, method)
-    reference = check_index(use_bwa, reference, method, output_format)
+    reference = check_index(use_bwa, reference, method, output_format, add_underscores)
     if skip_mate_rescue:
         skip_mate_rescue = '-S'
     else:

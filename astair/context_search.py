@@ -78,44 +78,44 @@ def ahocorasick_search(objects, context, string, string_name, user_defined_conte
             if region == None or (end_ind >= region[1] and end_ind+1 <=region[2]):
                 if strand == None:
                     if objects != 'CGb':
-                        data_context[(string_name, end_ind, end_ind + 1)] = tuple(("".join(reversed), objects[0:-1], 'A', 'G'))
+                        data_context[(string_name, end_ind, end_ind + 1)] = tuple(("".join(reversed), objects[0:-1], 'G'))
                     else:
-                        data_context[(string_name, end_ind, end_ind + 1)] = tuple(("".join(reversed), 'CpG', 'A', 'G'))
+                        data_context[(string_name, end_ind, end_ind + 1)] = tuple(("".join(reversed), 'CpG', 'G'))
                 else:
                     if objects != 'CGb':
-                        data_context[(string_name, end_ind, end_ind + 1, '-')] = tuple(("".join(reversed), objects[0:-1], 'A', 'G'))
+                        data_context[(string_name, end_ind, end_ind + 1, '-')] = tuple(("".join(reversed), objects[0:-1], 'G'))
                     else:
-                        data_context[(string_name, end_ind, end_ind + 1, '-')] = tuple(("".join(reversed), 'CpG', 'A', 'G'))
+                        data_context[(string_name, end_ind, end_ind + 1, '-')] = tuple(("".join(reversed), 'CpG', 'G'))
     elif objects == 'CG':
         for end_ind, found in auto.iter(string):
             context_total_counts[objects] += 1
             context_total_counts[found.upper()] += 1
             if strand == None:
                 if region == None or (end_ind -2  >= region[1] and end_ind - 1 <= region[2]):
-                    data_context[(string_name, end_ind - 2, end_ind - 1)] = tuple((found.upper(), 'CpG', 'T', 'C'))
+                    data_context[(string_name, end_ind - 2, end_ind - 1)] = tuple((found.upper(), 'CpG', 'C'))
             else:
                 if region == None or (end_ind -2  >= region[1] and end_ind - 1 <= region[2]):
-                    data_context[(string_name, end_ind - 2, end_ind - 1, '+')] = tuple((found.upper(), 'CpG', 'T', 'C'))
+                    data_context[(string_name, end_ind - 2, end_ind - 1, '+')] = tuple((found.upper(), 'CpG', 'C'))
     elif objects == 'CHG' or objects == 'CHH':
         for end_ind, found in auto.iter(string):
             context_total_counts[objects] += 1
             context_total_counts[found.upper()] += 1
             if strand == None:
                 if region == None or (end_ind - 2 >= region[1] and end_ind - 1 <= region[2]):
-                    data_context[(string_name, end_ind - 2, end_ind - 1)] = tuple((found.upper(), objects, 'T', 'C'))
+                    data_context[(string_name, end_ind - 2, end_ind - 1)] = tuple((found.upper(), objects, 'C'))
             else:
                 if region == None or (end_ind - 2 >= region[1] and end_ind - 1 <= region[2]):
-                    data_context[(string_name, end_ind - 2, end_ind - 1, '+')] = tuple((found.upper(), objects, 'T', 'C'))
+                    data_context[(string_name, end_ind - 2, end_ind - 1, '+')] = tuple((found.upper(), objects, 'C'))
     elif objects == 'CN':
         for end_ind, found in auto.iter(string):
             context_total_counts[objects] += 1
             context_total_counts[found.upper()] += 1
             if strand == None:
                 if region == None or (end_ind - 2 >= region[1] and end_ind - 1 <= region[2]):
-                    data_context[(string_name, end_ind - 2, end_ind -1 )] = tuple((found.upper(), 'CN', 'T', 'C'))
+                    data_context[(string_name, end_ind - 2, end_ind -1 )] = tuple((found.upper(), 'CN', 'C'))
             else:
                 if region == None or (end_ind - 2 >= region[1] and end_ind - 1 <= region[2]):
-                    data_context[(string_name, end_ind - 2, end_ind -1, '+')] = tuple((found.upper(), 'CN', 'T', 'C'))
+                    data_context[(string_name, end_ind - 2, end_ind -1, '+')] = tuple((found.upper(), 'CN', 'C'))
     elif objects == 'user':
         index_c = user_defined_context.upper().find('C')
         if index_c == -1:
@@ -126,11 +126,11 @@ def ahocorasick_search(objects, context, string, string_name, user_defined_conte
                 if strand == None:
                     if region == None or (end_ind - len(user_defined_context) + index_c + 1 >= region[1] and end_ind - len(user_defined_context) + index_c + 2<= region[2]):
                         data_context[(string_name, end_ind - len(user_defined_context) + index_c + 1, end_ind - len(user_defined_context) + index_c + 2)] = tuple(
-                            (user_defined_context, 'user defined context', 'T', 'C'))
+                            (user_defined_context, 'user defined context', 'C'))
                 else:
                     if region == None or (end_ind - len(user_defined_context) + index_c + 1 >= region[1] and end_ind - len(user_defined_context) + index_c + 2<= region[2]):
                         data_context[(string_name, end_ind - len(user_defined_context) + index_c + 1, end_ind - len(user_defined_context) + index_c + 2, '+')] = tuple(
-                            (user_defined_context, 'user defined context', 'T', 'C'))
+                            (user_defined_context, 'user defined context', 'C'))
             for end_ind, found in auto.iter(complementary(string)):
                 reversed = list(found.upper())
                 reversed.reverse()
@@ -138,10 +138,10 @@ def ahocorasick_search(objects, context, string, string_name, user_defined_conte
                 context_total_counts['user defined context'] += 1
                 if strand == None:
                     if region == None or (end_ind - index_c >= region[1] and end_ind - index_c + 1 <= region[2]):
-                        data_context[(string_name, end_ind - index_c, end_ind - index_c + 1)] = tuple((user_defined_context, 'user defined context', 'A', 'G'))
+                        data_context[(string_name, end_ind - index_c, end_ind - index_c + 1)] = tuple((user_defined_context, 'user defined context', 'G'))
                 else:
                     if region == None or (end_ind - index_c >= region[1] and end_ind - index_c + 1 <= region[2]):
-                        data_context[(string_name, end_ind - index_c, end_ind - index_c + 1, '-')] = tuple((user_defined_context, 'user defined context', 'A', 'G'))
+                        data_context[(string_name, end_ind - index_c, end_ind - index_c + 1, '-')] = tuple((user_defined_context, 'user defined context', 'G'))
         except TypeError:
             logs.error('The user-provided context does not contain cytosines. asTair will not output any user-provided context summary.', exc_info=True)
             raise
@@ -149,19 +149,19 @@ def ahocorasick_search(objects, context, string, string_name, user_defined_conte
         if re.match(r'CG', string[0:3]) and region == None or (re.match(r'CG', string[0:3]).start() >= region[1] and re.match(r'CG', string[0:3]).start() + 2 <= region[2]):
             context_total_counts['CG'] += 2
             if strand == None:
-                data_context[(string_name, re.match(r'CG', string[0:3]).start(), re.match(r'CG', string[0:3]).start() + 1)] = tuple(('CGN', 'CpG', 'T', 'C'))
-                data_context[(string_name, re.match(r'CG', string[0:3]).start() + 1, re.match(r'CG', string[0:3]).start() + 2)] = tuple(('CGN', 'CpG', 'A', 'G'))
+                data_context[(string_name, re.match(r'CG', string[0:3]).start(), re.match(r'CG', string[0:3]).start() + 1)] = tuple(('CGN', 'CpG', 'C'))
+                data_context[(string_name, re.match(r'CG', string[0:3]).start() + 1, re.match(r'CG', string[0:3]).start() + 2)] = tuple(('CGN', 'CpG', 'G'))
             else:
-                data_context[(string_name, re.match(r'CG', string[0:3]).start(), re.match(r'CG', string[0:3]).start() + 1, '+')] = tuple(('CGN', 'CpG', 'T', 'C'))
-                data_context[(string_name, re.match(r'CG', string[0:3]).start() + 1, re.match(r'CG', string[0:3]).start() + 2, '-')] = tuple(('CGN', 'CpG', 'A', 'G'))
+                data_context[(string_name, re.match(r'CG', string[0:3]).start(), re.match(r'CG', string[0:3]).start() + 1, '+')] = tuple(('CGN', 'CpG', 'C'))
+                data_context[(string_name, re.match(r'CG', string[0:3]).start() + 1, re.match(r'CG', string[0:3]).start() + 2, '-')] = tuple(('CGN', 'CpG', 'G'))
         elif re.match(r'CG', string[-2:]) and region == None or (re.match(r'CG', string[-2:]).start() >= region[1] and re.match(r'CG', string[-2:]).start() + 2 <= region[2]):
             context_total_counts['CG'] += 2
             if strand == None:
-                data_context[(string_name, re.match(r'CG', string[-2:]).start(), re.match(r'CG', string[-2:]).start() + 1)] = tuple(('CGN', 'CpG', 'T', 'C'))
-                data_context[(string_name, re.match(r'CG', string[-2:]).start() + 1, re.match(r'CG', string[-2:]).start() + 2)] = tuple(('CGN', 'CpG', 'A', 'G'))
+                data_context[(string_name, re.match(r'CG', string[-2:]).start(), re.match(r'CG', string[-2:]).start() + 1)] = tuple(('CGN', 'CpG', 'C'))
+                data_context[(string_name, re.match(r'CG', string[-2:]).start() + 1, re.match(r'CG', string[-2:]).start() + 2)] = tuple(('CGN', 'CpG', 'G'))
             else:
-                data_context[(string_name, re.match(r'CG', string[-2:]).start(), re.match(r'CG', string[-2:]).start() + 1, '+')] = tuple(('CGN', 'CpG', 'T', 'C'))
-                data_context[(string_name, re.match(r'CG', string[-2:]).start() + 1, re.match(r'CG', string[-2:]).start() + 2, '-')] = tuple(('CGN', 'CpG', 'A', 'G'))
+                data_context[(string_name, re.match(r'CG', string[-2:]).start(), re.match(r'CG', string[-2:]).start() + 1, '+')] = tuple(('CGN', 'CpG', 'C'))
+                data_context[(string_name, re.match(r'CG', string[-2:]).start() + 1, re.match(r'CG', string[-2:]).start() + 2, '-')] = tuple(('CGN', 'CpG', 'G'))
 
 
 def context_sequence_search(context, key, fastas, string_name, user_defined_context, context_total_counts, region, strand):
