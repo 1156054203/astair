@@ -412,7 +412,10 @@ def bam_input_simulation(directory, name, modification_level, context, input_fil
             modification_level_ = modification_level
         if modified_positions:
             if modified_positions[-3:] == '.gz':
-                csvfile = gzip.open(modified_positions, 'rt+', encoding='utf8')
+                if sys.version[0] == '3':
+                    csvfile = gzip.open(modified_positions, 'rt+', encoding='utf8', compresslevel=9)
+                else:
+                    csvfile = gzip.open(modified_positions, 'rt+', compresslevel=9)
             else:
                 csvfile = open(modified_positions, 'r+')
         else:

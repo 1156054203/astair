@@ -108,7 +108,7 @@ def find_contexts(reference, context, user_defined_context, per_chromosome, comp
             fasta_contexts_file = open(file_name, 'w')
             write_fasta = csv.writer(fasta_contexts_file, delimiter='\t', lineterminator='\n')
         else:
-            write_fasta = gzip.open(file_name, 'wt')
+            write_fasta = gzip.open(file_name, 'wt',  compresslevel=9)
         contexts, all_keys = sequence_context_set_creation(context, user_defined_context)
         cycles = 0
         context_total_counts, context_sample_counts = defaultdict(int), defaultdict(int)

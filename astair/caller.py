@@ -91,7 +91,7 @@ def modification_calls_writer(data_mods, compress, data_line, header=False):
             if header:
                 data_line.write('{}\t{}\t{}\t{}\t{}\t{}\t{}\t{}\t{}\t{}\t{}\t{}\n'.format("#CHROM", "START", "END", "MOD_LEVEL", "MOD", "UNMOD", "REF", "ALT", "SPECIFIC_CONTEXT", "CONTEXT", "SNV", "TOTAL_DEPTH"))
             data_line.write(
-                    '{}\t{}\t{}\t{}\t{}\t{}\t{}\t{}\t{}\t{}\t{}\t{}\t{}\t{}\n'.format(data_mods[0], data_mods[1], data_mods[2], data_mods[3],
+                    '{}\t{}\t{}\t{}\t{}\t{}\t{}\t{}\t{}\t{}\t{}\t{}\n'.format(data_mods[0], data_mods[1], data_mods[2], data_mods[3],
                                                                  data_mods[4], data_mods[5], data_mods[6], data_mods[7],
                                                                  data_mods[8], data_mods[9], data_mods[10], data_mods[11]))
     except IOError:
@@ -379,7 +379,10 @@ def cytosine_modification_finder(input_file, known_snp, model, reference, contex
             data_line = csv.writer(calls_output, delimiter='\t', lineterminator='\n')
         else:
             logs.info("Compressing output modification calls file.")
-            data_line = gzip.open(file_name + '.gz', 'wt', compresslevel=9, encoding='utf8', newline='\n')
+            if sys.version[0] == '3':
+                data_line = gzip.open(file_name + '.gz', 'wt', compresslevel=9, encoding='utf8', newline='\n')
+            else:
+                data_line = gzip.open(file_name + '.gz', 'wt', compresslevel=9)
         true_variants, possible_mods, matched = None, None, False
         if model == None:
             model, labels, model_name = None, None, None
