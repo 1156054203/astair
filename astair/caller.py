@@ -404,7 +404,7 @@ def cytosine_modification_finder(input_file, known_snp, model, reference, contex
             if known_snp != None:
                 time_s = datetime.now()
                 logs.info("Starting reading SNP information on {} chromosome (sequence). {} seconds".format(keys[i], (time_s - time_m).total_seconds()))
-                true_variants, possible_mods = read_vcf(known_snp, keys[i], fastas[keys[i]], N_threads)
+                true_variants, possible_mods = read_vcf(known_snp, keys[i], fastas[keys[i]], N_threads, None, None)
                 matched = True
                 time_sf = datetime.now()
                 logs.info("Reading SNP information on {} chromosome (sequence) has finished. {} seconds".format(keys[i], (time_sf - time_s).total_seconds()))
@@ -420,7 +420,7 @@ def cytosine_modification_finder(input_file, known_snp, model, reference, contex
                         all_data = numpy.array([position[0], position[1], position[1] + 1, 'NA', 0, 0, 'G', 'A',
                         modification_information_per_position[position][0], modification_information_per_position[position][1], '*', 0, '*', '*'])
                         modification_calls_writer(all_data, compress, data_line, header=False)
-            modification_information_per_position = None
+            modification_information_per_position, true_variants, possible_mods = None, None, None
         inbam.close()
         if per_chromosome == None:
             file_name = path.join(directory, name + "_" + method + "_" + context + ".stats")

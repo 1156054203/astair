@@ -12,7 +12,7 @@ import astair.finder as finder
 import astair.aligner as aligner
 import astair.simulator as simulator
 import astair.filter as filter 
-
+import astair.summary as summary
 
 
 # TODO make this config properly configurable using command line options
@@ -46,6 +46,7 @@ cli.add_command(finder.find)
 cli.add_command(aligner.align)
 cli.add_command(simulator.simulate)
 cli.add_command(filter.filter)
+cli.add_command(summary.summarise)
 
 
 if __name__ == '__main__':

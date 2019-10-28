@@ -15,7 +15,7 @@ logging.basicConfig(level=logging.DEBUG)
 logs = logging.getLogger(__name__)
 
 
-def read_vcf(vcf_file, chromosome, fasta, threads):
+def read_vcf(vcf_file, chromosome, fasta, threads, start, end):
     """Opens neatly and separately the vcf file and takes all SNPs of interest from the current chromosomes."""
     try:
         if os.path.isfile(vcf_file) and not os.path.isfile(os.path.join(str(vcf_file) + '.tbi')):
@@ -36,27 +36,38 @@ def read_vcf(vcf_file, chromosome, fasta, threads):
         for item_c in CN:
             all_contexts[item_c] = 'CN'
         file_to_open = pysam.VariantFile(vcf_file, 'r', threads=threads)
-        for variant in file_to_open:
-            if variant.chrom == chromosome:
+        try:
+            if file_to_open.is_valid_reference_name(chromosome):
+                variants_ = file_to_open.fetch(chromosome)
+            elif file_to_open.is_valid_reference_name(chromosome[3:]):
+                variants_ = file_to_open.fetch(chromosome[3:])
+        except Exception:
+            logs.error('The input VCF file chromosome names do not match those in the fasta and bam file.', exc_info=True)
+            raise
+        for variant in variants_:
+            if  (sys.version[0] == '3' and variant.chrom.isnumeric() and not chromosome.isnumeric()) or ( sys.version[0] == '2' and variant.chrom.isalnum() and not variant.chrom.isalpha() and chromosome.isalpha()):
+                variant_chrom = 'chr'+ variant.chrom
+            else:
+                variant_chrom = variant.chrom
+            if (variant_chrom == chromosome and variant.start>=start and variant.start+1<=end) or (variant_chrom == chromosome and start==None and end==None):
                 if (variant.ref in ["C", "G"]) or ((variant.ref in ["C", "G"] and variant.filter["PASS"])):
-                    true_variants.add(tuple((variant.chrom, variant.start, variant.start+1)))
+                    true_variants.add(tuple((variant_chrom, variant.start, variant.start+1)))
                 elif (set(variant.alts).intersection({'C'}) or  set(variant.alts).intersection({'G'})) or (set(variant.alts).intersection({'C'}) or  set(variant.alts).intersection({'G'}) and variant.filter["PASS"]):
+                    subcontext, context = 'CNN', 'CN'
                     if 'C' in variant.alts:
                         if variant.start+3 < len(fasta):
                             subcontext = ('C'+fasta[variant.start+1:variant.start+3].upper())
-                            context = all_contexts[subcontext]
-                        else:
-                            subcontext, context = 'CNN', 'CN'
-                        possible_mods[tuple((variant.chrom, variant.start, variant.start+1))] = (subcontext, context, 'C', variant.ref)
+                            if len(subcontext) == 3:
+                                context = all_contexts[subcontext]
+                        possible_mods[tuple((variant_chrom, variant.start, variant.start+1))] = (subcontext, context, 'C', variant.ref)
                     else:
                         if variant.start-2 >= 0:
                             subcontext = reverse_complementary(fasta[variant.start-2:variant.start].upper()+'G')
-                            context = all_contexts[subcontext]
-                        else:
-                            subcontext, context = 'CNN', 'CN'
-                        possible_mods[tuple((variant.chrom, variant.start, variant.start+1))] = (subcontext, context, 'G', variant.ref)
+                            if len(subcontext) == 3:
+                                context = all_contexts[subcontext]
+                        possible_mods[tuple((variant_chrom, variant.start, variant.start+1))] = (subcontext, context, 'G', variant.ref)
+        return true_variants, possible_mods
         file_to_open.close()
-        return true_variants, possible_mods 
     except Exception:
         logs.error('The input VCF file does not exist or is truncated.', exc_info=True)
         raise
