@@ -45,7 +45,7 @@ def read_vcf(vcf_file, chromosome, fasta, threads, start, end):
             logs.error('The input VCF file chromosome names do not match those in the fasta and bam file.', exc_info=True)
             raise
         for variant in variants_:
-            if  (sys.version[0] == '3' and variant.chrom.isnumeric() and not chromosome.isnumeric()) or ( sys.version[0] == '2' and variant.chrom.isalnum() and not variant.chrom.isalpha() and chromosome.isalpha()):
+            if  (sys.version[0] == '3' and variant.chrom.isnumeric() and not chromosome.isnumeric()) or ( sys.version[0] == '2' and variant.chrom.isalnum() and not variant.chrom.isalpha() and chromosome.isalnum() and not chromosome.isalpha()):
                 variant_chrom = 'chr'+ variant.chrom
             else:
                 variant_chrom = variant.chrom
