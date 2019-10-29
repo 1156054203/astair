@@ -49,7 +49,7 @@ def read_vcf(vcf_file, chromosome, fasta, threads, start, end):
                 variant_chrom = 'chr'+ variant.chrom
             else:
                 variant_chrom = variant.chrom
-            if (variant_chrom == chromosome and variant.start>=start and variant.start+1<=end) or (variant_chrom == chromosome and start==None and end==None):
+            if (variant_chrom == chromosome and start==None and end==None) or (variant_chrom == chromosome and variant.start>=start and variant.start+1<=end):
                 if (variant.ref in ["C", "G"]) or ((variant.ref in ["C", "G"] and variant.filter["PASS"])):
                     true_variants.add(tuple((variant_chrom, variant.start, variant.start+1)))
                 elif (set(variant.alts).intersection({'C'}) or  set(variant.alts).intersection({'G'})) or (set(variant.alts).intersection({'C'}) or  set(variant.alts).intersection({'G'}) and variant.filter["PASS"]):

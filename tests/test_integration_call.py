@@ -25,6 +25,22 @@ class CallOutputTest(unittest.TestCase):
         remove = 'rm {}'.format(current + '/test_data/small_lambda_mCtoT_all.*')
         subprocess.Popen(remove, shell=True)
         
+        
+    def test_call_default_taps_known_snps(self):
+        """Looks for TAPS modified cytosine positions and compares their modification level with
+        the expected one by context and labels known SNPs."""
+        cytosine_modification_finder(current + '/test_data/small_real_taps_chr10:20000-60000_pos.bam', current + '/test_data/GRCh38p7_common_snps_sample.vcf.gz', None, current + '/test_data/hg38_chr10_20000-60000.fa', 'all', False, False, 13, None, 'directional', 'mCtoT', 0, 0, True, False, True, True, 250, None, 1, current + '/test_data/', False, False, False)
+        data_generated = list()
+        with open(current + '/test_data/small_real_taps_chr10:20000-60000_pos_mCtoT_all.mods','r') as call_file:
+            mod_reader = csv.reader(call_file, delimiter='\t', lineterminator='\n')
+            for row in mod_reader:
+                data_generated.append(tuple((row)))
+        self.assertEqual(data_generated[4500:4530], [('chr10', '25922', '25923', '0.0', '0', '13', 'C', 'T', 'CTC', 'CHH', 'WGS_known', '27'), ('chr10', '25924', '25925', '0.0', '0', '14', 'C', 'T', 'CAC', 'CHH', 'No', '28'), ('chr10', '25926', '25927', '0.0', '0', '13', 'C', 'T', 'CAC', 'CHH', 'No', '27'), ('chr10', '25928', '25929', '0.0', '0', '13', 'C', 'T', 'CAT', 'CHH', 'No', '27'), ('chr10', '25931', '25932', '0.0', '0', '11', 'C', 'T', 'CTC', 'CHH', 'No', '25'), ('chr10', '25933', '25934', '0.0', '0', '13', 'C', 'T', 'CTC', 'CHH', 'No', '27'), ('chr10', '25935', '25936', '0.0', '0', '13', 'C', 'T', 'CAT', 'CHH', 'No', '26'), ('chr10', '25940', '25941', '0.0', '0', '13', 'G', 'A', 'CAA', 'CHH', 'No', '25'), ('chr10', '25942', '25943', '0.0', '0', '14', 'C', 'T', 'CAG', 'CHG', 'No', '27'), ('chr10', '25944', '25945', '0.0', '0', '12', 'G', 'A', 'CTG', 'CHG', 'No', '24'), ('chr10', '25945', '25946', '0.0', '0', '13', 'C', 'T', 'CTT', 'CHH', 'WGS_known', '24'), ('chr10', '25948', '25949', '0.0', '0', '11', 'C', 'T', 'CCC', 'CHH', 'No', '22'), ('chr10', '25949', '25950', '0.0', '0', '13', 'C', 'T', 'CCC', 'CHH', 'No', '23'), ('chr10', '25950', '25951', '0.0', '0', '13', 'C', 'T', 'CCA', 'CHH', 'No', '23'), ('chr10', '25951', '25952', '0.0', '0', '12', 'C', 'T', 'CAA', 'CHH', 'No', '22'), ('chr10', '25955', '25956', '0.0', '0', '9', 'G', 'A', 'CTT', 'CHH', 'No', '21'), ('chr10', '25956', '25957', '0.0', '0', '10', 'C', 'T', 'CAG', 'CHG', 'No', '20'), ('chr10', '25958', '25959', '0.0', '0', '9', 'G', 'A', 'CTG', 'CHG', 'No', '22'), ('chr10', '25959', '25960', '0.0', '0', '9', 'G', 'A', 'CCT', 'CHH', 'No', '22'), ('chr10', '25960', '25961', '0.0', '0', '13', 'C', 'T', 'CTT', 'CHH', 'No', '22'), ('chr10', '25964', '25965', '0.0', '0', '9', 'G', 'A', 'CAA', 'CHH', 'No', '22'), ('chr10', '25965', '25966', '0.0', '0', '13', 'C', 'T', 'CAG', 'CHG', 'No', '22'), ('chr10', '25967', '25968', '0.0', '0', '9', 'G', 'A', 'CTG', 'CHG', 'No', '22'), ('chr10', '25969', '25970', '0.0', '0', '9', 'C', 'T', 'CCA', 'CHH', 'No', '18'), ('chr10', '25970', '25971', '0.0', '0', '11', 'C', 'T', 'CAG', 'CHG', 'No', '20'), ('chr10', '25972', '25973', '0.0', '0', '9', 'G', 'A', 'CTG', 'CHG', 'No', '20'), ('chr10', '25973', '25974', '0.0', '0', '9', 'G', 'A', 'CCT', 'CHH', 'No', '20'), ('chr10', '25974', '25975', '0.0', '0', '10', 'C', 'T', 'CTC', 'CHH', 'No', '19'), ('chr10', '25976', '25977', '0.0', '0', '11', 'C', 'T', 'CCC', 'CHH', 'No', '20'), ('chr10', '25977', '25978', '0.0', '0', '12', 'C', 'T', 'CCC', 'CHH', 'No', '20')])
+        remove = 'rm {}'.format(current + '/test_data/small_real_taps_chr10:20000-60000_pos_mCtoT_all.*')
+        subprocess.Popen(remove, shell=True) 
+        
+          
+        
     def test_call_taps_mark_ends(self):
         """Looks for TAPS modified cytosine positions and compares their modification level with
         the expected one by context for a sample with mark_ends issue."""

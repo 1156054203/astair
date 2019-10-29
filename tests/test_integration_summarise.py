@@ -15,7 +15,7 @@ class FindOutputTest(unittest.TestCase):
     """Tests whether the same cytosine positions will be called as modified for both TAPS and WGBS."""
 
     def test_taps_default_CpG(self):
-        """Looks for cytosine positions and compares them with the expected ones by context."""
+        """Looks for cytosine positions and outputs read information by context for TAPS."""
         read_summariser(current + '/test_data/small_real_taps_chr10:20000-60000_pos.bam', current + '/test_data/hg38_chr10_20000-60000.fa',  current + '/test_data/GRCh38p7_common_snps_sample.vcf.gz', 'CpG', None, 'directional', 'mCtoT', (None, None, None), 10, 1, None, 1,  current + '/test_data/', False, False)
         data_generated = list()
         if sys.version[0] == '3':
@@ -34,7 +34,7 @@ class FindOutputTest(unittest.TestCase):
 
     
     def test_wgbs_default_CpG(self):
-        """Looks for cytosine positions and compares them with the expected ones by context."""
+        """Looks for cytosine positions and outputs read information by context for WGBS."""
         read_summariser(current + '/test_data/small_real_taps_chr10:20000-60000_pos.bam', current + '/test_data/hg38_chr10_20000-60000.fa',  current + '/test_data/GRCh38p7_common_snps_sample.vcf.gz', 'CpG', None, 'directional', 'CtoT', (None, None, None), 10, 1, None, 1,  current + '/test_data/', False, False)
         data_generated = list()
         if sys.version[0] == '3':
