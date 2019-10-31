@@ -58,7 +58,7 @@ def fasta_splitting_by_sequence(fasta_file, per_chromosome, numbered, add_unders
                     elif all_chromosomes == None and per_chromosome != 'keys_only':
                         sequences_per_chrom = pysam.FastaFile(fasta_file).fetch(per_chromosome)
                         sequences = "".join(sequences_per_chrom)
-                        fastas[keys[0]] = sequences
+                        fastas[per_chromosome] = sequences
                         return fastas
                     else:
                         for sequence_name in keys:
