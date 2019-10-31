@@ -52,20 +52,21 @@ def read_vcf(vcf_file, chromosome, fasta, threads, start, end):
             if (variant_chrom == chromosome and start==None and end==None) or (variant_chrom == chromosome and variant.start>=start and variant.start+1<=end):
                 if (variant.ref in ["C", "G"]) or ((variant.ref in ["C", "G"] and variant.filter["PASS"])):
                     true_variants.add(tuple((variant_chrom, variant.start, variant.start+1)))
-                elif (set(variant.alts).intersection({'C'}) or  set(variant.alts).intersection({'G'})) or (set(variant.alts).intersection({'C'}) or  set(variant.alts).intersection({'G'}) and variant.filter["PASS"]):
-                    subcontext, context = 'CNN', 'CN'
-                    if 'C' in variant.alts:
-                        if variant.start+3 < len(fasta):
-                            subcontext = ('C'+fasta[variant.start+1:variant.start+3].upper())
-                            if len(subcontext) == 3:
-                                context = all_contexts[subcontext]
-                        possible_mods[tuple((variant_chrom, variant.start, variant.start+1))] = (subcontext, context, 'C', variant.ref)
-                    else:
-                        if variant.start-2 >= 0:
-                            subcontext = reverse_complementary(fasta[variant.start-2:variant.start].upper()+'G')
-                            if len(subcontext) == 3:
-                                context = all_contexts[subcontext]
-                        possible_mods[tuple((variant_chrom, variant.start, variant.start+1))] = (subcontext, context, 'G', variant.ref)
+                if variant.alts!=None:
+                    if (set(variant.alts).intersection({'C'}) or  set(variant.alts).intersection({'G'})) or (set(variant.alts).intersection({'C'}) or  set(variant.alts).intersection({'G'}) and variant.filter["PASS"]):
+                        subcontext, context = 'CNN', 'CN'
+                        if 'C' in variant.alts:
+                            if variant.start+3 < len(fasta):
+                                subcontext = ('C'+fasta[variant.start+1:variant.start+3].upper())
+                                if len(subcontext) == 3:
+                                    context = all_contexts[subcontext]
+                            possible_mods[tuple((variant_chrom, variant.start, variant.start+1))] = (subcontext, context, 'C', variant.ref)
+                        else:
+                            if variant.start-2 >= 0:
+                                subcontext = reverse_complementary(fasta[variant.start-2:variant.start].upper()+'G')
+                                if len(subcontext) == 3:
+                                    context = all_contexts[subcontext]
+                            possible_mods[tuple((variant_chrom, variant.start, variant.start+1))] = (subcontext, context, 'G', variant.ref)
         return true_variants, possible_mods
         file_to_open.close()
     except Exception:
