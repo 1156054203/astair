@@ -367,7 +367,10 @@ def cytosine_modification_finder(input_file, known_snp, model, reference, contex
         except Exception:
             sys.exit(1)
         try:
-            keys = fasta_splitting_by_sequence(reference, 'keys_only', None, add_underscores, None)
+            if per_chromosome==None:
+                keys = fasta_splitting_by_sequence(reference, 'keys_only', None, add_underscores, None)
+            else:
+                keys = [per_chromosome]
         except Exception:
             sys.exit(1)
         contexts, all_keys = sequence_context_set_creation(context, user_defined_context)

@@ -34,6 +34,7 @@ Commands:
   mbias     Generate modification per read length information (Mbias).
   phred     Calculate per base (A, C, T, G) Phred scores for each strand.
   simulate  Simulate TAPS/BS conversion on top of an existing bam/cram file.
+  summarise  Collects and outputs modification information per read.
 
   __________________________________About__________________________________
   asTair was written by Gergana V. Velikova and Benjamin Schuster-Boeckler.

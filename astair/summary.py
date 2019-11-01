@@ -80,7 +80,10 @@ def read_summariser(input_file, reference, known_snp, context, user_defined_cont
         file_name = path.join(directory, name + "_" + method + "_" + per_chromosome + "_" + context + "read_summary.txt.gz")
     if not os.path.isfile(file_name):
         try:
-            keys = fasta_splitting_by_sequence(reference, 'keys_only', None, add_underscores, None)
+            if per_chromosome==None:
+                keys = fasta_splitting_by_sequence(reference, 'keys_only', None, add_underscores, None)
+            else:
+                keys = [per_chromosome]
             all_chrom = pysam.FastaFile(reference)
         except Exception:
             sys.exit(1)

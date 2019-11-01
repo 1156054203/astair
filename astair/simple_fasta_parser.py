@@ -34,21 +34,33 @@ def fasta_splitting_by_sequence(fasta_file, per_chromosome, numbered, add_unders
         if (sys.version[0] == '3' and isinstance(fasta_file, str)) or (sys.version[0] == '2' and isinstance(fasta_file, basestring)):
             reference_absolute_name = os.path.splitext(os.path.abspath(fasta_file))[0]
             reference_extension = os.path.splitext(os.path.basename(fasta_file))[1]
+            try:
+                if reference_extension == '.gz':
+                    bgzip_ = subprocess.Popen('bgzip -r {}'.format(fasta_file), shell=True)
+                    exit_code = bgzip_.wait()
+                    if exit_code == 0:
+                        compressed_ = 'bgzip'
+                    else:
+                        compressed_ = 'gzip'
+            except Exception:
+                logs.error('No bgzip was found to create gzi index.', exc_info=True)
+                compressed_ = 'gzip'
             if add_underscores:
                 if reference_extension == '.gz':
                     fasta_handle = gzipped_fasta_read(fasta_file, reference_absolute_name, reference_extension)
                 else:
                     fasta_handle = open(reference_absolute_name, 'r')
                 logs.info("The program will ouput a GZIP compressed fasta files with underscores in the reference names for future analyses.")
-                data_line = gzip.open(reference_absolute_name + '_no_spaces.fa.gz', 'wt')
-                for fasta_sequence in fasta_handle.readlines():
-                    if re.match(r'^>', fasta_sequence.splitlines()[0]):
-                            data_line.write('{}\n'.format(fasta_sequence.splitlines()[0].replace(' ', '_')))
-                    else:
-                        data_line.write('{}\n'.format(fasta_sequence.splitlines()[0]))
-                data_line.close()
-                fasta_handle.close()
-            if reference_extension != '.gz':
+                if not os.path.isfile(reference_absolute_name[:-3] + '_no_spaces.fa.gz'):
+                    data_line = gzip.open(reference_absolute_name[:-3] + '_no_spaces.fa.gz', 'wt')
+                    for fasta_sequence in fasta_handle.readlines():
+                        if re.match(r'^>', fasta_sequence.splitlines()[0]):
+                                data_line.write('{}\n'.format(fasta_sequence.splitlines()[0].replace(' ', '_')))
+                        else:
+                            data_line.write('{}\n'.format(fasta_sequence.splitlines()[0]))
+                    data_line.close()
+                    fasta_handle.close()
+            if reference_extension != '.gz' or compressed_=='bgzip':
                 keys, fastas, sequences, sequences_per_chrom = numpy.array([]), {}, numpy.array([]), numpy.array([])
                 try:
                     all_chrom = pysam.FastaFile(fasta_file)
@@ -66,7 +78,6 @@ def fasta_splitting_by_sequence(fasta_file, per_chromosome, numbered, add_unders
                         return keys, fastas
                 except Exception:
                     logs.error('The chromosome does not exist in the genome reference fasta file.', exc_info=True)
-                    
             else:
                 chromosome_found = False
                 keys, fastas, sequences, sequences_per_chrom = [], {}, [], []
@@ -76,10 +87,13 @@ def fasta_splitting_by_sequence(fasta_file, per_chromosome, numbered, add_unders
                             if fasta_sequence.splitlines()[0][1:].rfind(' ') == -1:
                                 keys.append(fasta_sequence.splitlines()[0][1:])
                             else:
-                                logs.info("There are spaces in the sequence names of your reference. Please add them yourself or run asTair with --add_underscores option, which will replace them with underscores and output a new fasta file recommended for future analyses, now it will run analyses with the first word of the reference names.")
+                                logs.info("There are spaces in the sequence names of your reference. Please add them yourself or run asTair with --add_underscores option, which will replace them with underscores and output a new fasta file recommended for future analyses, now it will run analyses with the first word of the reference names, unless you have also set --use_underscores.")
                                 keys.append(fasta_sequence.splitlines()[0][1:].split(' ')[0])
                             if all_chromosomes == None and per_chromosome == 'keys_only':
                                 fasta_handle.close()
+                                if reference_extension == '.gz' and sys.version[0] == '2' and  os.path.isfile(reference_absolute_name):
+                                    file_ = subprocess.Popen('gzip {}'.format(reference_absolute_name), shell=True)
+                                    exit_code = file_.wait()
                                 return keys
                             elif per_chromosome == None:
                                 sequences.append("".join(sequences_per_chrom))
