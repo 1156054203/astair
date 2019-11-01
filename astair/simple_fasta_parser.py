@@ -34,6 +34,9 @@ def fasta_splitting_by_sequence(fasta_file, per_chromosome, numbered, add_unders
         if (sys.version[0] == '3' and isinstance(fasta_file, str)) or (sys.version[0] == '2' and isinstance(fasta_file, basestring)):
             reference_absolute_name = os.path.splitext(os.path.abspath(fasta_file))[0]
             reference_extension = os.path.splitext(os.path.basename(fasta_file))[1]
+            reference_dir = os.path.dirname(fasta_file)
+            if list(reference_dir)[-1]!="/":
+                reference_dir = reference_dir + "/"
             try:
                 if reference_extension == '.gz':
                     bgzip_ = subprocess.Popen('bgzip -r {}'.format(fasta_file), shell=True)
@@ -51,8 +54,8 @@ def fasta_splitting_by_sequence(fasta_file, per_chromosome, numbered, add_unders
                 else:
                     fasta_handle = open(reference_absolute_name, 'r')
                 logs.info("The program will ouput a GZIP compressed fasta files with underscores in the reference names for future analyses.")
-                if not os.path.isfile(reference_absolute_name[:-3] + '_no_spaces.fa.gz'):
-                    data_line = gzip.open(reference_absolute_name[:-3] + '_no_spaces.fa.gz', 'wt')
+                if not os.path.isfile(reference_dir + os.path.splitext(os.path.basename(reference_absolute_name))[0] + '_no_spaces.fa.gz'):
+                    data_line = gzip.open(reference_dir + os.path.splitext(os.path.basename(reference_absolute_name))[0] + '_no_spaces.fa.gz', 'wt')
                     for fasta_sequence in fasta_handle.readlines():
                         if re.match(r'^>', fasta_sequence.splitlines()[0]):
                                 data_line.write('{}\n'.format(fasta_sequence.splitlines()[0].replace(' ', '_')))

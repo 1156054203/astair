@@ -107,10 +107,10 @@ def check_index(use_bwa, reference, method, output_format, add_underscores, use_
     reference_dir = os.path.dirname(reference)
     if list(reference_dir)[-1]!="/":
         reference_dir = reference_dir + "/"
-    if use_underscores and ((os.path.isfile(reference_dir + reference_base_name[:-3] + '_no_spaces.fa.gz') and reference_extension == '.gz') or (os.path.isfile(reference_dir + reference_base_name + '_no_spaces.fa.gz') and reference_extension != '.gz')):
+    if use_underscores and ((os.path.isfile(reference_dir + os.path.splitext(os.path.basename(reference_base_name))[0] + '_no_spaces.fa.gz') and reference_extension == '.gz') or (os.path.isfile(reference_dir + reference_base_name + '_no_spaces.fa.gz') and reference_extension != '.gz')):
         if reference_extension == '.gz':
-            reference = reference_dir + reference_base_name[:-3] + '_no_spaces.fa.gz'
-            reference_base_name = reference_base_name[:-3] + '_no_spaces.fa'
+            reference = reference_dir + os.path.splitext(os.path.basename(reference_base_name))[0]  + '_no_spaces.fa.gz'
+            reference_base_name = os.path.splitext(os.path.basename(reference_base_name))[0] + '_no_spaces.fa'
         else:
             reference = reference_dir + reference_base_name + '_no_spaces.fa.gz'
             reference_base_name = reference_base_name + '_no_spaces.fa'
@@ -161,6 +161,8 @@ def run_alignment(fq1, fq2, reference, bwa_path, samtools_path, directory, metho
         minimum_mapping_quality = 0
     else:
         aligned_string = '-F 4 '
+    if use_underscores:
+        add_underscores = True
     use_bwa, use_samtools = which_path(bwa_path, samtools_path, method)
     reference = check_index(use_bwa, reference, method, output_format, add_underscores, use_underscores)
     if skip_mate_rescue:
