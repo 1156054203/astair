@@ -45,7 +45,7 @@ from astair.simple_fasta_parser import fasta_splitting_by_sequence
 @click.option('read_length', '--read_length', '-l', type=int, required=True, help='The read length is needed to calculate the Mbias.')
 @click.option('method', '--method', '-m',  required=False, default='mCtoT', type=click.Choice(['CtoT', 'mCtoT']), help='Specify sequencing method, possible options are CtoT (unmodified cytosines are converted to thymines, bisulfite sequencing-like) and mCtoT (modified cytosines are converted to thymines, TAPS-like). (Default mCtoT).')
 @click.option('per_chromosome', '--per_chromosome', '-chr', default=None, type=str, help='When used, it calculates the modification rates only per the chromosome given. (Default None).')
-@click.option('single_end', '--se', '-se', default=False, is_flag=True, required=False, help='Indicates single-end sequencing reads (Default False).')
+@click.option('single_end', '--single_end', '-se', default=False, is_flag=True, required=False, help='Indicates single-end sequencing reads (Default False).')
 @click.option('plot', '--plot', '-p', required=False, is_flag=True, help='Phred scores will be visualised and output as a pdf file. Requires installed matplotlib.')
 @click.option('colors', '--colors', '-c', default=['teal', 'gray', 'maroon'], type=list, required=False, help="List of color values used for visualistion of CpG, CHG and CHH modification levels per read, which are given as color1,color2,color3. Accepts valid matplotlib color names, RGB and RGBA hex strings and  single letters denoting color {'b', 'g', 'r', 'c', 'm', 'y', 'k', 'w'}. (Default 'teal','gray','maroon').")
 @click.option('N_threads', '--N_threads', '-t', default=1, required=True, help='The number of threads to spawn (Default 1).')
@@ -54,8 +54,9 @@ def mbias(reference, input_file, directory, read_length, method, single_end, plo
     Mbias_plotting(reference, input_file, directory, read_length, method, single_end, plot, colors, N_threads, per_chromosome)
 
 
-warnings.simplefilter(action='ignore', category=FutureWarning)
 warnings.simplefilter(action='ignore', category=UserWarning)
+warnings.simplefilter(action='ignore', category=FutureWarning)
+warnings.simplefilter(action='ignore', category=RuntimeWarning)
 
 #logging.basicConfig(level=logging.WARNING)
 logs = logging.getLogger(__name__)
@@ -213,7 +214,7 @@ def mbias_statistics_calculator(fastas, input_file, name, directory, read_length
                 first, second = '1', '2'
             else:
                 first, second = 'OT', 'OB'
-            line.writerow(['POSITION_(bp)', 'MOD_LVL_CpG_READ_{}'.format(first), 'UNMOD_COUNT_CpG_READ_{}'.format(first), 'MOD_COUNT_CpG_READ_{}'.format(first),
+            line.writerow(['#POSITION_(bp)', 'MOD_LVL_CpG_READ_{}'.format(first), 'UNMOD_COUNT_CpG_READ_{}'.format(first), 'MOD_COUNT_CpG_READ_{}'.format(first),
                            'MOD_LVL_CpG_READ_{}'.format(second), 'UNMOD_COUNT_CpG_READ_{}'.format(second), 'MOD_COUNT_CpG_READ_{}'.format(second),
                            'MOD_LVL_CHG_READ_{}'.format(first), 'UNMOD_COUNT_CHG_READ_{}'.format(first), 'MOD_COUNT_CHG_READ_{}'.format(first),
                            'MOD_LVL_CHG_READ_{}'.format(second), 'UNMOD_COUNT_CHG_READ_{}'.format(second), 'MOD_COUNT_CHG_READ_{}'.format(second),
@@ -235,7 +236,7 @@ def Mbias_plotting(reference, input_file, directory, read_length, method, single
     if path.exists(directory) == False:
         raise Exception("The output directory does not exist.")
         sys.exit(1)
-    keys, fastas = fasta_splitting_by_sequence(reference, per_chromosome, None)
+    keys, fastas = fasta_splitting_by_sequence(reference, per_chromosome, None, False, 'all')
     values_1_CpG, values_2_CpG, values_1_CHG, values_2_CHG, values_1_CHH, values_2_CHH = mbias_statistics_calculator(fastas, input_file, name, directory, read_length, method, single_end, N_threads, per_chromosome)
     try:
         if plot:

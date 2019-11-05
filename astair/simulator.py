@@ -2,6 +2,7 @@
 #-*- coding: utf-8 -*-
 
 from __future__ import division
+from __future__ import print_function
 
 import re
 import os
@@ -22,6 +23,7 @@ from datetime import datetime
 from collections import defaultdict
 
 
+from astair.vcf_reader import read_vcf
 from astair.cigar_search import cigar_search
 from astair.bam_file_parser import bam_file_opener
 from astair.context_search import context_sequence_search
@@ -31,18 +33,19 @@ from astair.simple_fasta_parser import fasta_splitting_by_sequence
 
 @click.command()
 @click.option('reference', '--reference', '-f', required=True, help='Reference DNA sequence in FASTA format used for generation and modification of the sequencing reads at desired contexts.')
+@click.option('control_file', '--control_file', '-c', required=False, help='A VCF file with SNP status returned after WGS genotyping or a publicly available SNP list (dbSNP, 1000 genomes, etc).')
+@click.option('model', '--model', '-mo', default=None,  type=click.Choice([None]), required=False, help='Decide on model for class estimation.')
 @click.option('read_length', '--read_length', '-l', type=int, required=True, help='Desired length of pair-end sequencing reads.')
 @click.option('input_file', '--input_file', '-i', required=True, help='Sequencing reads as a BAM|CRAMfile or fasta sequence to generate reads.')
 @click.option('simulation_input', '--simulation_input', '-si', type=click.Choice(['bam']), default='bam', required=False, help='Input file format according to the desired outcome. BAM|CRAM files can be generated with other WGS simulators allowing for sequencing errors and read distributions or can be real-life sequencing data.')
 @click.option('method', '--method', '-m', required=False, default='mCtoT', type=click.Choice(['CtoT', 'mCtoT']), help='Specify sequencing method, possible options are CtoT (unmodified cytosines are converted to thymines, bisulfite sequencing-like) and mCtoT (modified cytosines are converted to thymines, TAPS-like). (Default mCtoT).')
 @click.option('modification_level', '--modification_level', '-ml',  type=int, required=False, help='Desired modification level; can take any value between 0 and 100.')
-@click.option('library', '--library', '-lb',  type=click.Choice(['directional']), default='directional', required=False, help='Provide the correct library construction method. NB: Non-directional methods under development.')
+@click.option('library', '--library', '-lb',  type=click.Choice(['directional', 'reverse']), default='directional', required=False, help='Provide the correct library construction method. NB: Non-directional methods under development.')
 @click.option('modified_positions', '--modified_positions', '-mp', required=False, default=None, help='Provide a tab-delimited list of positions to be modified. By default the simulator randomly modifies certain positions. Please use seed for replication if no list is given.')
 @click.option('context', '--context', '-co', required=False, default='all', type=click.Choice(['all', 'CpG', 'CHG', 'CHH']), help='Explains which cytosine sequence contexts are to be modified in the output file. Default behaviour is all, which modifies positions in CpG, CHG, CHH contexts. (Default all).')
 @click.option('user_defined_context', '--user_defined_context', '-uc', required=False, type=str, help='At least two-letter contexts other than CG, CHH and CHG to be evaluated, will return the genomic coordinates for the first cytosine in the string.')
 @click.option('coverage', '--coverage', '-cv', required=False, type=int, help='Desired depth of sequencing coverage.')
 @click.option('region', '--region', '-r', nargs=3, type=click.Tuple([str, int, int]), default=(None, None, None), required=False, help='The one-based genomic coordinates of the specific region of interest given in the form chromosome, start position, end position, e.g. chr1 100 2000.')
-@click.option('user_defined_context', '--user_defined_context', '-uc', required=False, type=str, help='At least two-letter contexts other than CG, CHH and CHG to be evaluated, will return the genomic coordinates for the first cytosine in the string.')
 @click.option('overwrite', '--overwrite', '-ov', required=False, default=False, is_flag=True, help='Indicates whether existing output files with matching names will be overwritten. (Default False).')
 @click.option('per_chromosome', '--per_chromosome', '-chr', default=None, type=str, help='When used, it calculates the modification rates only per the chromosome given. (Default None).')
 @click.option('GC_bias', '--GC_bias', '-gc', default=0.3, required=True, type=float, help='The value of total GC levels in the read above which lower coverage will be observed in Ns and fasta modes. (Default 0.5).')
@@ -51,16 +54,24 @@ from astair.simple_fasta_parser import fasta_splitting_by_sequence
 @click.option('reverse_modification', '--rev', '-rv', default=False, is_flag=True, required=False, help='Returns possible or known modified position to their unmodified expected state. NB: Works only on files with MD tags (Default False).')
 @click.option('directory', '--directory', '-d', required=True, type=str, help='Output directory to save files.')
 @click.option('seed', '--seed', '-s', type=int, required=False, help='An integer number to be used as a seed for the random generators to ensure replication.')
-
-
-def simulate(reference, read_length, input_file, method, library, simulation_input, modification_level,
-                   modified_positions, coverage, context, region, directory, seed, user_defined_context, N_threads, per_chromosome, GC_bias, sequence_bias, overwrite, reverse_modification):
+@click.option('skip_clip_overlap', '--skip_clip_overlap', '-sc', required=False, default=False, type=bool, help='Skipping the random removal of overlapping bases between pair-end reads. Not recommended for pair-end libraries, unless the overlaps are removed prior to calling. (Default False)')
+@click.option('single_end', '--single_end', '-se', default=False, is_flag=True, required=False, help='Indicates single-end sequencing reads (Default False).')
+@click.option('minimum_base_quality', '--minimum_base_quality', '-bq', required=False, type=int, default=20, help='Set the minimum base quality for a read base to be used in the pileup (Default 20).')
+@click.option('minimum_mapping_quality', '--minimum_mapping_quality', '-mq', required=False, type=int, default=0, help='Set the minimum mapping quality for a read to be used in the pileup (Default 0).')
+@click.option('adjust_acapq_threshold', '--adjust_capq_threshold', '-amq', required=False, type=int, default=0, help='Used to adjust the mapping quality with default 0 for no adjustment and a recommended value for adjustment 50. (Default 0).')
+@click.option('add_indels', '--add_indels', '-ai', required=False, default=True, type=bool, help='Adds inserted bases and Ns for base skipped from the reference (Default True).')
+@click.option('redo_baq', '--redo_baq', '-rbq', required=False, default=False, type=bool, help='Re-calculates per-Base Alignment Qualities ignoring existing base qualities (Default False).')
+@click.option('compute_baq', '--compute_baq', '-cbq', required=False, default=True, type=bool, help='Performs re-alignment computing of per-Base Alignment Qualities (Default True).')
+@click.option('ignore_orphans', '--ignore_orphans', '-io', required=False, default=True, type=bool, help='Ignore reads not in proper pairs (Default True).')
+@click.option('max_depth', '--max_depth', '-md', required=False, type=int, default=250, help='Set the maximum read depth for the pileup. Please increase the maximum value for spike-ins and other highly-covered sequences. (Default 250).')
+def simulate(reference,  control_file, model, read_length, input_file, simulation_input, method, modification_level, library, modified_positions, context, user_defined_context, coverage, region, overwrite, per_chromosome, GC_bias, sequence_bias, N_threads, reverse_modification, directory, seed, skip_clip_overlap, single_end, minimum_base_quality, minimum_mapping_quality,adjust_capq_threshold, add_indels, redo_baq, compute_baq, ignore_orphans, max_depth):
     """Simulate TAPS/BS conversion on top of an existing bam/cram file."""
-    modification_simulator(reference, read_length, input_file, method, library, simulation_input, modification_level,
-              modified_positions, coverage, context, region, directory, seed, user_defined_context, N_threads, per_chromosome, GC_bias, sequence_bias, overwrite, reverse_modification)
+    modification_simulator(reference,  control_file, model, read_length, input_file, simulation_input, method, modification_level, library, modified_positions, context, user_defined_context, coverage, region, overwrite, per_chromosome, GC_bias, sequence_bias, N_threads, reverse_modification, directory, seed, skip_clip_overlap, single_end, minimum_base_quality, minimum_mapping_quality,adjust_capq_threshold, add_indels, redo_baq, compute_baq, ignore_orphans, max_depth)
 
-warnings.simplefilter(action='ignore', category=FutureWarning)
+
 warnings.simplefilter(action='ignore', category=UserWarning)
+warnings.simplefilter(action='ignore', category=FutureWarning)
+warnings.simplefilter(action='ignore', category=RuntimeWarning)
 
 #logging.basicConfig(level=logging.DEBUG)
 logs = logging.getLogger(__name__)
@@ -181,7 +192,7 @@ def general_read_information_output(read, header, line):
     try:
         if header:
             line.write(
-                '{}\t{}\t{}\t{}\n'.format('Read ID', 'reference', 'start', 'end'))
+                '{}\t{}\t{}\t{}\n'.format('#Read ID', 'reference', 'start', 'end'))
             line.write(
                 '{}\t{}\t{}\t{}\n'.format(read.qname + orientation, read.reference_name, read.reference_start,
                                 read.reference_start + read.query_length))
@@ -401,7 +412,10 @@ def bam_input_simulation(directory, name, modification_level, context, input_fil
             modification_level_ = modification_level
         if modified_positions:
             if modified_positions[-3:] == '.gz':
-                csvfile = gzip.open(modified_positions, 'rt+', encoding='utf8')
+                if sys.version[0] == '3':
+                    csvfile = gzip.open(modified_positions, 'rt+', encoding='utf8', compresslevel=9)
+                else:
+                    csvfile = gzip.open(modified_positions, 'rt+', compresslevel=9)
             else:
                 csvfile = open(modified_positions, 'r+')
         else:
@@ -420,7 +434,7 @@ def bam_input_simulation(directory, name, modification_level, context, input_fil
             else:
                 outbam = pysam.AlignmentFile(path.join(directory, name + '_' + method + '_' + str(modification_level_) + '_' + context  + '_reversed_' + per_chromosome  + extension),
                 file_type, reference_filename=reference, template=bam_file_opener(input_file, None, N_threads), header=header)
-        keys, fastas = fasta_splitting_by_sequence(reference, per_chromosome, None)
+        keys, fastas = fasta_splitting_by_sequence(reference, per_chromosome, None, False, 'all')
         if per_chromosome == None:
             name_to_use = path.join(directory, name + '_' + method + '_' + str(modification_level_) + '_' + context + '_read_information.txt')
             name_to_use_absolute = path.join(directory,name + '_' + method + '_' + str(modification_level_) + '_' + context + '_modified_positions_information.txt')
@@ -430,7 +444,7 @@ def bam_input_simulation(directory, name, modification_level, context, input_fil
         line = gzip.open(name_to_use + '.gz', 'wt', compresslevel=9)
         line_ = gzip.open(name_to_use_absolute + '.gz', 'wt', compresslevel=9)
         context_total_counts = defaultdict(int)
-        if region == None and per_chromosome == None:
+        if region == None:
             for i in range(0, len(keys)):
                 modified_positions_data = list()
                 modification_information, random_sample, modification_level = modification_information_and_reads_fetching(context, user_defined_context, modified_positions, region, fastas, keys[i], context_total_counts, modification_level, library, seed, input_file, N_threads, csvfile)
@@ -441,7 +455,7 @@ def bam_input_simulation(directory, name, modification_level, context, input_fil
             line_.close()
             if modified_positions:
                 csvfile.close()
-        elif per_chromosome == None and region != None:
+        elif region != None:
             modified_positions_data = list()
             modification_information, random_sample, modification_level = modification_information_and_reads_fetching(context, user_defined_context, modified_positions, region, fastas, region[0], context_total_counts, modification_level, library, seed, input_file, N_threads, csvfile)
             fetch = tuple((region[0], region[1], region[2]))
@@ -451,21 +465,11 @@ def bam_input_simulation(directory, name, modification_level, context, input_fil
             line_.close()
             if modified_positions:
                 csvfile.close()
-        else:
-            modified_positions_data = list()
-            modification_information, random_sample, modification_level = modification_information_and_reads_fetching(context, user_defined_context, modified_positions, region, fastas, per_chromosome, context_total_counts, modification_level, library, seed, input_file, N_threads, csvfile)
-            fetch = tuple((per_chromosome, 0, pysam.AlignmentFile(input_file).get_reference_length(per_chromosome)))
-            read_modification(input_file, fetch, N_threads, name, directory, modification_level, header, region, method, context, modified_positions_data, random_sample, fastas, library, reverse_modification, outbam, line, modified_positions, modification_information)
-            absolute_modification_information(modified_positions_data, modification_information, modified_positions,name,directory, modification_level, context, method, per_chromosome, line_)
-            line.close()
-            line_.close()
-            if modified_positions:
-                csvfile.close()
 
 
 
-def modification_simulator(reference, read_length, input_file, method, library, simulation_input, modification_level,
-                           modified_positions, coverage, context, region, directory, seed, user_defined_context, N_threads, per_chromosome, GC_bias, sequence_bias, overwrite, reverse_modification):
+def modification_simulator(reference,  control_file, model, read_length, input_file, simulation_input, method, modification_level, library, modified_positions, context, user_defined_context, coverage, region, overwrite, per_chromosome, GC_bias, sequence_bias, N_threads, reverse_modification, directory, seed,
+                           skip_clip_overlap, single_end, minimum_base_quality, minimum_mapping_quality,adjust_capq_threshold, add_indels, redo_baq, compute_baq, ignore_orphans, max_depth):
     "Assembles the whole modification simulator and runs per mode, method, library and context."
     time_s = datetime.now()
     logs.info("asTair's cytosine modification simulator started running. {} seconds".format((time_s - time_b).total_seconds()))
