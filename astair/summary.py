@@ -97,7 +97,7 @@ def read_summariser(input_file, reference, known_snp, context, user_defined_cont
             data_line = gzip.open(file_name, 'wt', compresslevel=9, encoding='utf8', newline='\n')
         else:
             data_line = gzip.open(file_name, 'wt', compresslevel=9)    
-        data_line.write('{}\t{}\t{}\t{}\t{}\t{}\t{}\t{}\t{}\t{}\t{}\n'.format("#CHROM", "START", "END", "READ_NAME", "POSSIBLE_MODIFICATION", 'FLAG', 'CONTEXT', "SPECIFIC_CONTEXT", "BQ", "MAPQ", "KNOWN_SNP"))
+        data_line.write('{}\t{}\t{}\t{}\t{}\t{}\t{}\t{}\t{}\t{}\t{}\t{}\t{}\n'.format("#CHROM", "START", "END", "READ_NAME", "MODIFICATION_STATUS", 'FLAG', 'CONTEXT', "SPECIFIC_CONTEXT", "BQ", "MAPQ", "STRAND", "KNOWN_SNP", "INFO"))
         if region != (None, None, None):
             keys, start, end = [region[0]], region[1], region[2]
         for i in range(0, len(keys)):
@@ -126,18 +126,32 @@ def read_summariser(input_file, reference, known_snp, context, user_defined_cont
                 snp_status = '*'
                 for position in read_info:
                     if (known_snp==None and position in modification_information_per_position) or (known_snp!=None and (position in modification_information_per_position or position in possible_mods)):
+                        if known_snp!=None and position in possible_mods:
+                            label = 'possible_modification'
+                        else:
+                            label = 'true_modification'
+                        if  position in modification_information_per_position:
+                            if modification_information_per_position[position][2] == 'C':
+                                strand = '+'
+                            elif modification_information_per_position[position][2] == 'G':
+                                strand = '-'
+                        elif position in possible_mods:
+                            if possible_mods[position][2] == 'C':
+                                strand = '+'
+                            elif possible_mods[position][2] == 'G':
+                                strand = '-'
                         if known_snp != None and position in true_variants:
                             snp_status = 'WGS'
                         if position not in possible_mods:
                             if (read.flag in flags_expectation_top and read.query_sequence[position[1]-read.reference_start] in ['T','t'] and method == 'mCtoT') or  (read.flag in flags_expectation_top and read.query_sequence[position[1]-read.reference_start] in ['C','c'] and method == 'CtoT') or (read.flag in flags_expectation_bottom and read.query_sequence[position[1]-read.reference_start] in ['A','a'] and method == 'mCtoT') or  (read.flag in flags_expectation_bottom and read.query_sequence[position[1]-read.reference_start] in ['G','g'] and method == 'CtoT'):
-                                data_line.write('{}\t{}\t{}\t{}\t{}\t{}\t{}\t{}\t{}\t{}\t{}\n'.format(read.reference_name, position[1], position[2], read.query_name, 1, read.flag, modification_information_per_position[position][1], modification_information_per_position[position][0], read.query_qualities[position[1]-read.reference_start], read.mapq, snp_status))
+                                data_line.write('{}\t{}\t{}\t{}\t{}\t{}\t{}\t{}\t{}\t{}\t{}\t{}\t{}\n'.format(read.reference_name, position[1], position[2], read.query_name, 1, read.flag, modification_information_per_position[position][1], modification_information_per_position[position][0], read.query_qualities[position[1]-read.reference_start], read.mapq, strand, snp_status, label))
                             else:
-                                data_line.write('{}\t{}\t{}\t{}\t{}\t{}\t{}\t{}\t{}\t{}\t{}\n'.format(read.reference_name, position[1], position[2], read.query_name, 0, read.flag, modification_information_per_position[position][1], modification_information_per_position[position][0], read.query_qualities[position[1]-read.reference_start], read.mapq, snp_status))
+                                data_line.write('{}\t{}\t{}\t{}\t{}\t{}\t{}\t{}\t{}\t{}\t{}\t{}\t{}\n'.format(read.reference_name, position[1], position[2], read.query_name, 0, read.flag, modification_information_per_position[position][1], modification_information_per_position[position][0], read.query_qualities[position[1]-read.reference_start], read.mapq, strand, snp_status, label))
                         else:
                             if (read.flag in flags_expectation_top and read.query_sequence[position[1]-read.reference_start] in ['T','t'] and method == 'mCtoT') or  (read.flag in flags_expectation_top and read.query_sequence[position[1]-read.reference_start] in ['C','c'] and method == 'CtoT') or (read.flag in flags_expectation_bottom and read.query_sequence[position[1]-read.reference_start] in ['A','a'] and method == 'mCtoT') or  (read.flag in flags_expectation_bottom and read.query_sequence[position[1]-read.reference_start] in ['G','g'] and method == 'CtoT'):
-                                data_line.write('{}\t{}\t{}\t{}\t{}\t{}\t{}\t{}\t{}\t{}\t{}\n'.format(read.reference_name, position[1], position[2], read.query_name, 1, read.flag, possible_mods[position][1], possible_mods[position][0], read.query_qualities[position[1]-read.reference_start], read.mapq, snp_status))
+                                data_line.write('{}\t{}\t{}\t{}\t{}\t{}\t{}\t{}\t{}\t{}\t{}\t{}\t{}\n'.format(read.reference_name, position[1], position[2], read.query_name, 1, read.flag, possible_mods[position][1], possible_mods[position][0], read.query_qualities[position[1]-read.reference_start], read.mapq, strand, snp_status, label))
                             else:
-                                data_line.write('{}\t{}\t{}\t{}\t{}\t{}\t{}\t{}\t{}\t{}\t{}\n'.format(read.reference_name, position[1], position[2], read.query_name, 0, read.flag, possible_mods[position][1], possible_mods[position][0], read.query_qualities[position[1]-read.reference_start], read.mapq, snp_status))
+                                data_line.write('{}\t{}\t{}\t{}\t{}\t{}\t{}\t{}\t{}\t{}\t{}\t{}\t{}\n'.format(read.reference_name, position[1], position[2], read.query_name, 0, read.flag, possible_mods[position][1], possible_mods[position][0], read.query_qualities[position[1]-read.reference_start], read.mapq, strand, snp_status, label))
             modification_information_per_position, fastas = None, None
         data_line.close()
         all_chrom.close()
