@@ -27,6 +27,7 @@ from astair.vcf_reader import read_vcf
 from astair.cigar_search import cigar_search
 from astair.bam_file_parser import bam_file_opener
 from astair.context_search import context_sequence_search
+from astair.cigar_search import position_correction_cigar
 from astair.context_search import sequence_context_set_creation
 from astair.simple_fasta_parser import fasta_splitting_by_sequence
 
@@ -202,58 +203,6 @@ def general_read_information_output(read, header, line):
                                           read.reference_start + read.query_length))
     except IOError:
         logs.error('asTair cannot write to read information file.', exc_info=True)
-
-
-def position_correction_cigar(read, method, random_sample, positions, reverse_modification):
-    """Uses the CIGAR string information to correct the expected cytosine positions."""
-    names, positions_cigar, changes = cigar_search(read.cigarstring)
-    index = 0
-    for change in names:
-        if len(positions) != 0:
-            if change == 'D':
-                if isinstance(list(positions)[0], tuple):
-                    subsample = random_sample.intersection(positions)
-                    if method == 'CtoT' and reverse_modification == False:
-                        corrected_positions = [x[1] - abs(read.qstart - read.reference_start) if (x[1] - abs(read.qstart - read.reference_start)) < positions_cigar[index] else x[1] - abs(read.qstart - read.reference_start) - changes[index] for x in positions if x not in subsample]
-                    else:
-                        corrected_positions = [x[1] - abs(read.qstart - read.reference_start) if (x[1] - abs(
-                            read.qstart - read.reference_start)) < positions_cigar[index] else x[1] - abs(
-                            read.qstart - read.reference_start) - changes[index] for x in subsample]
-                else:
-                    corrected_positions = [x if x < positions_cigar[index] else x - changes[index] for x in positions]
-                index += 1
-                positions = corrected_positions
-            elif change == 'I':
-                if isinstance(list(positions)[0], tuple):
-                    subsample = random_sample.intersection(positions)
-                    if method == 'CtoT' and reverse_modification == False:
-                        corrected_positions = [x[1] - abs(read.qstart-read.reference_start) if (x[1] - abs(read.qstart-read.reference_start)) < positions_cigar[index] else x[1] - abs(read.qstart-read.reference_start) + changes[index] for x in positions if x not in subsample]
-                    else:
-                        corrected_positions = [x[1] - abs(read.qstart - read.reference_start) if (x[1] - abs(
-                            read.qstart - read.reference_start)) < positions_cigar[index] else x[1] - abs(
-                            read.qstart - read.reference_start) + changes[index] for x in subsample]
-                else:
-                    corrected_positions = [x if x < positions_cigar[index] else x + changes[index] for x in positions]
-                index += 1
-                positions = corrected_positions
-            elif change == 'S' or change == 'H':
-                if isinstance(list(positions)[0], tuple):
-                    subsample = random_sample.intersection(positions)
-                    if method == 'CtoT' and reverse_modification == False:
-                        corrected_positions = [x[1] - abs(read.qstart - read.reference_start) for x in positions if
-                                               x not in subsample]
-                    else:
-                        corrected_positions = [x[1] - abs(read.qstart-read.reference_start) for x in subsample]
-                else:
-                    if index == 0:
-                        corrected_positions = [x for x in positions if x > positions_cigar[index]]
-                    else:
-                        corrected_positions = [x for x in positions if x < positions_cigar[index]]
-                index += 1
-                positions = corrected_positions
-            else:
-                index += 1
-    return positions
 
 
 def modification_by_strand(read, library, reverse_modification, fastas):

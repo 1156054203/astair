@@ -47,7 +47,6 @@ from astair.simple_fasta_parser import fasta_splitting_by_sequence
 @click.option('N_threads', '--N_threads', '-t', default=1, required=True, help='The number of threads to spawn (Default 1).')
 @click.option('directory', '--directory', '-d', required=True, type=str, help='Output directory to save files.')
 @click.option('add_underscores', '--add_underscores', '-au', default=False, is_flag=True, required=False, help='Indicates outputting a new reference fasta file with added underscores in the sequence names that is afterwards used for calling. (Default False).')
-
 def summarise(input_file, reference, known_snp,  context, user_defined_context, library,  method, region, minimum_base_quality, minimum_mapping_quality,per_chromosome, N_threads, directory, single_end, add_underscores):
     """Collects and outputs modification information per read."""
     read_summariser(input_file, reference, known_snp, context, user_defined_context, library,  method, region, minimum_base_quality, minimum_mapping_quality,per_chromosome, N_threads, directory,single_end, add_underscores)
@@ -61,8 +60,6 @@ warnings.simplefilter(action='ignore', category=RuntimeWarning)
 logs = logging.getLogger(__name__)
 
 time_b = datetime.now()
-
-
 
 def read_summariser(input_file, reference, known_snp, context, user_defined_context, library,  method, region, minimum_base_quality, minimum_mapping_quality, per_chromosome, N_threads, directory, single_end, add_underscores):
     """Looks for cytosine contexts and their modification status and outpust read information."""
@@ -97,7 +94,7 @@ def read_summariser(input_file, reference, known_snp, context, user_defined_cont
             data_line = gzip.open(file_name, 'wt', compresslevel=9, encoding='utf8', newline='\n')
         else:
             data_line = gzip.open(file_name, 'wt', compresslevel=9)    
-        data_line.write('{}\t{}\t{}\t{}\t{}\t{}\t{}\t{}\t{}\t{}\t{}\t{}\t{}\n'.format("#CHROM", "START", "END", "READ_NAME", "MODIFICATION_STATUS", 'FLAG', 'CONTEXT', "SPECIFIC_CONTEXT", "BQ", "MAPQ", "STRAND", "KNOWN_SNP", "INFO"))
+        data_line.write('{}\t{}\t{}\t{}\t{}\t{}\t{}\t{}\t{}\t{}\t{}\t{}\t{}\t{}\t{}\t{}\t{}\n'.format("#CHROM", "START", "END", "READ_NAME", "MODIFICATION_STATUS", 'FLAG', 'CONTEXT', "SPECIFIC_CONTEXT", "BQ", "MAPQ", "STRAND", "FRAGMENT_LENGTH", "AS", "XS", "EDIT", "KNOWN_SNP", "INFO"))
         if region != (None, None, None):
             keys, start, end = [region[0]], region[1], region[2]
         for i in range(0, len(keys)):
@@ -122,36 +119,45 @@ def read_summariser(input_file, reference, known_snp, context, user_defined_cont
             except Exception:
                 sys.exit(1)
             for read in inbam:
-                read_info = ((read.reference_name, read.reference_start+i, read.reference_start+i+1) for i in range(0, read.query_length))
+                read_info = [(read.reference_name, i[1], i[1]+1) for i in read.get_aligned_pairs() if (i[1]!=None and i[0]!=None) and  (read.reference_name, i[1], i[1]+1) in modification_information_per_position]
+                indices = [i[0] for i in read.get_aligned_pairs() if (i[1]!=None and i[0]!=None) and (read.reference_name, i[1], i[1]+1) in modification_information_per_position]
+                if len(possible_mods)>0:
+                    read_info_ = [(read.reference_name, i[1], i[1]+1) for i in read.get_aligned_pairs() if (i[1]!=None and i[0]!=None) and (read.reference_name, i[1], i[1]+1) in possible_mods]
+                    indices_ = [i[0] for i in read.get_aligned_pairs() if (i[1]!=None and i[0]!=None) and (read.reference_name, i[1], i[1]+1) in possible_mods]
+                    read_info.extend(read_info_)
+                    indices.extend(indices_)
                 snp_status = '*'
-                for position in read_info:
-                    if (known_snp==None and position in modification_information_per_position) or (known_snp!=None and (position in modification_information_per_position or position in possible_mods)):
-                        if known_snp!=None and position in possible_mods:
-                            label = 'possible_modification'
-                        else:
-                            label = 'true_modification'
-                        if  position in modification_information_per_position:
-                            if modification_information_per_position[position][2] == 'C':
-                                strand = '+'
-                            elif modification_information_per_position[position][2] == 'G':
-                                strand = '-'
-                        elif position in possible_mods:
-                            if possible_mods[position][2] == 'C':
-                                strand = '+'
-                            elif possible_mods[position][2] == 'G':
-                                strand = '-'
-                        if known_snp != None and position in true_variants:
-                            snp_status = 'WGS'
-                        if position not in possible_mods:
-                            if (read.flag in flags_expectation_top and read.query_sequence[position[1]-read.reference_start] in ['T','t'] and method == 'mCtoT') or  (read.flag in flags_expectation_top and read.query_sequence[position[1]-read.reference_start] in ['C','c'] and method == 'CtoT') or (read.flag in flags_expectation_bottom and read.query_sequence[position[1]-read.reference_start] in ['A','a'] and method == 'mCtoT') or  (read.flag in flags_expectation_bottom and read.query_sequence[position[1]-read.reference_start] in ['G','g'] and method == 'CtoT'):
-                                data_line.write('{}\t{}\t{}\t{}\t{}\t{}\t{}\t{}\t{}\t{}\t{}\t{}\t{}\n'.format(read.reference_name, position[1], position[2], read.query_name, 1, read.flag, modification_information_per_position[position][1], modification_information_per_position[position][0], read.query_qualities[position[1]-read.reference_start], read.mapq, strand, snp_status, label))
+                if len(indices) > 0:
+                    for k in range(0,len(read_info)):
+                        position = read_info[k]
+                        index = indices[k]
+                        if (known_snp==None and position in modification_information_per_position) or (known_snp!=None and (position in modification_information_per_position or position in possible_mods)):
+                            if known_snp!=None and position in possible_mods:
+                                label = 'possible_modification'
                             else:
-                                data_line.write('{}\t{}\t{}\t{}\t{}\t{}\t{}\t{}\t{}\t{}\t{}\t{}\t{}\n'.format(read.reference_name, position[1], position[2], read.query_name, 0, read.flag, modification_information_per_position[position][1], modification_information_per_position[position][0], read.query_qualities[position[1]-read.reference_start], read.mapq, strand, snp_status, label))
-                        else:
-                            if (read.flag in flags_expectation_top and read.query_sequence[position[1]-read.reference_start] in ['T','t'] and method == 'mCtoT') or  (read.flag in flags_expectation_top and read.query_sequence[position[1]-read.reference_start] in ['C','c'] and method == 'CtoT') or (read.flag in flags_expectation_bottom and read.query_sequence[position[1]-read.reference_start] in ['A','a'] and method == 'mCtoT') or  (read.flag in flags_expectation_bottom and read.query_sequence[position[1]-read.reference_start] in ['G','g'] and method == 'CtoT'):
-                                data_line.write('{}\t{}\t{}\t{}\t{}\t{}\t{}\t{}\t{}\t{}\t{}\t{}\t{}\n'.format(read.reference_name, position[1], position[2], read.query_name, 1, read.flag, possible_mods[position][1], possible_mods[position][0], read.query_qualities[position[1]-read.reference_start], read.mapq, strand, snp_status, label))
+                                label = 'true_modification'
+                            if  position in modification_information_per_position:
+                                if modification_information_per_position[position][2] == 'C':
+                                    strand = '+'
+                                elif modification_information_per_position[position][2] == 'G':
+                                    strand = '-'
+                            elif position in possible_mods:
+                                if possible_mods[position][2] == 'C':
+                                    strand = '+'
+                                elif possible_mods[position][2] == 'G':
+                                    strand = '-'
+                            if known_snp != None and position in true_variants:
+                                snp_status = 'WGS'
+                            if position not in possible_mods:
+                                if (read.flag in flags_expectation_top and read.query_sequence[index] in ['T','t'] and method == 'mCtoT') or  (read.flag in flags_expectation_top and read.query_sequence[index] in ['C','c'] and method == 'CtoT') or (read.flag in flags_expectation_bottom and read.query_sequence[index] in ['A','a'] and method == 'mCtoT') or  (read.flag in flags_expectation_bottom and read.query_sequence[index] in ['G','g'] and method == 'CtoT'):
+                                    data_line.write('{}\t{}\t{}\t{}\t{}\t{}\t{}\t{}\t{}\t{}\t{}\t{}\t{}\t{}\t{}\t{}\t{}\n'.format(read.reference_name, position[1], position[2], read.query_name, 1, read.flag, modification_information_per_position[position][1], modification_information_per_position[position][0], read.query_qualities[index], read.mapq, strand, abs(read.template_length), read.get_tag('AS'), read.get_tag('XS'), read.get_tag('NM'), snp_status, label))
+                                else:
+                                    data_line.write('{}\t{}\t{}\t{}\t{}\t{}\t{}\t{}\t{}\t{}\t{}\t{}\t{}\t{}\t{}\t{}\t{}\n'.format(read.reference_name, position[1], position[2], read.query_name, 0, read.flag, modification_information_per_position[position][1], modification_information_per_position[position][0], read.query_qualities[index], read.mapq, strand, abs(read.template_length), read.get_tag('AS'), read.get_tag('XS'), read.get_tag('NM'), snp_status, label))
                             else:
-                                data_line.write('{}\t{}\t{}\t{}\t{}\t{}\t{}\t{}\t{}\t{}\t{}\t{}\t{}\n'.format(read.reference_name, position[1], position[2], read.query_name, 0, read.flag, possible_mods[position][1], possible_mods[position][0], read.query_qualities[position[1]-read.reference_start], read.mapq, strand, snp_status, label))
+                                if (read.flag in flags_expectation_top and read.query_sequence[index] in ['T','t'] and method == 'mCtoT') or  (read.flag in flags_expectation_top and read.query_sequence[index] in ['C','c'] and method == 'CtoT') or (read.flag in flags_expectation_bottom and read.query_sequence[index] in ['A','a'] and method == 'mCtoT') or  (read.flag in flags_expectation_bottom and read.query_sequence[index] in ['G','g'] and method == 'CtoT'):
+                                    data_line.write('{}\t{}\t{}\t{}\t{}\t{}\t{}\t{}\t{}\t{}\t{}\t{}\t{}\t{}\t{}\t{}\t{}\n'.format(read.reference_name, position[1], position[2], read.query_name, 1, read.flag, possible_mods[position][1], possible_mods[position][0], read.query_qualities[index], read.mapq, strand, abs(read.template_length), read.get_tag('AS'), read.get_tag('XS'), read.get_tag('NM'), snp_status, label))
+                                else:
+                                    data_line.write('{}\t{}\t{}\t{}\t{}\t{}\t{}\t{}\t{}\t{}\t{}\t{}\t{}\t{}\t{}\t{}\t{}\n'.format(read.reference_name, position[1], position[2], read.query_name, 0, read.flag, possible_mods[position][1], possible_mods[position][0], read.query_qualities[index], read.mapq, strand, abs(read.template_length),read.get_tag('AS'), read.get_tag('XS'), read.get_tag('NM'), snp_status, label))
             modification_information_per_position, fastas = None, None
         data_line.close()
         all_chrom.close()
@@ -160,10 +166,9 @@ def read_summariser(input_file, reference, known_snp, context, user_defined_cont
     else:
         logs.error('Read information summary file with this name exists. Please rename before rerunning.')
         sys.exit(1)
-
         
-
-
+        
 
 if __name__ == '__main__':
     summarise()
+        
