@@ -25,6 +25,7 @@ from collections import defaultdict
 
 from astair.vcf_reader import read_vcf
 from astair.cigar_search import cigar_search
+from astair.safe_division import safe_rounder
 from astair.bam_file_parser import bam_file_opener
 from astair.context_search import context_sequence_search
 from astair.cigar_search import position_correction_cigar
@@ -168,10 +169,10 @@ def random_position_modification(modification_information, modification_level, m
         all_keys = list(('CHG','CHH','CpG'))
         for context_string in all_keys:
             modification_list_by_context = modification_list_by_context.union(set((keys) for keys, vals in modification_information.items() if vals[1] == context_string))
-        required = round((len(modification_list_by_context)) * modification_level)
+        required = safe_rounder(len(modification_list_by_context) * modification_level, 1, False)
     elif context != 'all' and modified_positions == None:
         modification_list_by_context = set((keys) for keys, vals in modification_information.items() if vals[1] == context)
-        required = round((len(modification_list_by_context)) * modification_level)
+        required = safe_rounder(len(modification_list_by_context) * modification_level, 1, False)
     else:
         random_sample = set(modification_information)
         modification_level = 'custom'
@@ -234,7 +235,7 @@ def absolute_modification_information(modified_positions_data, modification_info
             context_list_length = len(modification_information)
         else:
             context_list_length = len(set(keys for keys, vals in modification_information.items() if vals[1] == context))
-        mod_level = round((len(modified_positions_data) / context_list_length) * 100, 3)
+        mod_level = safe_rounder((len(modified_positions_data) / context_list_length), 3, True)
     else:
         mod_level = 'Custom'
     try:

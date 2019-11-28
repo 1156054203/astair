@@ -10,7 +10,6 @@ def cigar_search(read_data):
     return names, positions, changes
 
 
-
 def position_correction_cigar(read, method, random_sample, positions, reverse_modification):
     """Uses the CIGAR string information to correct the expected cytosine positions."""
     names, positions_cigar, changes = cigar_search(read.cigarstring)

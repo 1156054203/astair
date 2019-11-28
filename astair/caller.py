@@ -31,6 +31,7 @@ else:
 
 
 from astair.vcf_reader import read_vcf
+from astair.safe_division import safe_rounder
 from astair.safe_division import non_zero_division
 from astair.bam_file_parser import bam_file_opener
 from astair.context_search import context_sequence_search
@@ -65,10 +66,10 @@ from astair.simple_fasta_parser import fasta_splitting_by_sequence
 @click.option('compress', '--gz', '-z', default=False, is_flag=True, required=False, help='Indicates whether the mods file output will be compressed with gzip (Default False).')
 @click.option('directory', '--directory', '-d', required=True, type=str, help='Output directory to save files.')
 @click.option('add_underscores', '--add_underscores', '-au', default=False, is_flag=True, required=False, help='Indicates outputting a new reference fasta file with added underscores in the sequence names that is afterwards used for calling. (Default False).')
-
-def call(input_file, known_snp, model, reference, context, zero_coverage, skip_clip_overlap, minimum_base_quality, user_defined_context, library,  method, minimum_mapping_quality, adjust_acapq_threshold, add_indels, redo_baq, compute_baq, ignore_orphans, max_depth,per_chromosome, N_threads, directory, compress, single_end, add_underscores):
-        """Call modified cytosines from a bam or cram file. The output consists of two files, one containing modification counts per nucleotide, the other providing genome-wide statistics per context."""
-        cytosine_modification_finder(input_file, known_snp, model, reference, context, zero_coverage, skip_clip_overlap, minimum_base_quality, user_defined_context, library,  method, minimum_mapping_quality, adjust_acapq_threshold, add_indels, redo_baq, compute_baq, ignore_orphans, max_depth, per_chromosome, N_threads, directory, compress, single_end, add_underscores)
+@click.option('no_information', '--no_information', '-ni', default='*', type=click.Choice(['.', '0', '*', 'NA']), required=False, help='What symbol should be used for a value where no enough quantative information is used. (Default *).')
+def call(input_file, known_snp, model, reference, context, zero_coverage, skip_clip_overlap, minimum_base_quality, user_defined_context, library,  method, minimum_mapping_quality, adjust_acapq_threshold, add_indels, redo_baq, compute_baq, ignore_orphans, max_depth,per_chromosome, N_threads, directory, compress, single_end, add_underscores, no_information):
+    """Call modified cytosines from a bam or cram file. The output consists of two files, one containing modification counts per nucleotide, the other providing genome-wide statistics per context."""
+    cytosine_modification_finder(input_file, known_snp, model, reference, context, zero_coverage, skip_clip_overlap, minimum_base_quality, user_defined_context, library,  method, minimum_mapping_quality, adjust_acapq_threshold, add_indels, redo_baq, compute_baq, ignore_orphans, max_depth, per_chromosome, N_threads, directory, compress, single_end, add_underscores, no_information)
 
 
 warnings.simplefilter(action='ignore', category=UserWarning)
@@ -79,6 +80,7 @@ warnings.simplefilter(action='ignore', category=RuntimeWarning)
 logs = logging.getLogger(__name__)
 
 time_b = datetime.now()
+
 
 def modification_calls_writer(data_mods, compress, data_line, header=False):
     """Outputs the modification calls per position in a tab-delimited format."""
@@ -119,42 +121,42 @@ def statistics_calculator(mean_mod, mean_unmod, data_mod, user_defined_context, 
             mean_unmod['user defined context'] += int(data_mod[5])
 
 
-def context_output(mean_mod, mean_unmod, user_defined_context, file_name, context_sample_counts, context_total_counts, context, total_contexts, sub_contexts, header):
+def context_output(mean_mod, mean_unmod, user_defined_context, file_name, context_sample_counts, context_total_counts, context, total_contexts, sub_contexts, header, no_information):
     """Writes the summary statistics of the cytosine modificaton levels."""
     with open(file_name, 'a') as statistics_output:
             write_file = csv.writer(statistics_output, delimiter='\t', lineterminator='\n')
             if header == True:
                 write_file.writerow(["#CONTEXT", "SPECIFIC_CONTEXT", "MEAN_MODIFICATION_RATE_PERCENT", "TOTAL_POSITIONS", "COVERED_POSITIONS", 'MODIFIED', 'UNMODIFIED'])
                 if user_defined_context:
-                    write_file.writerow([user_defined_context, "*", round(non_zero_division(mean_mod['user defined context'], mean_mod['user defined context'] + mean_unmod['user defined context']) * 100, 3), context_total_counts['user defined context'], context_sample_counts['user defined context'], mean_mod['user defined context'], mean_unmod['user defined context']])
-            write_file.writerow([context, "*", round(non_zero_division(mean_mod[context], mean_mod[context] + mean_unmod[context]) * 100, 3),
+                    write_file.writerow([user_defined_context, "*", safe_rounder(non_zero_division(mean_mod['user defined context'], mean_mod['user defined context'] + mean_unmod['user defined context'], no_information), 3, True), context_total_counts['user defined context'], context_sample_counts['user defined context'], mean_mod['user defined context'], mean_unmod['user defined context']])
+            write_file.writerow([context, "*", safe_rounder(non_zero_division(mean_mod[context], mean_mod[context] + mean_unmod[context], no_information), 3, True),
                         context_total_counts[total_contexts]+context_total_counts[total_contexts + 'b'], context_sample_counts[context], mean_mod[context], mean_unmod[context]])
             if len(sub_contexts) >= 1:
                 for subcontext in sub_contexts:
-                    write_file.writerow(["*", subcontext, round(non_zero_division(mean_mod[subcontext], mean_mod[subcontext] + mean_unmod[subcontext]) * 100, 3), context_total_counts[subcontext], context_sample_counts[subcontext], mean_mod[subcontext], mean_unmod[subcontext]])
+                    write_file.writerow(["*", subcontext, safe_rounder(non_zero_division(mean_mod[subcontext], mean_mod[subcontext] + mean_unmod[subcontext], no_information), 3, True), context_total_counts[subcontext], context_sample_counts[subcontext], mean_mod[subcontext], mean_unmod[subcontext]])
             
 
-def final_statistics_output(mean_mod, mean_unmod, user_defined_context, file_name, context_sample_counts, context_total_counts, context):
+def final_statistics_output(mean_mod, mean_unmod, user_defined_context, file_name, context_sample_counts, context_total_counts, context, no_information):
     """Writes the summary statistics of the cytosine modificaton levels.
     Cytosine modification rate given as the percentage total modified cytosines
     divided by the total number of cytosines covered."""
     try:
         if context == 'all':
-            context_output(mean_mod, mean_unmod, user_defined_context, file_name, context_sample_counts, context_total_counts, 'CpG', 'CG', numpy.array(['CGA','CGC', 'CGG', 'CGT']), True)
-            context_output(mean_mod, mean_unmod, user_defined_context, file_name, context_sample_counts, context_total_counts, 'CHG', 'CHG',  numpy.array(['CAG','CCG', 'CTG']), False)
-            context_output(mean_mod, mean_unmod, user_defined_context, file_name, context_sample_counts, context_total_counts, 'CHH', 'CHH',  numpy.array(['CTT', 'CAT', 'CCT', 'CTA', 'CAA', 'CCA', 'CTC', 'CAC', 'CCC']), False)
-            context_output(mean_mod, mean_unmod, user_defined_context, file_name, context_sample_counts, context_total_counts, 'CNN', 'CN',  numpy.array([]), False)
+            context_output(mean_mod, mean_unmod, user_defined_context, file_name, context_sample_counts, context_total_counts, 'CpG', 'CG', numpy.array(['CGA','CGC', 'CGG', 'CGT']), True, no_information)
+            context_output(mean_mod, mean_unmod, user_defined_context, file_name, context_sample_counts, context_total_counts, 'CHG', 'CHG',  numpy.array(['CAG','CCG', 'CTG']), False, no_information)
+            context_output(mean_mod, mean_unmod, user_defined_context, file_name, context_sample_counts, context_total_counts, 'CHH', 'CHH',  numpy.array(['CTT', 'CAT', 'CCT', 'CTA', 'CAA', 'CCA', 'CTC', 'CAC', 'CCC']), False, no_information)
+            context_output(mean_mod, mean_unmod, user_defined_context, file_name, context_sample_counts, context_total_counts, 'CNN', 'CN',  numpy.array([]), False, no_information)
         elif context == 'CpG':
-            context_output(mean_mod, mean_unmod, user_defined_context, file_name, context_sample_counts, context_total_counts, context, 'CG',  numpy.array(['CGA','CGC', 'CGG', 'CGT']), True)
+            context_output(mean_mod, mean_unmod, user_defined_context, file_name, context_sample_counts, context_total_counts, context, 'CG',  numpy.array(['CGA','CGC', 'CGG', 'CGT']), True, no_information)
         elif context == 'CHG':
-            context_output(mean_mod, mean_unmod, user_defined_context, file_name, context_sample_counts, context_total_counts, context, 'CHG',  numpy.array(['CAG','CCG', 'CTG']), True)
+            context_output(mean_mod, mean_unmod, user_defined_context, file_name, context_sample_counts, context_total_counts, context, 'CHG',  numpy.array(['CAG','CCG', 'CTG']), True, no_information)
         elif context == 'CHH':
-            context_output(mean_mod, mean_unmod, user_defined_context, file_name, context_sample_counts, context_total_counts, context, 'CHH',  numpy.array(['CTT', 'CAT', 'CCT', 'CTA', 'CAA', 'CCA', 'CTC', 'CAC', 'CCC']), True)
+            context_output(mean_mod, mean_unmod, user_defined_context, file_name, context_sample_counts, context_total_counts, context, 'CHH',  numpy.array(['CTT', 'CAT', 'CCT', 'CTA', 'CAA', 'CCA', 'CTC', 'CAC', 'CCC']), True, no_information)
     except IOError:
         logs.error('asTair cannot write to statistics summary file.', exc_info=True)
 
 
-def tuple_handler(read_counts, tuple_with_posinfo, method):
+def tuple_handler(read_counts, tuple_with_posinfo, method, no_information):
     if len(tuple_with_posinfo) == 4:
         unmodified_bases = read_counts[tuple_with_posinfo[0]]
         TAAF = read_counts[tuple_with_posinfo[1]]
@@ -172,17 +174,17 @@ def tuple_handler(read_counts, tuple_with_posinfo, method):
         AAAF = read_counts[tuple_with_posinfo[3]] + read_counts[tuple_with_posinfo[7]] + read_counts[tuple_with_posinfo[11]]
     allele_frequencies = list()
     for AAF in [TAAF, RAAF, AAAF]:
-        allele_frequencies.append(non_zero_division(AAF, (AAF + unmodified_bases)))
+        allele_frequencies.append(non_zero_division(AAF, (AAF + unmodified_bases), no_information))
     if method == 'mCtoT':
         if tuple_with_posinfo[0][1] == 'C':
-            ratio_modified = non_zero_division(TAAF,(unmodified_bases+TAAF))
+            ratio_modified = non_zero_division(TAAF,(unmodified_bases+TAAF), no_information)
         elif tuple_with_posinfo[0][1] == 'G':
-            ratio_modified = non_zero_division(AAAF, (unmodified_bases+AAAF))
+            ratio_modified = non_zero_division(AAAF, (unmodified_bases+AAAF), no_information)
     elif method == 'CtoT':
         if tuple_with_posinfo[0][1] == 'C':
-            ratio_modified = non_zero_division(unmodified_bases,(unmodified_bases+TAAF))
+            ratio_modified = non_zero_division(unmodified_bases,(unmodified_bases+TAAF), no_information)
         elif tuple_with_posinfo[0][1] == 'G':
-            ratio_modified = non_zero_division(unmodified_bases, (unmodified_bases+AAAF))
+            ratio_modified = non_zero_division(unmodified_bases, (unmodified_bases+AAAF), no_information)
     return unmodified_bases, TAAF, RAAF, AAAF, allele_frequencies, ratio_modified
 
 
@@ -193,10 +195,11 @@ def alternative_alele(read_counts, ref):
         alt = None
     return alt
 
-def universal_variant_calculation_heuristic(read_counts, unexpected_tuples, ref, method):
+def universal_variant_calculation_heuristic(read_counts, unexpected_tuples, ref, method, no_information):
     if len(read_counts)>0 and unexpected_tuples[0][1] != [key for key in read_counts.keys()][[i for i in read_counts.values()].index(max(read_counts.values()))][1]:
-        unmodified_bases, TAAF, RAAF, AAAF, allele_frequencies, ratio_modified = tuple_handler(read_counts, unexpected_tuples, method)
-        if (non_zero_division(TAAF, (unmodified_bases + TAAF)) >=0.8 and ref=='C') or (non_zero_division(AAAF, (unmodified_bases + AAAF)) >=0.8 and ref=='G'): 
+        unmodified_bases, TAAF, RAAF, AAAF, allele_frequencies, ratio_modified = tuple_handler(read_counts, unexpected_tuples, method, no_information)
+        # add a condition for being a numeric value
+        if (non_zero_division(TAAF, (unmodified_bases + TAAF), no_information) >=0.8 and ref=='C') or (non_zero_division(AAAF, (unmodified_bases + AAAF), no_information) >=0.8 and ref=='G'): 
             snp = 'homozygous'
         else:
             snp = None
@@ -206,8 +209,8 @@ def universal_variant_calculation_heuristic(read_counts, unexpected_tuples, ref,
     return snp, alt
 
 
-def universal_modification_calculation(read_counts, expected_tuples, snp, method):
-    unmodified_bases, TAAF, RAAF, AAAF, allele_frequencies, ratio_modified = tuple_handler(read_counts, expected_tuples, method)
+def universal_modification_calculation(read_counts, expected_tuples, snp, method, no_information):
+    unmodified_bases, TAAF, RAAF, AAAF, allele_frequencies, ratio_modified = tuple_handler(read_counts, expected_tuples, method, no_information)
     if method == 'mCtoT':
         if expected_tuples[0][1] == 'C':
             modified_bases = TAAF
@@ -220,7 +223,7 @@ def universal_modification_calculation(read_counts, expected_tuples, snp, method
         else:
             modified_bases = unmodified_bases
             unmodified_bases = AAAF
-    modification_level = round(ratio_modified, 3)
+    modification_level = safe_rounder(ratio_modified, 3, False)
     return modification_level, modified_bases, unmodified_bases
 
 
@@ -269,7 +272,7 @@ def flags_expectation(modification_information_per_position, position, modificat
 
 
 def pileup_summary(modification_information_per_position, position, read_counts, mean_mod, mean_unmod, user_defined_context,
-                   header, desired_tuples, undesired_tuples, modification, reference, depth, method, context_sample_counts, ignore_orphans, single_end, compress, data_line, real_snp, model, labels, additional_information):
+                   header, desired_tuples, undesired_tuples, modification, reference, depth, method, context_sample_counts, ignore_orphans, single_end, compress, data_line, real_snp, model, labels, additional_information, no_information):
     """Creates the modification output per position in the format:
     [chrom, start, end, mod_level, mod, unmod, ref, alt, specific_context, context, snv, total_depth]
     given the strand information and whether the library is pair-end or single-end. The key structure is read_counts
@@ -277,10 +280,10 @@ def pileup_summary(modification_information_per_position, position, read_counts,
     Assigns heuristic snv categories of heterozygous and not a snv by using the base ratios of the opposite strand."""
     snp_prob, alt = '*', None
     if real_snp == False:
-        snp, alt = universal_variant_calculation_heuristic(read_counts, undesired_tuples, reference, method)
+        snp, alt = universal_variant_calculation_heuristic(read_counts, undesired_tuples, reference, method, no_information)
     else:
         snp = 'WGS_known'
-    modification_level, modified_bases, unmodified_bases = universal_modification_calculation(read_counts, desired_tuples, snp, method)
+    modification_level, modified_bases, unmodified_bases = universal_modification_calculation(read_counts, desired_tuples, snp, method, no_information)
     if depth < 3:
         label = 'LowCov'
     else:
@@ -300,7 +303,7 @@ def tags_search(read_tags, tag_name, list_):
 
 def clean_pileup(pileups, cycles, modification_information_per_position, mean_mod, mean_unmod, user_defined_context,
                  file_name, method, add_indels, context_sample_counts, ignore_orphans, single_end, compress, data_line, library,
-                 true_variants, possible_mods, matched, model, labels, fastas, model_name):
+                 true_variants, possible_mods, matched, model, labels, fastas, model_name, no_information):
     """Takes reads from the piled-up region and calculates modification levels."""
     for reads in pileups:
         if cycles == 0:
@@ -339,7 +342,7 @@ def clean_pileup(pileups, cycles, modification_information_per_position, mean_mo
                 pileup_summary(modification_information_per_position, position, read_counts, mean_mod, mean_unmod,
                                     user_defined_context, header, desired_tuples, undesired_tuples, modification, reference,
                                     reads.get_num_aligned(), method, context_sample_counts, ignore_orphans, single_end,
-                                    compress, data_line, real_snp, model, labels, None)
+                                    compress, data_line, real_snp, model, labels, None, no_information)
                 modification_information_per_position.pop(position)
         except Exception:
             continue
@@ -348,7 +351,7 @@ def clean_pileup(pileups, cycles, modification_information_per_position, mean_mo
 
 def cytosine_modification_finder(input_file, known_snp, model, reference, context, zero_coverage, skip_clip_overlap, minimum_base_quality, user_defined_context, library, method,
                                  minimum_mapping_quality, adjust_acapq_threshold, add_indels, redo_baq, compute_baq, ignore_orphans,
-                                 max_depth, per_chromosome, N_threads, directory, compress, single_end, add_underscores):
+                                 max_depth, per_chromosome, N_threads, directory, compress, single_end, add_underscores, no_information):
     """Searches for cytosine modification positions in the desired contexts and calculates the modificaton levels."""
     time_s = datetime.now()
     logs.info("asTair modification finder started running. {} seconds".format((time_s - time_b).total_seconds()))
@@ -412,15 +415,15 @@ def cytosine_modification_finder(input_file, known_snp, model, reference, contex
                 time_sf = datetime.now()
                 logs.info("Reading SNP information on {} chromosome (sequence) has finished. {} seconds".format(keys[i], (time_sf - time_s).total_seconds()))
             clean_pileup(pileups, i, modification_information_per_position, mean_mod, mean_unmod, user_defined_context, file_name, method,
-                            add_indels, context_sample_counts, ignore_orphans, single_end, compress, data_line, library, true_variants, possible_mods, matched, model, labels, fastas, model_name)
+                            add_indels, context_sample_counts, ignore_orphans, single_end, compress, data_line, library, true_variants, possible_mods, matched, model, labels, fastas, model_name, no_information)
             if zero_coverage:
                 for position in modification_information_per_position.keys():
                     if modification_information_per_position[position][2] == 'C':
-                        all_data = numpy.array([position[0], position[1], position[1] + 1, 'NA', 0, 0, 'C', 'T',
+                        all_data = numpy.array([position[0], position[1], position[1] + 1, no_information, 0, 0, 'C', 'T',
                         modification_information_per_position[position][0], modification_information_per_position[position][1], '*', 0, '*', '*'])
                         modification_calls_writer(all_data, compress, data_line, header=False)
                     elif modification_information_per_position[position][2] == 'G':
-                        all_data = numpy.array([position[0], position[1], position[1] + 1, 'NA', 0, 0, 'G', 'A',
+                        all_data = numpy.array([position[0], position[1], position[1] + 1, no_information, 0, 0, 'G', 'A',
                         modification_information_per_position[position][0], modification_information_per_position[position][1], '*', 0, '*', '*'])
                         modification_calls_writer(all_data, compress, data_line, header=False)
             modification_information_per_position, true_variants, possible_mods = None, None, None
@@ -429,7 +432,7 @@ def cytosine_modification_finder(input_file, known_snp, model, reference, contex
             file_name = path.join(directory, name + "_" + method + "_" + context + ".stats")
         else:
             file_name = path.join(directory, name + "_" + method + "_" + per_chromosome + "_" + context + ".stats")
-        final_statistics_output(mean_mod, mean_unmod, user_defined_context, file_name, context_sample_counts, context_total_counts, context)
+        final_statistics_output(mean_mod, mean_unmod, user_defined_context, file_name, context_sample_counts, context_total_counts, context, no_information)
         if compress == False:
              calls_output.close()
         else:
@@ -442,4 +445,5 @@ def cytosine_modification_finder(input_file, known_snp, model, reference, contex
 
 if __name__ == '__main__':
     call()
+
 

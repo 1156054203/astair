@@ -30,7 +30,7 @@ class SimulateOutputTest(unittest.TestCase):
                                           ('lambda', '102', '103'), ('lambda', '104', '105'), ('lambda', '121', '122'), ('lambda', '123', '124'), ('lambda', '127', '128'), ('lambda', '129', '130'), ('lambda', '150', '151'), ('lambda', '152', '153'), ('lambda', '166', '167'), ('lambda', '168', '169'), ('lambda', '176', '177'), ('lambda', '208', '209'), ('lambda', '210', '211'), ('lambda', '211', '212'), ('lambda', '213', '214'), ('lambda', '215', '216'), ('lambda', '217', '218'), ('lambda', '227', '228'), ('lambda', '237', '238'), ('lambda', '247', '248'), ('lambda', '249', '250'), ('lambda', '252', '253'), ('lambda', '254', '255'), ('lambda', '256', '257'), ('lambda', '258', '259'), ('lambda', '262', '263'), ('lambda', '264', '265'), ('lambda', '272', '273'), ('lambda', '277', '278'), ('lambda', '279', '280'), ('lambda', '287', '288'), ('lambda', '317', '318'), ('lambda', '319', '320'), ('lambda', '320', '321'), ('lambda', '323', '324'), ('lambda', '341', '342'), ('lambda', '353', '354'), ('lambda', '355', '356'), ('lambda', '373', '374')])
         cytosine_modification_finder(current + '/test_data/small_lambda_mCtoT_100_CHG.bam', None, None, current + '/test_data/lambda_phage.fa',
                                      'CHG', False, False, 13, None, 'directional','mCtoT', 0, 0, True, False, True, True, 250, None,
-                                     1, current + '/test_data/', False, False, False)
+                                     1, current + '/test_data/', False, False, False,0)
         data_generated = list()
         with open(current + '/test_data/small_lambda_mCtoT_100_CHG_mCtoT_CHG.mods','rt') as call_file:
             mod_reader = csv.reader(call_file, delimiter='\t', lineterminator='\n')
@@ -55,7 +55,7 @@ class SimulateOutputTest(unittest.TestCase):
                                           ('Absolute modified positions: 44   |   Percentage to all positions of the desired context: 0.682 %',), ('__________________________________________________________________________________________________',),
                                           ('lambda', '5', '6'), ('lambda', '16', '17'), ('lambda', '41', '42'), ('lambda', '44', '45'), ('lambda', '57', '58'),
                                           ('lambda', '102', '103'), ('lambda', '104', '105'), ('lambda', '121', '122'), ('lambda', '123', '124'), ('lambda', '127', '128'), ('lambda', '129', '130'), ('lambda', '150', '151'), ('lambda', '152', '153'), ('lambda', '166', '167'), ('lambda', '168', '169'), ('lambda', '176', '177'), ('lambda', '208', '209'), ('lambda', '210', '211'), ('lambda', '211', '212'), ('lambda', '213', '214'), ('lambda', '215', '216'), ('lambda', '217', '218'), ('lambda', '227', '228'), ('lambda', '237', '238'), ('lambda', '247', '248'), ('lambda', '249', '250'), ('lambda', '252', '253'), ('lambda', '254', '255'), ('lambda', '256', '257'), ('lambda', '258', '259'), ('lambda', '262', '263'), ('lambda', '264', '265'), ('lambda', '272', '273'), ('lambda', '277', '278'), ('lambda', '279', '280'), ('lambda', '287', '288'), ('lambda', '317', '318'), ('lambda', '319', '320'), ('lambda', '320', '321'), ('lambda', '323', '324'), ('lambda', '341', '342'), ('lambda', '353', '354'), ('lambda', '355', '356'), ('lambda', '373', '374')])
-        cytosine_modification_finder(current + '/test_data/small_lambda_CtoT_100_CHG.bam', None, None, current + '/test_data/lambda_phage.fa', 'CHG', False, False, 13, None, 'directional',  'CtoT', 0, 0, True, False, True, True, 250, None, 1, current + '/test_data/', False, False, False)
+        cytosine_modification_finder(current + '/test_data/small_lambda_CtoT_100_CHG.bam', None, None, current + '/test_data/lambda_phage.fa', 'CHG', False, False, 13, None, 'directional',  'CtoT', 0, 0, True, False, True, True, 250, None, 1, current + '/test_data/', False, False, False,0)
         data_generated = list()
         with open(current + '/test_data/small_lambda_CtoT_100_CHG_CtoT_CHG.mods','rt') as call_file:
             mod_reader = csv.reader(call_file, delimiter='\t', lineterminator='\n')
@@ -74,7 +74,7 @@ class SimulateOutputTest(unittest.TestCase):
         modification_simulator(current + '/test_data/lambda_phage.fa', None, None, 80, current + '/test_data/small_real_taps_lambda_mCtoT.bam', 'bam', 'mCtoT', 100, 'directional', None, 'all', None,  1,  (None, None, None), False, None, 0.3, 0.1, 1, False, current + '/test_data/', False, False, False, 20, 0, 0, True, False, True, True, 250)
         modification_simulator(current + '/test_data/lambda_phage.fa', None, None, 80, current + '/test_data/small_real_taps_lambda_mCtoT_mCtoT_100_all.bam', 'bam', 'mCtoT', 100, 'directional', None, 'CpG', None,  1,  (None, None, None), False, None, 0.3, 0.1, 1, True, current + '/test_data/', False, False, False, 20, 0, 0, True, False, True, True, 250)
         data_generated = list()
-        cytosine_modification_finder(current + '/test_data/small_real_taps_lambda_mCtoT_mCtoT_100_all_mCtoT_100_CpG_reversed.bam', None, None, current + '/test_data/lambda_phage.fa', 'CpG', False, False, 13, None, 'directional', 'mCtoT', 0, 0, True, False, True, True, 250, None, 1, current + '/test_data/', False, False, False)
+        cytosine_modification_finder(current + '/test_data/small_real_taps_lambda_mCtoT_mCtoT_100_all_mCtoT_100_CpG_reversed.bam', None, None, current + '/test_data/lambda_phage.fa', 'CpG', False, False, 13, None, 'directional', 'mCtoT', 0, 0, True, False, True, True, 250, None, 1, current + '/test_data/', False, False, False, 0)
         data_generated = list()
         with open(current + '/test_data/small_real_taps_lambda_mCtoT_mCtoT_100_all_mCtoT_100_CpG_reversed_mCtoT_CpG.mods','rt') as call_file:
             mod_reader = csv.reader(call_file, delimiter='\t', lineterminator='\n')
@@ -90,7 +90,7 @@ class SimulateOutputTest(unittest.TestCase):
 
     def test_by_list_CpG_taps(self):
         """Tests whether truely modified CpG positions will be modified in TAPS if a list of positions is given."""
-        cytosine_modification_finder(current + '/test_data/small_real_taps_lambda_mCtoT.bam', None, None, current + '/test_data/lambda_phage.fa', 'CpG', False, False, 13, None, 'directional', 'mCtoT', 0, 0, True, False, True, True, 250, None, 1, current + '/test_data/', False, False, False)
+        cytosine_modification_finder(current + '/test_data/small_real_taps_lambda_mCtoT.bam', None, None, current + '/test_data/lambda_phage.fa', 'CpG', False, False, 13, None, 'directional', 'mCtoT', 0, 0, True, False, True, True, 250, None, 1, current + '/test_data/', False, False, False,0)
         modification_simulator(current + '/test_data/lambda_phage.fa', None, None, 80, current + '/test_data/small_real_taps_lambda_mCtoT.bam', 'bam', 'mCtoT', 100, 'directional', None, 'all', None,  1,  (None, None, None), False, None, 0.3, 0.1, 1, False, current + '/test_data/', False, False, False, 20, 0, 0, True, False, True, True, 250)
         if path.isfile(current + '/test_data/lambda_phage_.fa'):
             subprocess.Popen('gzip {}'.format(current + '/test_data/lambda_phage_.fa'), shell=True)
@@ -98,7 +98,7 @@ class SimulateOutputTest(unittest.TestCase):
               current + '/test_data/small_real_taps_lambda_mCtoT_mCtoT_CpG.mods', 'all',None,  1,  (None, None, None), False, None, 0.3, 0.1, 1, False, current + '/test_data/', False, False, False, 20, 0, 0, True, False, True, True, 250)
         if path.isfile(current + '/test_data/lambda_phage_.fa'):
             subprocess.Popen('gzip {}'.format(current + '/test_data/lambda_phage_.fa'), shell=True)
-        cytosine_modification_finder(current + '/test_data/small_real_taps_lambda_mCtoT_mCtoT_user_provided_list_all.bam', None, None, current + '/test_data/lambda_phage.fa', 'CpG', False, False, 13, None, 'directional', 'mCtoT', 0, 0, True, False, True, True, 250, None, 1, current + '/test_data/', False, False, False)
+        cytosine_modification_finder(current + '/test_data/small_real_taps_lambda_mCtoT_mCtoT_user_provided_list_all.bam', None, None, current + '/test_data/lambda_phage.fa', 'CpG', False, False, 13, None, 'directional', 'mCtoT', 0, 0, True, False, True, True, 250, None, 1, current + '/test_data/', False, False, False,0)
         if path.isfile(current + '/test_data/lambda_phage_.fa'):
             subprocess.Popen('gzip {}'.format(current + '/test_data/lambda_phage_.fa'), shell=True)
         data_generated = list()

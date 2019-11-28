@@ -47,9 +47,10 @@ from astair.simple_fasta_parser import fasta_splitting_by_sequence
 @click.option('N_threads', '--N_threads', '-t', default=1, required=True, help='The number of threads to spawn (Default 1).')
 @click.option('directory', '--directory', '-d', required=True, type=str, help='Output directory to save files.')
 @click.option('add_underscores', '--add_underscores', '-au', default=False, is_flag=True, required=False, help='Indicates outputting a new reference fasta file with added underscores in the sequence names that is afterwards used for calling. (Default False).')
-def summarise(input_file, reference, known_snp,  context, user_defined_context, library,  method, region, minimum_base_quality, minimum_mapping_quality,per_chromosome, N_threads, directory, single_end, add_underscores):
+@click.option('no_information', '--no_information', '-ni', default='*', type=click.Choice(['.', 0, '*', 'NA']), required=False, help='What symbol should be used for a value where no enough quantative information is used. (Default *).')
+def summarise(input_file, reference, known_snp,  context, user_defined_context, library,  method, region, minimum_base_quality, minimum_mapping_quality,per_chromosome, N_threads, directory, single_end, add_underscores, no_information):
     """Collects and outputs modification information per read."""
-    read_summariser(input_file, reference, known_snp, context, user_defined_context, library,  method, region, minimum_base_quality, minimum_mapping_quality,per_chromosome, N_threads, directory,single_end, add_underscores)
+    read_summariser(input_file, reference, known_snp, context, user_defined_context, library,  method, region, minimum_base_quality, minimum_mapping_quality,per_chromosome, N_threads, directory,single_end, add_underscores, no_information)
 
 
 warnings.simplefilter(action='ignore', category=UserWarning)
@@ -61,7 +62,7 @@ logs = logging.getLogger(__name__)
 
 time_b = datetime.now()
 
-def read_summariser(input_file, reference, known_snp, context, user_defined_context, library,  method, region, minimum_base_quality, minimum_mapping_quality, per_chromosome, N_threads, directory, single_end, add_underscores):
+def read_summariser(input_file, reference, known_snp, context, user_defined_context, library,  method, region, minimum_base_quality, minimum_mapping_quality, per_chromosome, N_threads, directory, single_end, add_underscores, no_information):
     """Looks for cytosine contexts and their modification status and outpust read information."""
     time_s = datetime.now()
     logs.info("asTair's read information summary function started running. {} seconds".format((time_s - time_b).total_seconds()))

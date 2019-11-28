@@ -32,6 +32,7 @@ try:
 except Exception:
     warnings.warn("Matplotlib was not found, visualisation output will not be supported.", ImportWarning)
 
+from astair.safe_division import safe_rounder
 from astair.safe_division import non_zero_division
 from astair.bam_file_parser import bam_file_opener
 from astair.DNA_sequences_operations import complementary
@@ -49,9 +50,10 @@ from astair.simple_fasta_parser import fasta_splitting_by_sequence
 @click.option('plot', '--plot', '-p', required=False, is_flag=True, help='Phred scores will be visualised and output as a pdf file. Requires installed matplotlib.')
 @click.option('colors', '--colors', '-c', default=['teal', 'gray', 'maroon'], type=list, required=False, help="List of color values used for visualistion of CpG, CHG and CHH modification levels per read, which are given as color1,color2,color3. Accepts valid matplotlib color names, RGB and RGBA hex strings and  single letters denoting color {'b', 'g', 'r', 'c', 'm', 'y', 'k', 'w'}. (Default 'teal','gray','maroon').")
 @click.option('N_threads', '--N_threads', '-t', default=1, required=True, help='The number of threads to spawn (Default 1).')
-def mbias(reference, input_file, directory, read_length, method, single_end, plot, colors, N_threads, per_chromosome):
+@click.option('no_information', '--no_information', '-ni', default='*', type=click.Choice(['.', 0, '*', 'NA']), required=False, help='What symbol should be used for a value where no enough quantative information is used. (Default *).')
+def mbias(reference, input_file, directory, read_length, method, single_end, plot, colors, N_threads, per_chromosome, no_information):
     """Generate modification per read length information (Mbias). This is a quality-control measure."""
-    Mbias_plotting(reference, input_file, directory, read_length, method, single_end, plot, colors, N_threads, per_chromosome)
+    Mbias_plotting(reference, input_file, directory, read_length, method, single_end, plot, colors, N_threads, per_chromosome, no_information)
 
 
 warnings.simplefilter(action='ignore', category=UserWarning)
@@ -165,16 +167,16 @@ def mbias_evaluater(input_file, read_length, method, single_end, N_threads, fast
 
 
 
-def context_calculator(i, read_mods, read_umods, read_values):
+def context_calculator(i, read_mods, read_umods, read_values, no_information):
     """Calculates summary statistics per context and read orientation."""
-    read_values[i] = non_zero_division(read_mods[i], read_umods[i] + read_mods[i]) * 100
-    values = [(keys + 1, round(vals[0], 3)) if isinstance(vals, list) else (keys + 1, round(vals, 3)) for keys, vals in read_values.items()]
-    umod_counts = [(keys + 1, round(vals[0], 3)) if isinstance(vals, list) else (keys + 1, round(vals, 3)) for keys, vals in read_umods.items()]
-    mod_counts = [(keys + 1, round(vals[0], 3)) if isinstance(vals, list) else (keys + 1, round(vals, 3)) for keys, vals in read_mods.items()]
+    read_values[i] = non_zero_division(read_mods[i], read_umods[i] + read_mods[i], no_information)
+    values = [(keys + 1, safe_rounder(vals[0], 3, True)) if isinstance(vals, list) else (keys + 1, safe_rounder(vals, 3, True)) for keys, vals in read_values.items()]
+    umod_counts = [(keys + 1, safe_rounder(vals[0], 3, True)) if isinstance(vals, list) else (keys + 1, safe_rounder(vals, 3, True)) for keys, vals in read_umods.items()]
+    mod_counts = [(keys + 1, safe_rounder(vals[0], 3, True)) if isinstance(vals, list) else (keys + 1, safe_rounder(vals, 3, True)) for keys, vals in read_mods.items()]
     return read_values, values, umod_counts, mod_counts
 
 
-def mbias_statistics_calculator(fastas, input_file, name, directory, read_length, method, single_end, N_threads, per_chromosome):
+def mbias_statistics_calculator(fastas, input_file, name, directory, read_length, method, single_end, N_threads, per_chromosome, no_information):
     """Creates a summary statistics of the modification levels per read position, pair orientation and cytosine context,
     and then writes them as a text file that can be used for independent visualisation."""
     read1_mods_CpG, read1_mods_CHG, read1_mods_CHH, read1_umod_CpG, read1_umod_CHG, read1_umod_CHH,\
@@ -191,12 +193,12 @@ def mbias_statistics_calculator(fastas, input_file, name, directory, read_length
             read1_umod_CHG[i] = read1_umod_CHG[i] + read2_umod_CHG[i]
             read1_umod_CHH[i] = read1_umod_CHH[i] + read2_umod_CHH[i]
     for i in range(0, read_length):
-        read_values_1_CHH, values_1_CHH, umod_counts_1_CHH, mod_counts_1_CHH = context_calculator(i, read1_mods_CHH, read1_umod_CHH, read_values_1_CHH)
-        read_values_1_CHG, values_1_CHG, umod_counts_1_CHG, mod_counts_1_CHG = context_calculator(i, read1_mods_CHG, read1_umod_CHG, read_values_1_CHG)
-        read_values_1_CpG, values_1_CpG, umod_counts_1_CpG, mod_counts_1_CpG = context_calculator(i, read1_mods_CpG, read1_umod_CpG, read_values_1_CpG)
-        read_values_2_CHH, values_2_CHH, umod_counts_2_CHH, mod_counts_2_CHH = context_calculator(i, read2_mods_CHH, read2_umod_CHH, read_values_2_CHH)
-        read_values_2_CHG, values_2_CHG, umod_counts_2_CHG, mod_counts_2_CHG = context_calculator(i, read2_mods_CHG, read2_umod_CHG, read_values_2_CHG)
-        read_values_2_CpG, values_2_CpG, umod_counts_2_CpG, mod_counts_2_CpG = context_calculator(i, read2_mods_CpG, read2_umod_CpG, read_values_2_CpG)
+        read_values_1_CHH, values_1_CHH, umod_counts_1_CHH, mod_counts_1_CHH = context_calculator(i, read1_mods_CHH, read1_umod_CHH, read_values_1_CHH, no_information)
+        read_values_1_CHG, values_1_CHG, umod_counts_1_CHG, mod_counts_1_CHG = context_calculator(i, read1_mods_CHG, read1_umod_CHG, read_values_1_CHG, no_information)
+        read_values_1_CpG, values_1_CpG, umod_counts_1_CpG, mod_counts_1_CpG = context_calculator(i, read1_mods_CpG, read1_umod_CpG, read_values_1_CpG, no_information)
+        read_values_2_CHH, values_2_CHH, umod_counts_2_CHH, mod_counts_2_CHH = context_calculator(i, read2_mods_CHH, read2_umod_CHH, read_values_2_CHH, no_information)
+        read_values_2_CHG, values_2_CHG, umod_counts_2_CHG, mod_counts_2_CHG = context_calculator(i, read2_mods_CHG, read2_umod_CHG, read_values_2_CHG, no_information)
+        read_values_2_CpG, values_2_CpG, umod_counts_2_CpG, mod_counts_2_CpG = context_calculator(i, read2_mods_CpG, read2_umod_CpG, read_values_2_CpG, no_information)
     all_values = [(a1, a2, a3, a4, a5, a6, a7, a8, a9, a10, a11, a12, a13, a14, a15, a16, a17, a18) for
                   a1, a2, a3, a4, a5, a6, a7, a8, a9, a10, a11, a12, a13, a14, a15, a16, a17, a18 in
                   zip_longest(values_1_CpG, umod_counts_1_CpG, mod_counts_1_CpG, values_2_CpG,
@@ -226,7 +228,7 @@ def mbias_statistics_calculator(fastas, input_file, name, directory, read_length
         logs.error('asTair cannot write to Mbias file.', exc_info=True)
     return values_1_CpG, values_2_CpG, values_1_CHG, values_2_CHG, values_1_CHH, values_2_CHH
 
-def Mbias_plotting(reference, input_file, directory, read_length, method, single_end, plot, colors, N_threads, per_chromosome):
+def Mbias_plotting(reference, input_file, directory, read_length, method, single_end, plot, colors, N_threads, per_chromosome, no_information):
     """The general M-bias calculation and statistics output function, which might be also visualised if the plotting module is enabled."""
     time_s = datetime.now()
     logs.info("asTair's M-bias summary function started running. {} seconds".format((time_s - time_b).total_seconds()))
@@ -237,7 +239,7 @@ def Mbias_plotting(reference, input_file, directory, read_length, method, single
         raise Exception("The output directory does not exist.")
         sys.exit(1)
     keys, fastas = fasta_splitting_by_sequence(reference, per_chromosome, None, False, 'all')
-    values_1_CpG, values_2_CpG, values_1_CHG, values_2_CHG, values_1_CHH, values_2_CHH = mbias_statistics_calculator(fastas, input_file, name, directory, read_length, method, single_end, N_threads, per_chromosome)
+    values_1_CpG, values_2_CpG, values_1_CHG, values_2_CHG, values_1_CHH, values_2_CHH = mbias_statistics_calculator(fastas, input_file, name, directory, read_length, method, single_end, N_threads, per_chromosome, no_information)
     try:
         if plot:
             if colors != ['teal', 'gray', 'maroon']:
