@@ -35,7 +35,6 @@ except Exception:
 from astair.safe_division import safe_rounder
 from astair.safe_division import non_zero_division
 from astair.bam_file_parser import bam_file_opener
-from astair.DNA_sequences_operations import complementary
 from astair.simple_fasta_parser import fasta_splitting_by_sequence
 
 
@@ -50,7 +49,7 @@ from astair.simple_fasta_parser import fasta_splitting_by_sequence
 @click.option('plot', '--plot', '-p', required=False, is_flag=True, help='Phred scores will be visualised and output as a pdf file. Requires installed matplotlib.')
 @click.option('colors', '--colors', '-c', default=['teal', 'gray', 'maroon'], type=list, required=False, help="List of color values used for visualistion of CpG, CHG and CHH modification levels per read, which are given as color1,color2,color3. Accepts valid matplotlib color names, RGB and RGBA hex strings and  single letters denoting color {'b', 'g', 'r', 'c', 'm', 'y', 'k', 'w'}. (Default 'teal','gray','maroon').")
 @click.option('N_threads', '--N_threads', '-t', default=1, required=True, help='The number of threads to spawn (Default 1).')
-@click.option('no_information', '--no_information', '-ni', default='*', type=click.Choice(['.', 0, '*', 'NA']), required=False, help='What symbol should be used for a value where no enough quantative information is used. (Default *).')
+@click.option('no_information', '--no_information', '-ni', default=0, type=click.Choice(['.', 0, '*', 'NA']), required=False, help='What symbol should be used for a value where no enough quantative information is used. (Default *).')
 def mbias(reference, input_file, directory, read_length, method, single_end, plot, colors, N_threads, per_chromosome, no_information):
     """Generate modification per read length information (Mbias). This is a quality-control measure."""
     Mbias_plotting(reference, input_file, directory, read_length, method, single_end, plot, colors, N_threads, per_chromosome, no_information)
@@ -74,75 +73,42 @@ def initialise_data_counters(read_length):
     return all_read_data[0], all_read_data[1], all_read_data[2]
 
 
-def strand_and_method(flag, ref_sequence, read_sequence, method, single_end):
-    """Takes the positions of interest in the read given the flag and the method."""
-    try:
-        if single_end == False:
-            if flag == 99 or flag == 147:
-                ref, alt = 'C', 'T'
-            elif flag == 163 or flag == 83:
-                ref, alt, = 'G', 'A'
-        else:
-            if flag == 0:
-                ref, alt = 'C', 'T'
-            elif flag == 16:
-                ref, alt, = 'G', 'A'
-        cytosines_reference = [m.start() for m in re.finditer(ref, ref_sequence, re.IGNORECASE)]
-        thymines_read = [m.start() for m in re.finditer(alt, read_sequence, re.IGNORECASE)]
-        if method == 'mCtoT':
-            positions = list(set(thymines_read).intersection(set(cytosines_reference)))
-        elif method == 'CtoT':
-            positions = list(set(cytosines_reference).difference(set(thymines_read)))
-        return positions
-    except (IndexError, TypeError, ValueError):
-            logs.error('The input file does not contain a MD tag column.', exc_info=True)
-            sys.exit(1)
 
-
-def mbias_calculator(flag, ref_sequence, read_sequence, read_length, read_mods_CpG, read_mods_CHG, read_mods_CHH, read_umod_CpG, read_umod_CHG, read_umod_CHH, method, single_end):
+def mbias_calculator(flag, ref_name, cytosines, modified, unmodified, full_reference, read_sequence, read_length, read_mods_CpG, read_mods_CHG, read_mods_CHH, read_umod_CpG, read_umod_CHG, read_umod_CHH, method, single_end):
     """Calculates the modification level per read position, pair orientation and cytosine context."""
-    positions = strand_and_method(flag, ref_sequence, read_sequence, method, single_end)
     if single_end == False:
         OT, OB = [99, 147], [83, 163]
     else:
         OT, OB = [0], [16]
     if flag in OT:
-        cpg_all = [m.start() for m in re.finditer(r'CG', ref_sequence, re.IGNORECASE)]
-        chg_all = [m.start() for m in re.finditer(r'C(A|C|T)G', ref_sequence, re.IGNORECASE)]
-        chh_all = [m.start() for m in re.finditer(r'C(A|C|T)(A|T|C)', ref_sequence, re.IGNORECASE)]
-    elif flag in OB:
-        cpg_all = [m.start() + 1 for m in re.finditer(r'CG', ref_sequence, re.IGNORECASE)]
-        chg_all = [m.end()-1 for m in re.finditer(r'C(A|G|T)G', ref_sequence, re.IGNORECASE)]
-        chh_all = list()
-        for chh_ in ['AAC', 'CAC', 'TAC', 'ACC', 'CCC', 'TCC', 'ATC', 'CTC', 'TTC']:
-            chh_all.extend([m.end()-1 for m in re.finditer(chh_, complementary(ref_sequence), re.IGNORECASE)])
-    if len(positions) >= 1:
-        cpg_mods = [x for x in positions if x in cpg_all]
-        chg_mods = [x for x in positions if x in chg_all]
-        chh_mods = [x for x in positions if x in chh_all]
-        if len(read_sequence) <= read_length:
-            for i in range(0, len(read_sequence)):
-                if i in chh_mods:
-                    read_mods_CHH[i] += 1
-                elif i in chg_mods:
-                    read_mods_CHG[i] += 1
-                elif i in cpg_mods:
-                    read_mods_CpG[i] += 1
-                elif i in chh_all:
-                    read_umod_CHH[i] += 1
-                elif i in chg_all:
-                    read_umod_CHG[i] += 1
-                elif i in cpg_all:
-                    read_umod_CpG[i] += 1
+        cpg_all = [pos[0] for pos in cytosines if full_reference[pos[1]:pos[1]+2].upper()=="CG"]
+        chg_all = [pos[0] for pos in cytosines if full_reference[pos[1]:pos[1]+3].upper() in ['CAG', 'CCG', 'CTG']]
+        chh_all = [pos[0] for pos in cytosines if full_reference[pos[1]:pos[1]+3].upper() in ['CAA', 'CAC', 'CAT', 'CCA', 'CCC', 'CCT', 'CTA', 'CTC', 'CTT']]
     else:
-        if len(read_sequence) <= read_length:
-            for i in range(0, len(read_sequence)):
-                if i in chh_all:
-                    read_umod_CHH[i] += 1
-                if i in chg_all:
-                    read_umod_CHG[i] += 1
-                if i in cpg_all:
-                    read_umod_CpG[i] += 1
+        cpg_all = [pos[0] for pos in cytosines if full_reference[pos[1]-1:pos[1]+1].upper()=="CG"]
+        contexts = [full_reference[pos[1]-2:pos[1]+1].upper() for pos in cytosines]
+        chg_all = [cytosines[ind][0] for ind in range(len(contexts)) if contexts[ind] in ['CAG', 'CGG', 'CTG']]
+        chh_all = [cytosines[ind][0] for ind in range(len(contexts)) if contexts[ind] in ['AAG', 'AGG', 'ATG', 'GAG', 'GGG', 'GTG', 'TAG', 'TGG', 'TTG']]
+    cpg_mods = [x for x in modified if x in cpg_all]
+    chg_mods = [x for x in modified if x in chg_all]
+    chh_mods = [x for x in modified if x in chh_all]
+    cpg_umods = [x for x in unmodified if x in cpg_all]
+    chg_umods = [x for x in unmodified if x in chg_all]
+    chh_umods = [x for x in unmodified if x in chh_all]
+    if len(read_sequence) <= read_length:
+        for i in range(0, len(read_sequence)):
+            if i in chh_mods:
+                read_mods_CHH[i] += 1
+            elif i in chg_mods:
+                read_mods_CHG[i] += 1
+            elif i in cpg_mods:
+                read_mods_CpG[i] += 1
+            elif i in chh_umods:
+                read_umod_CHH[i] += 1
+            elif i in chg_umods:
+                read_umod_CHG[i] += 1
+            elif i in cpg_umods:
+                read_umod_CpG[i] += 1
     return read_mods_CpG, read_mods_CHG, read_mods_CHH, read_umod_CpG, read_umod_CHG, read_umod_CHH
 
 
@@ -157,11 +123,35 @@ def mbias_evaluater(input_file, read_length, method, single_end, N_threads, fast
             exp1, exp2 = [99, 83], [147, 163]
         else:
             exp1, exp2 = [0], [16]
-        if read.reference_length != 0:
-            if (per_chromosome == None and read.flag in exp1) or (per_chromosome != None and read.reference_name == per_chromosome and read.flag in exp1):
-                mbias_calculator(read.flag, fastas[read.reference_name][read.reference_start:read.reference_start+read.qlen], read.query_sequence, read_length, read1_mods_CpG, read1_mods_CHG, read1_mods_CHH, read1_umod_CpG, read1_umod_CHG, read1_umod_CHH, method, single_end)
-            elif (per_chromosome == None and read.flag in exp2) or (per_chromosome != None and read.reference_name == per_chromosome and read.flag in exp2):
-                mbias_calculator(read.flag, fastas[read.reference_name][read.reference_start:read.reference_start+read.qlen], read.query_sequence, read_length,read2_mods_CpG, read2_mods_CHG, read2_mods_CHH, read2_umod_CpG, read2_umod_CHG, read2_umod_CHH, method, single_end)
+        if read.reference_length != 0 and read.flag in exp1 + exp2 and ((per_chromosome is None) or (per_chromosome is not None and read.reference_name == per_chromosome)):
+            flag, ref_name, r_start, r_sequence = read.flag, read.reference_name, read.reference_start, read.query_sequence
+            if single_end == False:
+                if flag == 99 or flag == 147:
+                    ref, alt = 'C', 'T'
+                elif flag == 163 or flag == 83:
+                    ref, alt, = 'G', 'A'
+            else:
+                if flag == 0:
+                    ref, alt = 'C', 'T'
+                elif flag == 16:
+                    ref, alt, = 'G', 'A'
+            try:
+                cytosines = [i for i in read.get_aligned_pairs() if i[1] is not None and fastas[ref_name][i[1]] == ref and  i[0] is not None]
+            except (IndexError, TypeError, ValueError):
+                logs.error('The input file does not contain a MD tag column.', exc_info=True)
+                sys.exit(1)
+            reference_cytosines = [pos[0] for pos in cytosines]
+            read_alts = [ind for ind in reference_cytosines if r_sequence[ind].upper() == alt]
+            if method == 'mCtoT':
+                modified = read_alts
+            else:
+                modified = list(set(reference_cytosines).difference(set(read_alts)))
+            unmodified = list(set(reference_cytosines).difference(set(modified)))
+            modified.sort(), unmodified.sort()
+            if ref == "C":
+                mbias_calculator(flag, ref_name, cytosines, modified, unmodified, fastas[ref_name], r_sequence, read_length, read1_mods_CpG, read1_mods_CHG, read1_mods_CHH, read1_umod_CpG, read1_umod_CHG, read1_umod_CHH, method, single_end)
+            else:
+                mbias_calculator(flag, ref_name, cytosines, modified, unmodified, fastas[ref_name], r_sequence, read_length,read2_mods_CpG, read2_mods_CHG, read2_mods_CHH, read2_umod_CpG, read2_umod_CHG, read2_umod_CHH, method, single_end)
     return read1_mods_CpG, read1_mods_CHG, read1_mods_CHH, read1_umod_CpG, read1_umod_CHG, read1_umod_CHH,\
            read2_mods_CpG, read2_mods_CHG, read2_mods_CHH, read2_umod_CpG, read2_umod_CHG, read2_umod_CHH
 
