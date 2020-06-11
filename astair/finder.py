@@ -94,12 +94,12 @@ def find_contexts(reference, context, user_defined_context, per_chromosome, comp
     except Exception:
         sys.exit(1)
     if compress == False:
-        if per_chromosome == None:
+        if per_chromosome is None:
             file_name = path.join(directory, name + "_" + context + ".bed")
         else:
             file_name = path.join(directory, name + "_" + per_chromosome + "_" + context + ".bed")
     else:
-        if per_chromosome == None:
+        if per_chromosome is None:
             file_name = path.join(directory, name + "_" + context + ".bed.gz")
         else:
             file_name = path.join(directory, name + "_" + per_chromosome + "_" + context + ".bed.gz")

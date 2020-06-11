@@ -25,10 +25,10 @@ else:
 try:
     import matplotlib as mplot
     mplot.use('Agg')
-    import matplotlib.pyplot as pyp
+    import matplotlib.pyplot as plt
     import matplotlib.ticker as ticker
-    pyp.style.use('seaborn-whitegrid')
-    pyp.ioff()
+    plt.style.use('seaborn-whitegrid')
+    plt.ioff()
 except Exception:
     warnings.warn("Matplotlib was not found, visualisation output will not be supported.", ImportWarning)
 
@@ -49,7 +49,7 @@ from astair.simple_fasta_parser import fasta_splitting_by_sequence
 @click.option('plot', '--plot', '-p', required=False, is_flag=True, help='Phred scores will be visualised and output as a pdf file. Requires installed matplotlib.')
 @click.option('colors', '--colors', '-c', default=['teal', 'gray', 'maroon'], type=list, required=False, help="List of color values used for visualistion of CpG, CHG and CHH modification levels per read, which are given as color1,color2,color3. Accepts valid matplotlib color names, RGB and RGBA hex strings and  single letters denoting color {'b', 'g', 'r', 'c', 'm', 'y', 'k', 'w'}. (Default 'teal','gray','maroon').")
 @click.option('N_threads', '--N_threads', '-t', default=1, required=True, help='The number of threads to spawn (Default 1).')
-@click.option('no_information', '--no_information', '-ni', default=0, type=click.Choice(['.', 0, '*', 'NA']), required=False, help='What symbol should be used for a value where no enough quantative information is used. (Default *).')
+@click.option('no_information', '--no_information', '-ni', default='0', type=click.Choice(['.', '0', '*', 'NA']), required=False, help='What symbol should be used for a value where no enough quantative information is used. (Default *).')
 def mbias(reference, input_file, directory, read_length, method, single_end, plot, colors, N_threads, per_chromosome, no_information):
     """Generate modification per read length information (Mbias). This is a quality-control measure."""
     Mbias_plotting(reference, input_file, directory, read_length, method, single_end, plot, colors, N_threads, per_chromosome, no_information)
@@ -229,6 +229,8 @@ def Mbias_plotting(reference, input_file, directory, read_length, method, single
         raise Exception("The output directory does not exist.")
         sys.exit(1)
     keys, fastas = fasta_splitting_by_sequence(reference, per_chromosome, None, False, 'all')
+    if no_information == '0':
+        no_information = int(no_information)
     values_1_CpG, values_2_CpG, values_1_CHG, values_2_CHG, values_1_CHH, values_2_CHH = mbias_statistics_calculator(fastas, input_file, name, directory, read_length, method, single_end, N_threads, per_chromosome, no_information)
     try:
         if plot:
@@ -248,15 +250,15 @@ def Mbias_plotting(reference, input_file, directory, read_length, method, single
             for row in values_2_CHH:
                 y_axis_CHH2.append(row[1])
             x_axis = [x for x in range(1,read_length+1)]
-            pyp.figure()
+            plt.figure()
             if single_end == False:
-                fig, fq = pyp.subplots(2, 1)
+                fig, fq = plt.subplots(2, 1)
             else:
-                fig, fq = pyp.subplots(1, 1)
+                fig, fq = plt.subplots(1, 1)
             fig.suptitle('Sequencing M-bias', fontsize=14)
             if single_end == False:
-                pyp.subplots_adjust(hspace=0.4)
-                pyp.subplots_adjust(right=1)
+                plt.subplots_adjust(hspace=0.4)
+                plt.subplots_adjust(right=1)
                 fq[0].set_ylabel('Modification level, %', fontsize=12)
                 fq[0].set_xlabel('First in pair base positions', fontsize=12)
                 fq[0].plot(x_axis, y_axis_CpG1, linewidth=1.0, linestyle='-', color=colors[0])
@@ -273,7 +275,7 @@ def Mbias_plotting(reference, input_file, directory, read_length, method, single
                 fq[1].xaxis.set_ticks(numpy.arange(0, read_length + 1, step=ceil(read_length/10)))
                 fq[1].yaxis.set_ticks(numpy.arange(0, 101, step=10))
                 fq[1].grid(color='lightgray', linestyle='solid', linewidth=1)
-                pyp.figlegend(['CpG', 'CHG', 'CHH'], loc='center left', bbox_to_anchor=(1, 0.5))
+                plt.figlegend(['CpG', 'CHG', 'CHH'], loc='center left', bbox_to_anchor=(1, 0.5))
             else:
                 fq.set_ylabel('Modification level, %', fontsize=12)
                 fq.set_xlabel('Base positions', fontsize=12)
@@ -283,9 +285,9 @@ def Mbias_plotting(reference, input_file, directory, read_length, method, single
                 fq.xaxis.set_ticks(numpy.arange(0, read_length + 1, step=ceil(read_length / 10)))
                 fq.yaxis.set_ticks(numpy.arange(0, 101, step=10))
                 fq.grid(color='lightgray', linestyle='solid', linewidth=1)
-                pyp.figlegend(['CpG', 'CHG', 'CHH'], loc='center left', bbox_to_anchor=(0.9, 0.5))
-            pyp.savefig(directory + name + '_M-bias_plot.pdf', figsize=(16, 12), dpi=330, bbox_inches='tight', pad_inches=0.15)
-            pyp.close()
+                plt.figlegend(['CpG', 'CHG', 'CHH'], loc='center left', bbox_to_anchor=(0.9, 0.5))
+            plt.savefig(directory + name + '_M-bias_plot.pdf', figsize=(16, 12), dpi=330, bbox_inches='tight', pad_inches=0.15)
+            plt.close()
     except Exception:
         logs.error('asTair cannot output the Mbias plot.', exc_info=True)
     else:

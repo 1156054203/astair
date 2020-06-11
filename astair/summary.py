@@ -47,7 +47,7 @@ from astair.simple_fasta_parser import fasta_splitting_by_sequence
 @click.option('N_threads', '--N_threads', '-t', default=1, required=True, help='The number of threads to spawn (Default 1).')
 @click.option('directory', '--directory', '-d', required=True, type=str, help='Output directory to save files.')
 @click.option('add_underscores', '--add_underscores', '-au', default=False, is_flag=True, required=False, help='Indicates outputting a new reference fasta file with added underscores in the sequence names that is afterwards used for calling. (Default False).')
-@click.option('no_information', '--no_information', '-ni', default='*', type=click.Choice(['.', 0, '*', 'NA']), required=False, help='What symbol should be used for a value where no enough quantative information is used. (Default *).')
+@click.option('no_information', '--no_information', '-ni', default='0', type=click.Choice(['.', '0', '*', 'NA']), required=False, help='What symbol should be used for a value where no enough quantative information is used. (Default *).')
 def summarise(input_file, reference, known_snp,  context, user_defined_context, library,  method, region, minimum_base_quality, minimum_mapping_quality,per_chromosome, N_threads, directory, single_end, add_underscores, no_information):
     """Collects and outputs modification information per read."""
     read_summariser(input_file, reference, known_snp, context, user_defined_context, library,  method, region, minimum_base_quality, minimum_mapping_quality,per_chromosome, N_threads, directory,single_end, add_underscores, no_information)
@@ -72,10 +72,12 @@ def read_summariser(input_file, reference, known_snp, context, user_defined_cont
     if path.exists(directory) == False:
         raise Exception("The output directory does not exist.")
         sys.exit(1)
-    if per_chromosome == None:
+    if per_chromosome is None:
         file_name = path.join(directory, name + "_" + method + "_" + context + "_read_summary.txt.gz")
     else:
         file_name = path.join(directory, name + "_" + method + "_" + per_chromosome + "_" + context + "read_summary.txt.gz")
+    if no_information == '0':
+        no_information = int(no_information)
     if not os.path.isfile(file_name):
         try:
             if per_chromosome==None:
@@ -109,7 +111,7 @@ def read_summariser(input_file, reference, known_snp, context, user_defined_cont
             modification_information_per_position = context_sequence_search(contexts, all_keys, fastas, keys[i], user_defined_context, context_total_counts, None, None)
             if region == (None, None, None):
                 start, end = 0, all_chrom.get_reference_length(keys[i])
-            if known_snp != None:
+            if known_snp is not None:
                 time_s = datetime.now()
                 logs.info("Starting reading SNP information on {} chromosome (sequence). {} seconds".format(keys[i], (time_s - time_m).total_seconds()))
                 true_variants, possible_mods = read_vcf(known_snp, keys[i], fastas[keys[i]], N_threads, start, end)
@@ -147,7 +149,7 @@ def read_summariser(input_file, reference, known_snp, context, user_defined_cont
                                     strand = '+'
                                 elif possible_mods[position][2] == 'G':
                                     strand = '-'
-                            if known_snp != None and position in true_variants:
+                            if known_snp is not None and position in true_variants:
                                 snp_status = 'WGS'
                             if position not in possible_mods:
                                 if (read.flag in flags_expectation_top and read.query_sequence[index] in ['T','t'] and method == 'mCtoT') or  (read.flag in flags_expectation_top and read.query_sequence[index] in ['C','c'] and method == 'CtoT') or (read.flag in flags_expectation_bottom and read.query_sequence[index] in ['A','a'] and method == 'mCtoT') or  (read.flag in flags_expectation_bottom and read.query_sequence[index] in ['G','g'] and method == 'CtoT'):

@@ -63,13 +63,15 @@ from astair.simple_fasta_parser import fasta_splitting_by_sequence
 @click.option('add_underscores', '--add_underscores', '-au', default=False, is_flag=True, required=False, help='Indicates outputting a new reference fasta file with added underscores in the sequence names that is afterwards used for calling. (Default False).')
 @click.option('use_underscores', '--use_underscores', '-uu', default=False, is_flag=True, required=False, help='Uses as a reference the fasta file with added underscores in the sequence names that is afterwards used for calling. (Default False).')
 @click.option('temp_dir', '--temp_dir', '-td', required=False, help='Provides a custom directory to write temporary files. (Default the chosen directory for the output).')
+@click.option('compress', '--compress', '-z', is_flag=True, default=False, required=False, help='Should the reference FASTA be compressed after the run (Default False).')
+@click.option('sort_chunck_size', '--sort_chunck_size', '-cz', default='768M', required=False, help='WARNING: sorting large files >= 50 GB might require to increaase the maximum memory per thread parameter; recognised sufixes are  K/M/G (Default 768M).')
 def align(fq1, fq2, reference, bwa_path, samtools_path, directory, method, output_format, minimum_mapping_quality, keep_unmapped, N_threads, minimum_seed_length, band_width, dropoff,
                  internal_seeds, reseeding_occurence, N_skip_seeds, drop_chains, discard_chains, N_mate_rescues, skip_mate_rescue, skip_pairing, match_score, mismatch_penalty,
-                 gap_open_penalty, gap_extension_penalty, end_clipping_penalty, unpaired_penalty, read_type, single_end, smart_pairing, read_group, header_string, include_alt, split_alignment, supplementary_mapq, minimum_score, alternative_score, all_alignments, fasta_comment, fasta_header, clip_supplementary, mark_splitted, reads_distribution, add_underscores, temp_dir, use_underscores):
+                 gap_open_penalty, gap_extension_penalty, end_clipping_penalty, unpaired_penalty, read_type, single_end, smart_pairing, read_group, header_string, include_alt, split_alignment, supplementary_mapq, minimum_score, alternative_score, all_alignments, fasta_comment, fasta_header, clip_supplementary, mark_splitted, reads_distribution, add_underscores, temp_dir, use_underscores, compress, sort_chunck_size):
     """Align raw reads in fastq format to a reference genome. bwa is required to align TAPS reads, and bwa-meth fif you plan to process BS-seq data."""
     run_alignment(fq1, fq2, reference, bwa_path, samtools_path, directory, method, output_format, minimum_mapping_quality, keep_unmapped, N_threads, minimum_seed_length, band_width, dropoff,
                  internal_seeds, reseeding_occurence, N_skip_seeds, drop_chains, discard_chains, N_mate_rescues, skip_mate_rescue, skip_pairing, match_score, mismatch_penalty,
-                 gap_open_penalty, gap_extension_penalty, end_clipping_penalty, unpaired_penalty, read_type, single_end, smart_pairing, read_group, header_string, include_alt, split_alignment, supplementary_mapq, minimum_score, alternative_score, all_alignments, fasta_comment, fasta_header, clip_supplementary, mark_splitted, reads_distribution, add_underscores,temp_dir, use_underscores)
+                 gap_open_penalty, gap_extension_penalty, end_clipping_penalty, unpaired_penalty, read_type, single_end, smart_pairing, read_group, header_string, include_alt, split_alignment, supplementary_mapq, minimum_score, alternative_score, all_alignments, fasta_comment, fasta_header, clip_supplementary, mark_splitted, reads_distribution, add_underscores,temp_dir, use_underscores, compress, sort_chunck_size)
 
 
 warnings.simplefilter(action='ignore', category=UserWarning)
@@ -140,13 +142,17 @@ def check_index(use_bwa, reference, method, output_format, add_underscores, use_
 
 def run_alignment(fq1, fq2, reference, bwa_path, samtools_path, directory, method, output_format, minimum_mapping_quality, keep_unmapped, N_threads, minimum_seed_length, band_width, dropoff,
                  internal_seeds, reseeding_occurence, N_skip_seeds, drop_chains, discard_chains, N_mate_rescues, skip_mate_rescue, skip_pairing, match_score, mismatch_penalty,
-                 gap_open_penalty, gap_extension_penalty, end_clipping_penalty, unpaired_penalty, read_type, single_end, smart_pairing, read_group, header_string, include_alt, split_alignment, supplementary_mapq, minimum_score, alternative_score, all_alignments, fasta_comment, fasta_header, clip_supplementary, mark_splitted, reads_distribution, add_underscores, temp_dir, use_underscores):
+                 gap_open_penalty, gap_extension_penalty, end_clipping_penalty, unpaired_penalty, read_type, single_end, smart_pairing, read_group, header_string, include_alt, split_alignment, supplementary_mapq, minimum_score, alternative_score, all_alignments, fasta_comment, fasta_header, clip_supplementary, mark_splitted, reads_distribution, add_underscores, temp_dir, use_underscores, compress, sort_chunck_size):
     """Aligns the provided pair-end reads to the reference according to the method specified.
     Outputs a sorted and indexed file."""
     time_s = datetime.now()
     logs.info("asTair genome aligner started running. {} seconds".format((time_s - time_b).total_seconds()))
     name = os.path.splitext(os.path.basename(fq1))[0]
-    if single_end == False  or fq2 != None:
+    if  os.path.splitext(os.path.basename(reference))[1] == '.gz':
+        initial_compression = True
+    else:
+        initial_compression = False
+    if single_end == False  or fq2 is not None:
         name = re.sub('(_R1|_1)', '', name)
     if  os.path.splitext(os.path.basename(fq1))[1] == '.gz':
         name = "_".join(name.split('.')[:-1])
@@ -187,17 +193,17 @@ def run_alignment(fq1, fq2, reference, bwa_path, samtools_path, directory, metho
         read_type = '-x ont2d'
     elif read_type == 'intractg':
         read_type = '-x intractg'
-    if single_end == True or fq2 == None:
+    if single_end == True or fq2 is None:
         fq2 = ''
     if smart_pairing:
         smart_pairing = ' -p '
     else:
         smart_pairing = ''
-    if read_group == None:
+    if read_group is None:
         read_group = ''
     else:
         read_group = ' -R ' + read_group
-    if header_string == None:
+    if header_string is None:
         header_string = ''
     else:
         header_string = ' -H ' + header_string
@@ -217,11 +223,11 @@ def run_alignment(fq1, fq2, reference, bwa_path, samtools_path, directory, metho
         all_alignments = ' -a '
     else:
         all_alignments = ''
-    if fasta_comment == None:
+    if fasta_comment is None:
         fasta_comment = ''
     else:
         fasta_comment = ' -C ' + fasta_comment
-    if fasta_header == None:
+    if fasta_header is None:
         fasta_header = ''
     else:
         fasta_header = ' -V ' + fasta_header
@@ -233,7 +239,7 @@ def run_alignment(fq1, fq2, reference, bwa_path, samtools_path, directory, metho
         mark_splitted = ' -M '
     else:
         mark_splitted = ''
-    if reads_distribution == None:
+    if reads_distribution is None:
         reads_distribution = ''
     else:
         reads_distribution = ' -I '+ reads_distribution
@@ -244,10 +250,10 @@ def run_alignment(fq1, fq2, reference, bwa_path, samtools_path, directory, metho
     if method == 'mCtoT':
         alignment_command = '{} {} -t {} -k {} -w {} -d {} -r {} -y {} -c {} -D {} -W {} -m {} {} ' \
                             ' {} -A {} -B {} -O {} -E {} -L {} -U {} {} {} {} {} {} {} {} -T {} -h {} {} {} {} {} {} {} {} {} {} | {} view {} -T {} -q {} {} -O {} ' \
-                            '| {} sort -@ {} -O {} > {}'.format(use_bwa, 'mem', N_threads, minimum_seed_length, band_width, dropoff,
+                            '| {} sort -m {} -@ {} -O {} > {}'.format(use_bwa, 'mem', N_threads, minimum_seed_length, band_width, dropoff,
                  internal_seeds, reseeding_occurence, N_skip_seeds, drop_chains, discard_chains, N_mate_rescues, skip_mate_rescue, skip_pairing, match_score, mismatch_penalty,
                  gap_open_penalty, gap_extension_penalty, end_clipping_penalty, unpaired_penalty, read_type, smart_pairing, read_group, header_string, include_alt, split_alignment, supplementary_mapq, minimum_score, alternative_score, all_alignments, fasta_comment, fasta_header, clip_supplementary, mark_splitted, reads_distribution, reference, fq1, fq2, use_samtools, output_f, reference, minimum_mapping_quality,
-                   aligned_string, output_format, use_samtools, N_threads, output_format, os.path.join(directory + name + '_' + method + "." + output_format.lower()))
+                   aligned_string, output_format, use_samtools, sort_chunck_size, N_threads, output_format, os.path.join(directory + name + '_' + method + "." + output_format.lower()))
     else:
         alignment_command = 'python {} -t {} --reference {} {} {} | {} view {} -T {} -q {} {} -O {} | {} sort -T {} -@ {} -O {} > {}'.\
             format(use_bwa, N_threads, reference, fq1, fq2, use_samtools, output_f, reference, minimum_mapping_quality,
@@ -255,10 +261,6 @@ def run_alignment(fq1, fq2, reference, bwa_path, samtools_path, directory, metho
     try:
         if os.path.isfile(os.path.join(directory + name + '_' + method + "." + output_format.lower())):
             logs.error('The output files will not be overwritten. Please rename the input or the existing output files before rerunning if the input is different.')
-            if output_format == 'CRAM' and os.path.splitext(os.path.basename(reference))[1] != '.gz':
-                gzip_ = subprocess.Popen('gzip {}'.format(reference), shell=True)
-                gzip_.wait()
-            sys.exit(1)
         else:
             align = subprocess.Popen(alignment_command, shell=True)
             exit_code = align.wait()
@@ -266,8 +268,12 @@ def run_alignment(fq1, fq2, reference, bwa_path, samtools_path, directory, metho
                 indexing_command = '{} index {}'.format(use_samtools, os.path.join(directory + name + '_' + method + "." + output_format.lower()))
                 index = subprocess.Popen(indexing_command, shell=True)
                 index.wait()
-        if output_format == 'CRAM' and os.path.splitext(os.path.basename(reference))[1] != '.gz':
-            gzip_ = subprocess.Popen('gzip {}'.format(reference), shell=True)
+        if os.path.splitext(os.path.basename(reference))[1] != '.gz' and (compress == True or initial_compression==True):
+            try:
+                gzip_ = subprocess.Popen('bgzip {}'.format(reference), shell=True)
+            except Exception:
+                logs.error('The output fasta will be GZIP compressed.')
+                gzip_ = subprocess.Popen('gzip {}'.format(reference), shell=True)
             gzip_.wait()
         time_e = datetime.now()
         logs.info("asTair genome aligner finished running. {} seconds".format((time_e - time_b).total_seconds()))

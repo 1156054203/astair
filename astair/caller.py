@@ -38,12 +38,11 @@ from astair.context_search import context_sequence_search
 from astair.context_search import sequence_context_set_creation
 from astair.simple_fasta_parser import fasta_splitting_by_sequence
 
-
 @click.command()
 @click.option('input_file', '--input_file', '-i', required=True, help='BAM|CRAM format file containing sequencing reads.')
 #@click.option('control_file', '--control_file', '-c', required=False, help='BAM|CRAM format file containing sequencing reads used as a matched control.')
 @click.option('known_snp', '--known_snp', '-ks', required=False, help='VCF format file containing genotyped WGS high quality variants or known common variants in VCF format (dbSNP, 1000 genomes, etc.).')
-@click.option('model', '--model', '-mo', default=None,  type=click.Choice([None]), required=False, help='Decide on model for class estimation.')
+@click.option('model', '--model', '-mo', default='none',  type=click.Choice(['none']), required=False, help='Decide on model for class estimation.')
 @click.option('reference', '--reference', '-f', required=True, help='Reference DNA sequence in FASTA format used for aligning of the sequencing reads and for pileup.')
 #@click.option('exclude_variants', '--exclude_variants', '-ev', default=False, is_flag=True, help='When set to true does not output variants.)
 @click.option('zero_coverage', '--zero_coverage', '-zc', default=False, is_flag=True, help='When set to True, outputs positions not covered in the bam file. Uncovering zero coverage positions takes longer time than using the default option.')
@@ -67,6 +66,7 @@ from astair.simple_fasta_parser import fasta_splitting_by_sequence
 @click.option('directory', '--directory', '-d', required=True, type=str, help='Output directory to save files.')
 @click.option('add_underscores', '--add_underscores', '-au', default=False, is_flag=True, required=False, help='Indicates outputting a new reference fasta file with added underscores in the sequence names that is afterwards used for calling. (Default False).')
 @click.option('no_information', '--no_information', '-ni', default='*', type=click.Choice(['.', '0', '*', 'NA']), required=False, help='What symbol should be used for a value where no enough quantative information is used. (Default *).')
+
 def call(input_file, known_snp, model, reference, context, zero_coverage, skip_clip_overlap, minimum_base_quality, user_defined_context, library,  method, minimum_mapping_quality, adjust_acapq_threshold, add_indels, redo_baq, compute_baq, ignore_orphans, max_depth,per_chromosome, N_threads, directory, compress, single_end, add_underscores, no_information):
     """Call modified cytosines from a bam or cram file. The output consists of two files, one containing modification counts per nucleotide, the other providing genome-wide statistics per context."""
     cytosine_modification_finder(input_file, known_snp, model, reference, context, zero_coverage, skip_clip_overlap, minimum_base_quality, user_defined_context, library,  method, minimum_mapping_quality, adjust_acapq_threshold, add_indels, redo_baq, compute_baq, ignore_orphans, max_depth, per_chromosome, N_threads, directory, compress, single_end, add_underscores, no_information)
@@ -288,9 +288,9 @@ def pileup_summary(modification_information_per_position, position, read_counts,
         label = 'LowCov'
     else:
         label = 'PASS'
-    if alt != None:
+    if alt is not None:
         modification = alt
-    if snp == None:
+    if snp is None:
         snp = 'No'
     all_data = numpy.array([position[0], position[1], position[1] + 1, modification_level, modified_bases, unmodified_bases, reference, modification, modification_information_per_position[position][0], modification_information_per_position[position][1], snp, depth])
     statistics_calculator(mean_mod, mean_unmod, all_data, user_defined_context, context_sample_counts)
@@ -311,7 +311,7 @@ def clean_pileup(pileups, cycles, modification_information_per_position, mean_mo
         else:
             header = False
         try:
-            if ((reads.reference_name, reads.pos, reads.pos + 1) in modification_information_per_position) or (possible_mods!= None and (reads.reference_name, reads.pos, reads.pos + 1) in possible_mods):
+            if ((reads.reference_name, reads.pos, reads.pos + 1) in modification_information_per_position) or (possible_mods is not None and (reads.reference_name, reads.pos, reads.pos + 1) in possible_mods):
                 cycles += 1
                 position = (reads.reference_name, reads.pos, reads.pos + 1)
                 real_snp = False
@@ -335,7 +335,7 @@ def clean_pileup(pileups, cycles, modification_information_per_position, mean_mo
                         "Failed getting query sequences (AssertionError, pysam). Please decrease the max_depth parameter.")
                 for pileup, seq in zip_longest(reads.pileups, sequences, fillvalue='BLANK'):
                     read_counts[(pileup.alignment.flag, seq.upper())] += 1
-                if possible_mods != None and (reads.reference_name, reads.pos, reads.pos + 1) in possible_mods and ((sequences.count(modification) + sequences.count(modification.lower())) != max([sequences.count('A')+sequences.count('a'), sequences.count('C')+sequences.count('c'),
+                if possible_mods is not None and (reads.reference_name, reads.pos, reads.pos + 1) in possible_mods and ((sequences.count(modification) + sequences.count(modification.lower())) != max([sequences.count('A')+sequences.count('a'), sequences.count('C')+sequences.count('c'),
                                                                                                    sequences.count('G')+sequences.count('g'), sequences.count('T')+sequences.count('t')]) or (sequences.count(reference) + sequences.count(reference.lower())) != max([sequences.count('A')+sequences.count('a'), sequences.count('C')+sequences.count('c'),
                                                                                                    sequences.count('G')+sequences.count('g'), sequences.count('T')+sequences.count('t')])):
                     pass
@@ -357,13 +357,17 @@ def cytosine_modification_finder(input_file, known_snp, model, reference, contex
     logs.info("asTair modification finder started running. {} seconds".format((time_s - time_b).total_seconds()))
     name = path.splitext(path.basename(input_file))[0]
     directory = path.abspath(directory)
+    if model == 'none':
+        model, labels, model_name = None, None, None
     if os.path.exists(directory) == False:
         raise Exception("The output directory does not exist.")
         sys.exit(1)
-    if per_chromosome == None:
+    if per_chromosome is None:
         file_name = path.join(directory, name + "_" + method + "_" + context + ".mods")
     else:
         file_name = path.join(directory, name + "_" + method + "_" + per_chromosome + "_" + context + ".mods")
+    if no_information == '0':
+        no_information = int(no_information)
     if not os.path.isfile(file_name) and not os.path.isfile(file_name + '.gz'):
         try:
             inbam = bam_file_opener(input_file, None, N_threads)
@@ -390,8 +394,6 @@ def cytosine_modification_finder(input_file, known_snp, model, reference, contex
             else:
                 data_line = gzip.open(file_name + '.gz', 'wt', compresslevel=9)
         true_variants, possible_mods, matched = None, None, False
-        if model == None:
-            model, labels, model_name = None, None, None
         for i in range(0, len(keys)):
             time_m = datetime.now()
             logs.info("Starting modification calling on {} chromosome (sequence). {} seconds".format(keys[i], (time_m - time_b).total_seconds()))
@@ -407,7 +409,7 @@ def cytosine_modification_finder(input_file, known_snp, model, reference, contex
             pileups = inbam.pileup(keys[i], ignore_overlaps=skip_clip_overlap, min_base_quality=minimum_base_quality, stepper='samtools',
                                     max_depth=max_depth, redo_baq=redo_baq, ignore_orphans=ignore_orphans, compute_baq=compute_baq,
                                     min_mapping_quality=minimum_mapping_quality, adjust_acapq_threshold=adjust_acapq_threshold)
-            if known_snp != None:
+            if known_snp is not None:
                 time_s = datetime.now()
                 logs.info("Starting reading SNP information on {} chromosome (sequence). {} seconds".format(keys[i], (time_s - time_m).total_seconds()))
                 true_variants, possible_mods = read_vcf(known_snp, keys[i], fastas[keys[i]], N_threads, None, None)
@@ -428,7 +430,7 @@ def cytosine_modification_finder(input_file, known_snp, model, reference, contex
                         modification_calls_writer(all_data, compress, data_line, header=False)
             modification_information_per_position, true_variants, possible_mods = None, None, None
         inbam.close()
-        if per_chromosome == None:
+        if per_chromosome is None:
             file_name = path.join(directory, name + "_" + method + "_" + context + ".stats")
         else:
             file_name = path.join(directory, name + "_" + method + "_" + per_chromosome + "_" + context + ".stats")

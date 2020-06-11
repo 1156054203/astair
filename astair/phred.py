@@ -21,10 +21,10 @@ from datetime import datetime
 try:
     import matplotlib as mplot
     mplot.use('Agg')
-    import matplotlib.pyplot as pyp
+    import matplotlib.pyplot as plt
     import matplotlib.ticker as ticker
-    pyp.style.use('seaborn-whitegrid')
-    pyp.ioff()
+    plt.style.use('seaborn-whitegrid')
+    plt.ioff()
 except Exception:
     warnings.warn("Matplotlib was not found, visualisation output will not be supported.", ImportWarning)
 
@@ -82,7 +82,7 @@ def clean_open_file(input_file):
 
 def Phred_score_main_body(file_to_load, calculation_mode, sample_size):
     """Calculates the mean or the absolute numeric Phred scores per each base using a desired sample size for random sampling from the fastq file."""
-    if sample_size == None:
+    if sample_size is None:
         cutoff = 10000000
     else:
         cutoff = int(sample_size)
@@ -156,16 +156,16 @@ def main_Phred_score_calculation_output(fq1, fq2, sample_size, directory, name, 
     queue = [Queue(), Queue()]
     threads.append(Thread(target=lambda que, arg1, arg2, arg3, arg4, arg5: que.put(Phred_score_value_return(arg1, arg2, arg3, arg4, arg5)),
                           args=(queue[0], fq1, sample_size, calculation_mode, fq1, fq2), ))
-    if single_end == False or fq2 != None:
+    if single_end == False or fq2 is not None:
         threads.append(Thread(target=lambda que, arg1, arg2, arg3, arg4, arg5: que.put(Phred_score_value_return(arg1, arg2, arg3, arg4, arg5)),
                           args=(queue[1], fq2, sample_size, calculation_mode, fq1, fq2), ))
     threads[0].start()
-    if single_end == False or fq2 != None:
+    if single_end == False or fq2 is not None:
         threads[1].start()
     for thread in threads:
         thread.join()
     read_values_fq1 = queue[0].get()
-    if single_end == False or fq2 != None:
+    if single_end == False or fq2 is not None:
         read_values_fq2 = queue[1].get()
     else:
         read_values_fq2 = None
@@ -250,14 +250,14 @@ def Phred_scores_plotting(fq1, fq2, calculation_mode, directory, sample_size, mi
     try:
         file1 = open(fq1, 'r')
         file1.close()
-        if single_end == False or fq2 != None:
+        if single_end == False or fq2 is not None:
             file2 = open(fq2, 'r')
             file2.close()
     except Exception:
         logs.error('The input fastq files do not exist.', exc_info=True)
         sys.exit(1)
     name = path.splitext(path.basename(fq1))[0]
-    if single_end == False or fq2 != None:
+    if single_end == False or fq2 is not None:
         name = re.sub('_(R1|1).fq', '', name)
     else:
         name = re.sub('.fq', '', name)
@@ -271,15 +271,15 @@ def Phred_scores_plotting(fq1, fq2, calculation_mode, directory, sample_size, mi
         colors = "".join(colors).split(',')
     read_values_fq1, read_values_fq2 = main_Phred_score_calculation_output(fq1, fq2, sample_size, directory, name, calculation_mode, single_end)
     data_fq1, maxy1 = Phred_values_return(read_values_fq1, 'F', directory, name, calculation_mode, single_end)
-    if single_end == False  or fq2 != None:
+    if single_end == False  or fq2 is not None:
         data_fq2, maxy2 = Phred_values_return(read_values_fq2, 'R', directory, name, calculation_mode, single_end)
     try:
         if plot:
-            pyp.figure()
-            if single_end == False  or fq2 != None:
-                fig, fq = pyp.subplots(1, 2)
+            plt.figure()
+            if single_end == False  or fq2 is not None:
+                fig, fq = plt.subplots(1, 2)
                 fig.suptitle('Sequencing base quality', fontsize=14)
-                pyp.subplots_adjust(wspace=0.4)
+                plt.subplots_adjust(wspace=0.4)
                 maxy = [max(maxy1, maxy2) + 1 if max(maxy1, maxy2) + 1 > 35 else 35][0]
                 box1 = fq[0].boxplot(data_fq1, labels=['A', 'C', 'G', 'T'], patch_artist=True)
                 fq[0].set_ylabel('Phred score', fontsize=12)
@@ -293,10 +293,10 @@ def Phred_scores_plotting(fq1, fq2, calculation_mode, directory, sample_size, mi
                 fq[1].yaxis.set_major_locator(ticker.MultipleLocator(5))
                 fq[1].grid(color='lightgray', linestyle='solid', linewidth=1)
                 Phred_scores_color_change([box1, box2], colors)
-                pyp.vlines(-1, minimum_score, maxy, alpha=0.3, linewidth=1, linestyle='--', color='gray', clip_on=False)
-                pyp.savefig(directory + name + '_phred_scores_plot.pdf', figsize=(14, 8), dpi=330, bbox_inches='tight')
+                plt.vlines(-1, minimum_score, maxy, alpha=0.3, linewidth=1, linestyle='--', color='gray', clip_on=False)
+                plt.savefig(directory + name + '_phred_scores_plot.pdf', figsize=(14, 8), dpi=330, bbox_inches='tight')
             else:
-                fig, fq = pyp.subplots(1, 1)
+                fig, fq = plt.subplots(1, 1)
                 fig.suptitle('Sequencing base quality', fontsize=14)
                 maxy = [maxy1 + 1 if maxy1 + 1 > 35 else 35][0]
                 box1 = fq.boxplot(data_fq1, labels=['A', 'C', 'G', 'T'], patch_artist=True)
@@ -306,8 +306,8 @@ def Phred_scores_plotting(fq1, fq2, calculation_mode, directory, sample_size, mi
                 fq.yaxis.set_major_locator(ticker.MultipleLocator(5))
                 fq.grid(color='lightgray', linestyle='solid', linewidth=1)
                 Phred_scores_color_change([box1], colors)
-                pyp.savefig(directory + name + '_phred_scores_plot.pdf', figsize=(14, 8), dpi=330, bbox_inches='tight')
-            pyp.close()
+                plt.savefig(directory + name + '_phred_scores_plot.pdf', figsize=(14, 8), dpi=330, bbox_inches='tight')
+            plt.close()
     except Exception:
         logs.error('asTair cannot output the Phred scores plot.', exc_info=True)
     else:
