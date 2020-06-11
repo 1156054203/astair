@@ -9,7 +9,7 @@ class SafeDivisionFunctionsOutputTest(unittest.TestCase):
     def test_non_zero_division(self):
         """Tests whether zero will be returned from division
         by zero operation."""
-        self.assertEqual(safe_division.non_zero_division(10,0), 0)
+        self.assertEqual(safe_division.non_zero_division(10,0,0), 0)
     def test_non_zero_division_NA(self):
         """Tests whether NA will be returned from division
         by zero operation."""
