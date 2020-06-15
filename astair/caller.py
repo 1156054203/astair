@@ -23,10 +23,10 @@ from datetime import datetime
 from collections import defaultdict
 
 if sys.version[0] == '3':
-    from astair.soft_clipper_3 import soft_clipper
+    from astair import soft_clipper_3 as soft_clipper
     from itertools import zip_longest
 elif sys.version[0] == '2':
-    from astair.soft_clipper import soft_clipper
+    from astair import soft_clipper as soft_clipper
     from itertools import izip_longest as zip_longest
 else:
     raise Exception("This is not the python we're looking for (version {})".format(sys.version[0]))
@@ -338,7 +338,7 @@ def clean_pileup(pileups, cycles, modification_information_per_position, mean_mo
                     except AssertionError:
                         logs.exception("Failed getting query sequences (AssertionError, pysam). Please decrease the max_depth parameter.")
                 else:
-                    clipped_pileups, sequences = soft_clipper(reads, start_clip, end_clip, add_indels)
+                    clipped_pileups, sequences = soft_clipper.soft_clipper(reads, start_clip, end_clip, add_indels)
                 for pileup, seq in zip_longest(clipped_pileups, sequences, fillvalue='BLANK'):
                     read_counts[(pileup.alignment.flag, seq.upper())] += 1
                 if possible_mods is not None and (reads.reference_name, reads.pos, reads.pos + 1) in possible_mods and ((sequences.count(modification) + sequences.count(modification.lower())) != max([sequences.count('A')+sequences.count('a'), sequences.count('C')+sequences.count('c'),
