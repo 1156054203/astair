@@ -23,14 +23,15 @@ from datetime import datetime
 from collections import defaultdict
 
 if sys.version[0] == '3':
+    from astair.soft_clipper_3 import soft_clipper
     from itertools import zip_longest
 elif sys.version[0] == '2':
+    from astair.soft_clipper import soft_clipper
     from itertools import izip_longest as zip_longest
 else:
     raise Exception("This is not the python we're looking for (version {})".format(sys.version[0]))
 
 
-from astair.soft_clipper import soft_clipper
 from astair.vcf_reader import read_vcf
 from astair.safe_division import safe_rounder
 from astair.safe_division import non_zero_division
