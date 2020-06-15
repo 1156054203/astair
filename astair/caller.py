@@ -30,6 +30,7 @@ else:
     raise Exception("This is not the python we're looking for (version {})".format(sys.version[0]))
 
 
+from astair.soft_clipper import soft_clipper
 from astair.vcf_reader import read_vcf
 from astair.safe_division import safe_rounder
 from astair.safe_division import non_zero_division
@@ -66,10 +67,11 @@ from astair.simple_fasta_parser import fasta_splitting_by_sequence
 @click.option('directory', '--directory', '-d', required=True, type=str, help='Output directory to save files.')
 @click.option('add_underscores', '--add_underscores', '-au', default=False, is_flag=True, required=False, help='Indicates outputting a new reference fasta file with added underscores in the sequence names that is afterwards used for calling. (Default False).')
 @click.option('no_information', '--no_information', '-ni', default='*', type=click.Choice(['.', '0', '*', 'NA']), required=False, help='What symbol should be used for a value where no enough quantative information is used. (Default *).')
-
-def call(input_file, known_snp, model, reference, context, zero_coverage, skip_clip_overlap, minimum_base_quality, user_defined_context, library,  method, minimum_mapping_quality, adjust_acapq_threshold, add_indels, redo_baq, compute_baq, ignore_orphans, max_depth,per_chromosome, N_threads, directory, compress, single_end, add_underscores, no_information):
+@click.option('start_clip', '--start_clip', '-scl', required=False, type=int, default=0, help='Set the length of the bases in the start of the reads that will not be used for calling. (Default 8).')
+@click.option('end_clip', '--end_clip', '-ecl', required=False, type=int, default=0, help='Set the length of the bases in the end of the reads that will not be used for calling. (Default 0).')
+def call(input_file, known_snp, model, reference, context, zero_coverage, skip_clip_overlap, minimum_base_quality, user_defined_context, library,  method, minimum_mapping_quality, adjust_acapq_threshold, add_indels, redo_baq, compute_baq, ignore_orphans, max_depth,per_chromosome, N_threads, directory, compress, single_end, add_underscores, no_information, start_clip, end_clip):
     """Call modified cytosines from a bam or cram file. The output consists of two files, one containing modification counts per nucleotide, the other providing genome-wide statistics per context."""
-    cytosine_modification_finder(input_file, known_snp, model, reference, context, zero_coverage, skip_clip_overlap, minimum_base_quality, user_defined_context, library,  method, minimum_mapping_quality, adjust_acapq_threshold, add_indels, redo_baq, compute_baq, ignore_orphans, max_depth, per_chromosome, N_threads, directory, compress, single_end, add_underscores, no_information)
+    cytosine_modification_finder(input_file, known_snp, model, reference, context, zero_coverage, skip_clip_overlap, minimum_base_quality, user_defined_context, library,  method, minimum_mapping_quality, adjust_acapq_threshold, add_indels, redo_baq, compute_baq, ignore_orphans, max_depth, per_chromosome, N_threads, directory, compress, single_end, add_underscores, no_information, start_clip, end_clip)
 
 
 warnings.simplefilter(action='ignore', category=UserWarning)
@@ -303,7 +305,7 @@ def tags_search(read_tags, tag_name, list_):
 
 def clean_pileup(pileups, cycles, modification_information_per_position, mean_mod, mean_unmod, user_defined_context,
                  file_name, method, add_indels, context_sample_counts, ignore_orphans, single_end, compress, data_line, library,
-                 true_variants, possible_mods, matched, model, labels, fastas, model_name, no_information):
+                 true_variants, possible_mods, matched, model, labels, fastas, model_name, no_information, start_clip, end_clip):
     """Takes reads from the piled-up region and calculates modification levels."""
     for reads in pileups:
         if cycles == 0:
@@ -328,12 +330,15 @@ def clean_pileup(pileups, cycles, modification_information_per_position, mean_mo
                 desired_tuples, undesired_tuples = flags_expectation(modification_information_per_position, position,
                                                                             modification, reference, ignore_orphans,
                                                                             single_end, library)
-                try:
-                    sequences = reads.get_query_sequences(mark_matches=False, mark_ends=False, add_indels=add_indels)
-                except AssertionError:
-                    logs.exception(
-                        "Failed getting query sequences (AssertionError, pysam). Please decrease the max_depth parameter.")
-                for pileup, seq in zip_longest(reads.pileups, sequences, fillvalue='BLANK'):
+                if start_clip==0 and end_clip==0:
+                    clipped_pileups = reads.pileups
+                    try:
+                        sequences = reads.get_query_sequences(mark_matches=False, mark_ends=False, add_indels=add_indels) 
+                    except AssertionError:
+                        logs.exception("Failed getting query sequences (AssertionError, pysam). Please decrease the max_depth parameter.")
+                else:
+                    clipped_pileups, sequences = soft_clipper(reads, start_clip, end_clip, add_indels)
+                for pileup, seq in zip_longest(clipped_pileups, sequences, fillvalue='BLANK'):
                     read_counts[(pileup.alignment.flag, seq.upper())] += 1
                 if possible_mods is not None and (reads.reference_name, reads.pos, reads.pos + 1) in possible_mods and ((sequences.count(modification) + sequences.count(modification.lower())) != max([sequences.count('A')+sequences.count('a'), sequences.count('C')+sequences.count('c'),
                                                                                                    sequences.count('G')+sequences.count('g'), sequences.count('T')+sequences.count('t')]) or (sequences.count(reference) + sequences.count(reference.lower())) != max([sequences.count('A')+sequences.count('a'), sequences.count('C')+sequences.count('c'),
@@ -349,9 +354,7 @@ def clean_pileup(pileups, cycles, modification_information_per_position, mean_mo
     pileups = None
 
 
-def cytosine_modification_finder(input_file, known_snp, model, reference, context, zero_coverage, skip_clip_overlap, minimum_base_quality, user_defined_context, library, method,
-                                 minimum_mapping_quality, adjust_acapq_threshold, add_indels, redo_baq, compute_baq, ignore_orphans,
-                                 max_depth, per_chromosome, N_threads, directory, compress, single_end, add_underscores, no_information):
+def cytosine_modification_finder(input_file, known_snp, model, reference, context, zero_coverage, skip_clip_overlap, minimum_base_quality, user_defined_context, library, method, minimum_mapping_quality, adjust_acapq_threshold, add_indels, redo_baq, compute_baq, ignore_orphans, max_depth, per_chromosome, N_threads, directory, compress, single_end, add_underscores, no_information, start_clip, end_clip):
     """Searches for cytosine modification positions in the desired contexts and calculates the modificaton levels."""
     time_s = datetime.now()
     logs.info("asTair modification finder started running. {} seconds".format((time_s - time_b).total_seconds()))
@@ -417,7 +420,7 @@ def cytosine_modification_finder(input_file, known_snp, model, reference, contex
                 time_sf = datetime.now()
                 logs.info("Reading SNP information on {} chromosome (sequence) has finished. {} seconds".format(keys[i], (time_sf - time_s).total_seconds()))
             clean_pileup(pileups, i, modification_information_per_position, mean_mod, mean_unmod, user_defined_context, file_name, method,
-                            add_indels, context_sample_counts, ignore_orphans, single_end, compress, data_line, library, true_variants, possible_mods, matched, model, labels, fastas, model_name, no_information)
+                            add_indels, context_sample_counts, ignore_orphans, single_end, compress, data_line, library, true_variants, possible_mods, matched, model, labels, fastas, model_name, no_information, start_clip, end_clip)
             if zero_coverage:
                 for position in modification_information_per_position.keys():
                     if modification_information_per_position[position][2] == 'C':
