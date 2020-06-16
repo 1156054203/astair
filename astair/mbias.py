@@ -112,6 +112,24 @@ def mbias_calculator(flag, ref_name, cytosines, modified, unmodified, full_refer
     return read_mods_CpG, read_mods_CHG, read_mods_CHH, read_umod_CpG, read_umod_CHG, read_umod_CHH
 
 
+def positions_discovery(read, fastas, ref_name, ref, alt_base, r_sequence, method):
+    """Gets modified and unmodified cytosine positions."""
+    try:
+        cytosines = [i for i in read.get_aligned_pairs() if i[1] is not None and fastas[ref_name][i[1]].upper() == ref and  i[0] is not None]
+    except (IndexError, TypeError, ValueError):
+        logs.error('The input file does not contain a MD tag column.', exc_info=True)
+        sys.exit(1)
+    reference_cytosines = list(map(lambda x: x[0], cytosines))
+    read_alts = list(filter(lambda x: r_sequence[x].upper() == alt_base, reference_cytosines))
+    if method == 'mCtoT':
+        modified = read_alts
+    else:
+        modified = list(set(reference_cytosines).difference(set(read_alts)))
+    unmodified = list(set(reference_cytosines).difference(set(modified)))
+    modified.sort(), unmodified.sort()
+    return cytosines, modified, unmodified
+
+
 def mbias_evaluater(input_file, read_length, method, single_end, N_threads, fastas, per_chromosome):
     """Outputs the modification levels per read position, pair orientation and cytosine context."""
     read1_mods_CHH, read1_mods_CHG, read1_mods_CpG = initialise_data_counters(read_length)
@@ -135,19 +153,7 @@ def mbias_evaluater(input_file, read_length, method, single_end, N_threads, fast
                     ref, alt = 'C', 'T'
                 elif flag == 16:
                     ref, alt, = 'G', 'A'
-            try:
-                cytosines = [i for i in read.get_aligned_pairs() if i[1] is not None and fastas[ref_name][i[1]] == ref and  i[0] is not None]
-            except (IndexError, TypeError, ValueError):
-                logs.error('The input file does not contain a MD tag column.', exc_info=True)
-                sys.exit(1)
-            reference_cytosines = [pos[0] for pos in cytosines]
-            read_alts = [ind for ind in reference_cytosines if r_sequence[ind].upper() == alt]
-            if method == 'mCtoT':
-                modified = read_alts
-            else:
-                modified = list(set(reference_cytosines).difference(set(read_alts)))
-            unmodified = list(set(reference_cytosines).difference(set(modified)))
-            modified.sort(), unmodified.sort()
+            cytosines, modified, unmodified = positions_discovery(read, fastas, ref_name, ref, alt, r_sequence, method)
             if ref == "C":
                 mbias_calculator(flag, ref_name, cytosines, modified, unmodified, fastas[ref_name], r_sequence, read_length, read1_mods_CpG, read1_mods_CHG, read1_mods_CHH, read1_umod_CpG, read1_umod_CHG, read1_umod_CHH, method, single_end)
             else:
