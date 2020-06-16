@@ -22,11 +22,9 @@ from os import path
 from datetime import datetime
 from collections import defaultdict
 
-if sys.version[0] == '3':
-    from astair import soft_clipper_3 as soft_clipper
+if sys.version[0] == '3': 
     from itertools import zip_longest
 elif sys.version[0] == '2':
-    from astair import soft_clipper as soft_clipper
     from itertools import izip_longest as zip_longest
 else:
     raise Exception("This is not the python we're looking for (version {})".format(sys.version[0]))
@@ -239,6 +237,12 @@ def context_dictionary(user_defined_context):
     return empty_dict
 
 
+def clipped_reads(pileups, positions, sequences, start_clip, end_clip):   
+    """Simplified read clipping."""
+    if positions > start_clip and positions < (pileups.alignment.rlen - end_clip):
+        return pileups, sequences   
+    
+    
 def flags_expectation(modification_information_per_position, position, modification, reference, ignore_orphans, single_end, library):
     """Gives the expected flag-base couples, the reference and the modified base."""
     if reference == 'C':
@@ -308,6 +312,7 @@ def clean_pileup(pileups, cycles, modification_information_per_position, mean_mo
                  file_name, method, add_indels, context_sample_counts, ignore_orphans, single_end, compress, data_line, library,
                  true_variants, possible_mods, matched, model, labels, fastas, model_name, no_information, start_clip, end_clip):
     """Takes reads from the piled-up region and calculates modification levels."""
+    vclipped_reads = numpy.vectorize(clipped_reads)
     for reads in pileups:
         if cycles == 0:
             header = True
@@ -331,14 +336,14 @@ def clean_pileup(pileups, cycles, modification_information_per_position, mean_mo
                 desired_tuples, undesired_tuples = flags_expectation(modification_information_per_position, position,
                                                                             modification, reference, ignore_orphans,
                                                                             single_end, library)
+                try:
+                    sequences = reads.get_query_sequences(mark_matches=False, mark_ends=False, add_indels=add_indels)
+                except AssertionError:
+                    logs.exception("Failed getting query sequences (AssertionError, pysam). Please decrease the max_depth parameter.")   
                 if start_clip==0 and end_clip==0:
-                    clipped_pileups = reads.pileups
-                    try:
-                        sequences = reads.get_query_sequences(mark_matches=False, mark_ends=False, add_indels=add_indels) 
-                    except AssertionError:
-                        logs.exception("Failed getting query sequences (AssertionError, pysam). Please decrease the max_depth parameter.")
+                    clipped_pileups, sequences = reads.pileups, sequences
                 else:
-                    clipped_pileups, sequences = soft_clipper.soft_clipper(reads, start_clip, end_clip, add_indels)
+                    clipped_pileups, sequences = vclipped_reads(reads.pileups, reads.get_query_positions(), sequences, start_clip, end_clip)
                 for pileup, seq in zip_longest(clipped_pileups, sequences, fillvalue='BLANK'):
                     read_counts[(pileup.alignment.flag, seq.upper())] += 1
                 if possible_mods is not None and (reads.reference_name, reads.pos, reads.pos + 1) in possible_mods and ((sequences.count(modification) + sequences.count(modification.lower())) != max([sequences.count('A')+sequences.count('a'), sequences.count('C')+sequences.count('c'),
