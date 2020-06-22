@@ -154,7 +154,7 @@ def mbias_evaluater(input_file, read_length, method, single_end, N_threads, fast
                 elif flag == 16:
                     ref, alt, = 'G', 'A'
             cytosines, modified, unmodified = positions_discovery(read, fastas, ref_name, ref, alt, r_sequence, method)
-            if ref == "C":
+            if flag in exp1:
                 mbias_calculator(flag, ref_name, cytosines, modified, unmodified, fastas[ref_name], r_sequence, read_length, read1_mods_CpG, read1_mods_CHG, read1_mods_CHH, read1_umod_CpG, read1_umod_CHG, read1_umod_CHH, method, single_end)
             else:
                 mbias_calculator(flag, ref_name, cytosines, modified, unmodified, fastas[ref_name], r_sequence, read_length,read2_mods_CpG, read2_mods_CHG, read2_mods_CHH, read2_umod_CpG, read2_umod_CHG, read2_umod_CHH, method, single_end)
