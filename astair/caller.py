@@ -344,6 +344,7 @@ def clean_pileup(pileups, cycles, modification_information_per_position, mean_mo
                     clipped_pileups, sequences = reads.pileups, sequences
                 else:
                     clipped_pileups, sequences = vclipped_reads(reads.pileups, reads.get_query_positions(), sequences, start_clip, end_clip)
+                    clipped_pileups, sequences = clipped_pileups[clipped_pileups != numpy.array(None)], sequences[sequences != 'Fals']
                 for pileup, seq in zip_longest(clipped_pileups, sequences, fillvalue='BLANK'):
                     read_counts[(pileup.alignment.flag, seq.upper())] += 1
                 if possible_mods is not None and (reads.reference_name, reads.pos, reads.pos + 1) in possible_mods and ((sequences.count(modification) + sequences.count(modification.lower())) != max([sequences.count('A')+sequences.count('a'), sequences.count('C')+sequences.count('c'),

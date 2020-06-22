@@ -35,6 +35,7 @@ Commands:
   phred     Calculate per base (A, C, T, G) Phred scores for each strand.
   simulate  Simulate TAPS/BS conversion on top of an existing bam/cram file.
   summarise  Collects and outputs modification information per read.
+  idbias    Generate indel count per read length information (IDbias).
 
   __________________________________About__________________________________
   asTair was written by Gergana V. Velikova and Benjamin Schuster-Boeckler.
