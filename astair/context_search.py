@@ -167,7 +167,10 @@ def ahocorasick_search(objects, context, string, string_name, user_defined_conte
 def context_sequence_search(context, key, fastas, string_name, user_defined_context, context_total_counts, region, strand):
     """Starts the search for cytosine contexts in the reference fasta file."""
     data_context = {}
-    string = fastas[string_name]
+    try:
+        string = fastas[string_name]
+    except Exception:
+        logs.error('The FASTA file is not indexed or chromosome names contain spaces or do not exist.', exc_info=True)
     if key.count('C') == 0:
         for objects in key:
             try:

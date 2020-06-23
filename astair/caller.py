@@ -241,6 +241,8 @@ def clipped_reads(pileups, positions, sequences, start_clip, end_clip):
     """Simplified read clipping."""
     if positions > start_clip and positions < (pileups.alignment.rlen - end_clip):
         return pileups, sequences   
+    else:
+        return None, None
     
     
 def flags_expectation(modification_information_per_position, position, modification, reference, ignore_orphans, single_end, library):
@@ -344,7 +346,7 @@ def clean_pileup(pileups, cycles, modification_information_per_position, mean_mo
                     clipped_pileups, sequences = reads.pileups, sequences
                 else:
                     clipped_pileups, sequences = vclipped_reads(reads.pileups, reads.get_query_positions(), sequences, start_clip, end_clip)
-                    clipped_pileups, sequences = clipped_pileups[clipped_pileups != numpy.array(None)], sequences[sequences != 'Fals']
+                    clipped_pileups, sequences = clipped_pileups[clipped_pileups != numpy.array(None)], sequences[sequences != numpy.array(None)]
                 for pileup, seq in zip_longest(clipped_pileups, sequences, fillvalue='BLANK'):
                     read_counts[(pileup.alignment.flag, seq.upper())] += 1
                 if possible_mods is not None and (reads.reference_name, reads.pos, reads.pos + 1) in possible_mods and ((sequences.count(modification) + sequences.count(modification.lower())) != max([sequences.count('A')+sequences.count('a'), sequences.count('C')+sequences.count('c'),
@@ -384,7 +386,7 @@ def cytosine_modification_finder(input_file, known_snp, model, reference, contex
         except Exception:
             sys.exit(1)
         try:
-            if per_chromosome==None:
+            if per_chromosome is None:
                 keys = fasta_splitting_by_sequence(reference, 'keys_only', None, add_underscores, None)
             else:
                 keys = [per_chromosome]
@@ -413,7 +415,9 @@ def cytosine_modification_finder(input_file, known_snp, model, reference, contex
                 numbered = None
             try:
                 fastas = fasta_splitting_by_sequence(reference, keys[i], numbered, add_underscores, None)
+                fastas is not None
             except Exception:
+                logs.error('The fasta file does not exist or is not indexed.', exc_info=True)
                 sys.exit(1)
             modification_information_per_position = context_sequence_search(contexts, all_keys, fastas, keys[i], user_defined_context, context_total_counts, None, None)
             pileups = inbam.pileup(keys[i], ignore_overlaps=skip_clip_overlap, min_base_quality=minimum_base_quality, stepper='samtools',
