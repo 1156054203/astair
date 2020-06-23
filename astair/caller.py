@@ -60,7 +60,7 @@ from astair.simple_fasta_parser import fasta_splitting_by_sequence
 @click.option('compute_baq', '--compute_baq', '-cbq', required=False, default=True, type=bool, help='Performs re-alignment computing of per-Base Alignment Qualities (Default True).')
 @click.option('ignore_orphans', '--ignore_orphans', '-io', required=False, default=True, type=bool, help='Ignore reads not in proper pairs (Default True).')
 @click.option('max_depth', '--max_depth', '-md', required=False, type=int, default=250, help='Set the maximum read depth for the pileup. Please increase the maximum value for spike-ins and other highly-covered sequences. (Default 250).')
-@click.option('per_chromosome', '--per_chromosome', '-chr', default=None, type=str, help='When used, it calculates the modification rates only per the chromosome given. (Default None).')
+@click.option('per_chromosome', '--per_chromosome', '-chr', type=str, help='When used, it calculates the modification rates only per the chromosome given.')
 @click.option('N_threads', '--N_threads', '-t', default=1, required=True, help='The number of threads to spawn (Default 1).')
 @click.option('compress', '--gz', '-z', default=False, is_flag=True, required=False, help='Indicates whether the mods file output will be compressed with gzip (Default False).')
 @click.option('directory', '--directory', '-d', required=True, type=str, help='Output directory to save files.')
