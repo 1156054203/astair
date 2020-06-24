@@ -31,11 +31,11 @@ Commands:
   call      Call modified cytosines from a bam or cram file.
   filter    Look for sequencing reads with more than N CpH modifications.
   find      Output positions of Cs from fasta file per context.
+  idbias    Generate indel count per read length information (IDbias).
   mbias     Generate modification per read length information (Mbias).
   phred     Calculate per base (A, C, T, G) Phred scores for each strand.
   simulate  Simulate TAPS/BS conversion on top of an existing bam/cram file.
   summarise  Collects and outputs modification information per read.
-  idbias    Generate indel count per read length information (IDbias).
 
   __________________________________About__________________________________
   asTair was written by Gergana V. Velikova and Benjamin Schuster-Boeckler.
@@ -62,7 +62,7 @@ wget https://zenodo.org/record/2582855/files/lambda.phage_test_sample_2.fq.gz
 
 The raw reads need to be aligned. asTair contains a command to help with this. It assumes that [`bwa`](https://github.com/lh3/bwa) and [`samtools`](http://www.htslib.org/) are available on your system. (If you prefer to use a different aligner, [skip to step 2](#markdown-header-2-call-methylation).)
 
-You will also need an indexed reference genome to align to, which can be given as a bgzip or gzip compressed file. For this example we are using the lambda phage genome, which you can download with
+You will also need an indexed reference genome to align to, which can be given as a bgzip compressed file. For this example we are using the lambda phage genome, which you can download with
 
 ```bash
 wget https://zenodo.org/record/2582855/files/lambda_phage.fa
