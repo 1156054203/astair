@@ -83,6 +83,8 @@ Once your fastq files are aligned and sorted (done automatically by `astair alig
 ```bash
 astair call -i output_dir/lambda.phage_test_sample_mCtoT.cram -f lambda_phage.fa --context CpG --minimum_base_quality 13 -d output_dir/
 ```
+You can skip positions from the 5' or 3' of the reads if they seem to show Mbias by the `--start_clip` and `--end_clip` options. NB: In case positions are poorly covered or are covered only by reads' start and end positions, the usage of `--start_clip` and `--end_clip` can can alter the modified/unmodified ratio or show the genomic position as uncovered.
+The `--no_information` option is also critical and we recommend to use 0, followed by a filtering of positions by the sum of modified and unmodified positions to be greater than 0.
 
 ## 3. Interpret results
 After calling methylation, you will find two additional files in `output_dir`:
