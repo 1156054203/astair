@@ -83,16 +83,12 @@ logs = logging.getLogger(__name__)
 time_b = datetime.now()
 
 
-def modification_calls_writer(data_mods, compress, data_line, header=False):
+def modification_calls_writer(data_mods, compress, data_line):
     """Outputs the modification calls per position in a tab-delimited format."""
     try:
         if compress == False:
-            if header:
-                data_line.writerow(["#CHROM", "START", "END", "MOD_LEVEL", "MOD", "UNMOD", "REF", "ALT", "SPECIFIC_CONTEXT", "CONTEXT", "SNV", "TOTAL_DEPTH"])
             data_line.writerow(data_mods)
         else:
-            if header:
-                data_line.write('{}\t{}\t{}\t{}\t{}\t{}\t{}\t{}\t{}\t{}\t{}\t{}\n'.format("#CHROM", "START", "END", "MOD_LEVEL", "MOD", "UNMOD", "REF", "ALT", "SPECIFIC_CONTEXT", "CONTEXT", "SNV", "TOTAL_DEPTH"))
             data_line.write(
                     '{}\t{}\t{}\t{}\t{}\t{}\t{}\t{}\t{}\t{}\t{}\t{}\n'.format(data_mods[0], data_mods[1], data_mods[2], data_mods[3],
                                                                  data_mods[4], data_mods[5], data_mods[6], data_mods[7],
@@ -199,8 +195,7 @@ def alternative_alele(read_counts, ref):
 def universal_variant_calculation_heuristic(read_counts, unexpected_tuples, ref, method, no_information):
     if len(read_counts)>0 and unexpected_tuples[0][1] != [key for key in read_counts.keys()][[i for i in read_counts.values()].index(max(read_counts.values()))][1]:
         unmodified_bases, TAAF, RAAF, AAAF, allele_frequencies, ratio_modified = tuple_handler(read_counts, unexpected_tuples, method, no_information)
-        # add a condition for being a numeric value
-        if (non_zero_division(TAAF, (unmodified_bases + TAAF), no_information) >=0.8 and ref=='C') or (non_zero_division(AAAF, (unmodified_bases + AAAF), no_information) >=0.8 and ref=='G'): 
+        if (non_zero_division(TAAF, (unmodified_bases + TAAF), 0) >=0.8 and ref=='C') or (non_zero_division(AAAF, (unmodified_bases + AAAF), no_information) >=0.8 and ref=='G'): 
             snp = 'homozygous'
         else:
             snp = None
@@ -272,8 +267,7 @@ def flags_expectation(modification_information_per_position, position, modificat
     return desired_tuples, undesired_tuples
 
 
-def pileup_summary(modification_information_per_position, position, read_counts, mean_mod, mean_unmod, user_defined_context,
-                   header, desired_tuples, undesired_tuples, modification, reference, depth, method, context_sample_counts, ignore_orphans, single_end, compress, data_line, real_snp, model, labels, additional_information, no_information):
+def pileup_summary(modification_information_per_position, position, read_counts, mean_mod, mean_unmod, user_defined_context,desired_tuples, undesired_tuples, modification, reference, depth, method, context_sample_counts, ignore_orphans, single_end, compress, data_line, real_snp, model, labels, additional_information, no_information):
     """Creates the modification output per position in the format:
     [chrom, start, end, mod_level, mod, unmod, ref, alt, specific_context, context, snv, total_depth]
     given the strand information and whether the library is pair-end or single-end. The key structure is read_counts
@@ -295,25 +289,20 @@ def pileup_summary(modification_information_per_position, position, read_counts,
         snp = 'No'
     all_data = numpy.array([position[0], position[1], position[1] + 1, modification_level, modified_bases, unmodified_bases, reference, modification, modification_information_per_position[position][0], modification_information_per_position[position][1], snp, depth])
     statistics_calculator(mean_mod, mean_unmod, all_data, user_defined_context, context_sample_counts)
-    modification_calls_writer(all_data, compress, data_line, header=header)
+    modification_calls_writer(all_data, compress, data_line)
 
 
 def tags_search(read_tags, tag_name, list_):
     list_.extend([i[1] for i in read_tags if i[0] == tag_name])
 
 
-def clean_pileup(pileups, cycles, modification_information_per_position, mean_mod, mean_unmod, user_defined_context,
+def clean_pileup(pileups, modification_information_per_position, mean_mod, mean_unmod, user_defined_context,
                  file_name, method, add_indels, context_sample_counts, ignore_orphans, single_end, compress, data_line, library,
                  true_variants, possible_mods, matched, model, labels, fastas, model_name, no_information, start_clip, end_clip):
     """Takes reads from the piled-up region and calculates modification levels."""
     for reads in pileups:
-        if cycles == 0:
-            header = True
-        else:
-            header = False
         try:
             if ((reads.reference_name, reads.pos, reads.pos + 1) in modification_information_per_position) or (possible_mods is not None and (reads.reference_name, reads.pos, reads.pos + 1) in possible_mods):
-                cycles += 1
                 position = (reads.reference_name, reads.pos, reads.pos + 1)
                 real_snp = False
                 read_counts = defaultdict(int)
@@ -341,7 +330,7 @@ def clean_pileup(pileups, cycles, modification_information_per_position, mean_mo
                                                                                                    sequences.count('G')+sequences.count('g'), sequences.count('T')+sequences.count('t')])):
                     pass
                 pileup_summary(modification_information_per_position, position, read_counts, mean_mod, mean_unmod,
-                                    user_defined_context, header, desired_tuples, undesired_tuples, modification, reference,
+                                    user_defined_context, desired_tuples, undesired_tuples, modification, reference,
                                     reads.get_num_aligned(), method, context_sample_counts, ignore_orphans, single_end,
                                     compress, data_line, real_snp, model, labels, None, no_information)
                 modification_information_per_position.pop(position)
@@ -380,18 +369,19 @@ def cytosine_modification_finder(input_file, known_snp, model, reference, contex
         except Exception:
             sys.exit(1)
         contexts, all_keys = sequence_context_set_creation(context, user_defined_context)
-        cycles = 0
         mean_mod, mean_unmod = context_dictionary(user_defined_context), context_dictionary(user_defined_context)
         context_total_counts, context_sample_counts = defaultdict(int), defaultdict(int)
         if compress == False:
             calls_output = open(file_name, 'a')
             data_line = csv.writer(calls_output, delimiter='\t', lineterminator='\n')
+            data_line.writerow(["#CHROM", "START", "END", "MOD_LEVEL", "MOD", "UNMOD", "REF", "ALT", "SPECIFIC_CONTEXT", "CONTEXT", "SNV", "TOTAL_DEPTH"])
         else:
             logs.info("Compressing output modification calls file.")
             if sys.version[0] == '3':
                 data_line = gzip.open(file_name + '.gz', 'wt', compresslevel=9, encoding='utf8', newline='\n')
             else:
                 data_line = gzip.open(file_name + '.gz', 'wt', compresslevel=9)
+            data_line.write('{}\t{}\t{}\t{}\t{}\t{}\t{}\t{}\t{}\t{}\t{}\t{}\n'.format("#CHROM", "START", "END", "MOD_LEVEL", "MOD", "UNMOD", "REF", "ALT", "SPECIFIC_CONTEXT", "CONTEXT", "SNV", "TOTAL_DEPTH"))
         true_variants, possible_mods, matched = None, None, False
         for i in range(0, len(keys)):
             time_m = datetime.now()
@@ -417,7 +407,7 @@ def cytosine_modification_finder(input_file, known_snp, model, reference, contex
                 matched = True
                 time_sf = datetime.now()
                 logs.info("Reading SNP information on {} chromosome (sequence) has finished. {} seconds".format(keys[i], (time_sf - time_s).total_seconds()))
-            clean_pileup(pileups, i, modification_information_per_position, mean_mod, mean_unmod, user_defined_context, file_name, method,
+            clean_pileup(pileups, modification_information_per_position, mean_mod, mean_unmod, user_defined_context, file_name, method,
                             add_indels, context_sample_counts, ignore_orphans, single_end, compress, data_line, library, true_variants, possible_mods, matched, model, labels, fastas, model_name, no_information, start_clip, end_clip)
             if zero_coverage:
                 for position in modification_information_per_position.keys():
