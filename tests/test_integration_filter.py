@@ -29,8 +29,8 @@ class CallOutputTest(unittest.TestCase):
             subprocess.Popen('gzip {}'.format(current + '/test_data/lambda_phage_.fa'), shell=True)
         
 
-    def test_filter_default_taps_gzip(self):
-        """Looks for TAPS sequencing reads with more than N CpH modified positions and filters them out with GZIP compressed fasta reference."""
+    def test_filter_default_taps_bgzip(self):
+        """Looks for TAPS sequencing reads with more than N CpH modified positions and filters them out with BGZIP compressed fasta reference."""
         removing_mod_err(current + '/test_data/lambda_phage_.fa.gz', current + '/test_data/small_real_taps_lambda_mCtoT.bam', 'mCtoT', 3, None, 1, False, current + '/test_data/')
         if path.isfile(current + '/test_data/lambda_phage_.fa'):
             subprocess.Popen('gzip {}'.format(current + '/test_data/lambda_phage_.fa'), shell=True)
