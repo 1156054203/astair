@@ -33,7 +33,7 @@ class CallOutputTest(unittest.TestCase):
         """Looks for TAPS sequencing reads with more than N CpH modified positions and filters them out with BGZIP compressed fasta reference."""
         removing_mod_err(current + '/test_data/lambda_phage_.fa.gz', current + '/test_data/small_real_taps_lambda_mCtoT.bam', 'mCtoT', 3, None, 1, False, current + '/test_data/')
         if path.isfile(current + '/test_data/lambda_phage_.fa'):
-            subprocess.Popen('gzip {}'.format(current + '/test_data/lambda_phage_.fa'), shell=True)
+            #subprocess.Popen('gzip {}'.format(current + '/test_data/lambda_phage_.fa'), shell=True)
         cytosine_modification_finder(current + '/test_data/small_real_taps_lambda_mCtoT_high_CpH_filtered.bam', None, 'none', current + '/test_data/lambda_phage.fa', 'all', False, False, 13, None, 'directional', 'mCtoT', 0, 0, True, False, True, True, 250, None, 1, current + '/test_data/', False, False, False, 0, 0, 0)
         data_generated = list()
         with open(current + '/test_data/small_real_taps_lambda_mCtoT_high_CpH_filtered_mCtoT_all.stats','r') as call_file:
@@ -61,8 +61,8 @@ class CallOutputTest(unittest.TestCase):
         subprocess.Popen(remove, shell=True)
         
         
-    def test_filter_default_wgbs_gzip(self):
-        """Looks for WGBS sequencing reads with more than N CpH modified positions and filters them out with GZIP compressed fasta reference."""
+    def test_filter_default_wgbs_bgzip(self):
+        """Looks for WGBS sequencing reads with more than N CpH modified positions and filters them out with BGZIP compressed fasta reference."""
         if path.isfile(current + '/test_data/lambda_phage_.fa'):
             subprocess.Popen('gzip {}'.format(current + '/test_data/lambda_phage_.fa'), shell=True)
         removing_mod_err(current + '/test_data/lambda_phage_.fa.gz', current + '/test_data/small_real_wgbs_lambda_CtoT.bam', 'CtoT', 3, None, 1, False,  current + '/test_data/')
