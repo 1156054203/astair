@@ -56,7 +56,7 @@ from astair.simple_fasta_parser import fasta_splitting_by_sequence
 @click.option('reverse_modification', '--rev', '-rv', default=False, is_flag=True, required=False, help='Returns possible or known modified position to their unmodified expected state. NB: Works only on files with MD tags (Default False).')
 @click.option('directory', '--directory', '-d', required=True, type=str, help='Output directory to save files.')
 @click.option('seed', '--seed', '-s', type=int, required=False, help='An integer number to be used as a seed for the random generators to ensure replication.')
-@click.option('skip_clip_overlap', '--skip_clip_overlap', '-sc', required=False, default=True, is_flag=True, help='Skipping the random removal of overlapping bases between pair-end reads. Not recommended for pair-end libraries, unless the overlaps are removed prior to calling. (Default False)')
+@click.option('skip_clip_overlap', '--skip_clip_overlap', '-sc', required=False, default=True, is_flag=True, help='Random removal of overlapping bases between pair-end reads. Skipping is recommended for pair-end libraries, unless the overlaps are removed prior to calling. (Default True)')
 @click.option('single_end', '--single_end', '-se', default=False, is_flag=True, required=False, help='Indicates single-end sequencing reads (Default False).')
 @click.option('minimum_base_quality', '--minimum_base_quality', '-bq', required=False, type=int, default=20, help='Set the minimum base quality for a read base to be used in the pileup (Default 20).')
 @click.option('minimum_mapping_quality', '--minimum_mapping_quality', '-mq', required=False, type=int, default=0, help='Set the minimum mapping quality for a read to be used in the pileup (Default 0).')
