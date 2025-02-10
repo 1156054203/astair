@@ -22,6 +22,7 @@ from astair.simple_fasta_parser import fasta_splitting_by_sequence
 @click.option('bwa_path', '--bwa_path', '-bp', required=False, help='The path to BWA for TAPS-like data and to bwameth.py for bisulfite sequencing.')
 @click.option('samtools_path', '--samtools_path', '-sp', required=False, help='The path to Samtools.')
 @click.option('directory', '--directory', '-d', required=True, help='Output directory to save files.')
+@click.option('output_name', '--output_name', '-n', required=False, help='Output file stem name.')
 @click.option('method', '--method', '-m', required=False, default='mCtoT', type=click.Choice(['CtoT', 'mCtoT']), help='Specify sequencing method, possible options are CtoT (unmodified cytosines are converted to thymines, bisulfite sequencing-like) and mCtoT (modified cytosines are converted to thymines, TAPS-like). (Default mCtoT)')
 @click.option('output_format', '--output_format', '-O', required=False, default='BAM', type=click.Choice(['CRAM', 'BAM']), help='Specify output format, possible options are BAM and CRAM. The Default BAM.')
 @click.option('minimum_mapping_quality', '--minimum_mapping_quality', '-mq', required=False, type=int, default=1, help='Set the minimum mapping quality for a read to be output to file (Default >=1).')
@@ -65,11 +66,11 @@ from astair.simple_fasta_parser import fasta_splitting_by_sequence
 @click.option('temp_dir', '--temp_dir', '-td', required=False, help='Provides a custom directory to write temporary files. (Default the chosen directory for the output).')
 @click.option('compress', '--compress', '-z', is_flag=True, default=False, required=False, help='Should the reference FASTA be compressed after the run (Default False).')
 @click.option('sort_chunck_size', '--sort_chunck_size', '-cz', default='768M', required=False, help='WARNING: sorting large files >= 50 GB might require to increaase the maximum memory per thread parameter; recognised sufixes are  K/M/G (Default 768M).')
-def align(fq1, fq2, reference, bwa_path, samtools_path, directory, method, output_format, minimum_mapping_quality, keep_unmapped, N_threads, minimum_seed_length, band_width, dropoff,
+def align(fq1, fq2, reference, bwa_path, samtools_path, directory, output_name, method, output_format, minimum_mapping_quality, keep_unmapped, N_threads, minimum_seed_length, band_width, dropoff,
                  internal_seeds, reseeding_occurence, N_skip_seeds, drop_chains, discard_chains, N_mate_rescues, skip_mate_rescue, skip_pairing, match_score, mismatch_penalty,
                  gap_open_penalty, gap_extension_penalty, end_clipping_penalty, unpaired_penalty, read_type, single_end, smart_pairing, read_group, header_string, include_alt, split_alignment, supplementary_mapq, minimum_score, alternative_score, all_alignments, fasta_comment, fasta_header, clip_supplementary, mark_splitted, reads_distribution, add_underscores, temp_dir, use_underscores, compress, sort_chunck_size):
     """Align raw reads in fastq format to a reference genome. bwa is required to align TAPS reads, and bwa-meth fif you plan to process BS-seq data."""
-    run_alignment(fq1, fq2, reference, bwa_path, samtools_path, directory, method, output_format, minimum_mapping_quality, keep_unmapped, N_threads, minimum_seed_length, band_width, dropoff,
+    run_alignment(fq1, fq2, reference, bwa_path, samtools_path, directory, output_name, method, output_format, minimum_mapping_quality, keep_unmapped, N_threads, minimum_seed_length, band_width, dropoff,
                  internal_seeds, reseeding_occurence, N_skip_seeds, drop_chains, discard_chains, N_mate_rescues, skip_mate_rescue, skip_pairing, match_score, mismatch_penalty,
                  gap_open_penalty, gap_extension_penalty, end_clipping_penalty, unpaired_penalty, read_type, single_end, smart_pairing, read_group, header_string, include_alt, split_alignment, supplementary_mapq, minimum_score, alternative_score, all_alignments, fasta_comment, fasta_header, clip_supplementary, mark_splitted, reads_distribution, add_underscores,temp_dir, use_underscores, compress, sort_chunck_size)
 
@@ -140,7 +141,7 @@ def check_index(use_bwa, reference, method, output_format, add_underscores, use_
     return reference
 
 
-def run_alignment(fq1, fq2, reference, bwa_path, samtools_path, directory, method, output_format, minimum_mapping_quality, keep_unmapped, N_threads, minimum_seed_length, band_width, dropoff,
+def run_alignment(fq1, fq2, reference, bwa_path, samtools_path, directory, output_name, method, output_format, minimum_mapping_quality, keep_unmapped, N_threads, minimum_seed_length, band_width, dropoff,
                  internal_seeds, reseeding_occurence, N_skip_seeds, drop_chains, discard_chains, N_mate_rescues, skip_mate_rescue, skip_pairing, match_score, mismatch_penalty,
                  gap_open_penalty, gap_extension_penalty, end_clipping_penalty, unpaired_penalty, read_type, single_end, smart_pairing, read_group, header_string, include_alt, split_alignment, supplementary_mapq, minimum_score, alternative_score, all_alignments, fasta_comment, fasta_header, clip_supplementary, mark_splitted, reads_distribution, add_underscores, temp_dir, use_underscores, compress, sort_chunck_size):
     """Aligns the provided pair-end reads to the reference according to the method specified.
@@ -156,6 +157,9 @@ def run_alignment(fq1, fq2, reference, bwa_path, samtools_path, directory, metho
         name = re.sub('(_R1|_1)', '', name)
     if  os.path.splitext(os.path.basename(fq1))[1] == '.gz':
         name = "_".join(name.split('.')[:-1])
+    # a small safety net here
+    if output_name:
+        name = output_name
     directory = os.path.abspath(directory)
     if list(directory)[-1]!="/":
         directory = directory + "/"
@@ -283,4 +287,3 @@ def run_alignment(fq1, fq2, reference, bwa_path, samtools_path, directory, metho
 
 if __name__ == '__main__':
     align()
-
